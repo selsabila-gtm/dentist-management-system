@@ -75,25 +75,60 @@ class Role(db.Model):
 class Staff(db.Model):
     __tablename__ = "staff"
     id = db.Column(db.Integer, primary_key=True)
+
+    # basic identity
     full_name = db.Column(db.String(200))
     first_name = db.Column(db.String(100))
     last_name = db.Column(db.String(100))
+
+    # contact
     email = db.Column(db.String(150), unique=True)
     phone = db.Column(db.String(50))
+    address = db.Column(db.String(255))
+
+    # auth
     username = db.Column(db.String(80), unique=True)
     password_hash = db.Column(db.String(200))
-    role_id = db.Column(db.Integer, db.ForeignKey("roles.id"), nullable=True)
 
+    # role
+    role_id = db.Column(db.Integer, db.ForeignKey("roles.id"), nullable=True)
     role = db.relationship("Role", backref="staff_members")
 
+    # permissions & schedule (for staff feature)
+    permissions = db.Column(db.Text)  # JSON string
+    availability = db.Column(db.String(50))
+    days_available = db.Column(db.String(100))
+    hours = db.Column(db.String(100))
+
     def to_dict(self):
+        full_name = self.full_name or f"{self.first_name or ''} {self.last_name or ''}".strip()
         return {
             "id": self.id,
-            "full_name": self.full_name or f"{self.first_name or ''} {self.last_name or ''}".strip(),
+            # name fields
+            "name": full_name,          # for old frontend
+            "full_name": full_name,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+
+            # contact
             "email": self.email,
             "phone": self.phone,
+            "address": self.address,
+
+            # auth
             "username": self.username,
+
+            # schedule fields used in table
+            "availability": self.availability,
+            "days_available": self.days_available,
+            "hours": self.hours,
+
+            # permissions object for checkboxes
+            "permissions": load_json_field(self.permissions),
+
+            # role
             "role": self.role.to_dict() if self.role else None,
+            "role_name": self.role.name if self.role else None,
         }
 
 class Patient(db.Model):
@@ -312,26 +347,35 @@ def list_staff():
 @app.route("/api/staff", methods=["POST"])
 def create_staff():
     data = request.get_json() or {}
+
     password = data.get("password")
     if not password:
         return jsonify({"error": "Password is required"}), 400
 
+    # build staff object from request
     staff = Staff(
         full_name=data.get("full_name"),
         first_name=data.get("first_name"),
         last_name=data.get("last_name"),
         email=data.get("email"),
         phone=data.get("phone"),
+        address=data.get("address"),
         username=data.get("username"),
         role_id=data.get("role_id"),
+        availability=data.get("availability"),
+        days_available=data.get("days_available"),
+        hours=data.get("hours"),
+        permissions=dumps_field(data.get("permissions")),
         password_hash=generate_password_hash(password),
     )
+
     try:
         db.session.add(staff)
         db.session.commit()
         return jsonify(staff.to_dict()), 201
     except Exception as e:
         db.session.rollback()
+        print("Error creating staff:", e)
         return jsonify({"error": "Failed to create staff", "detail": str(e)}), 500
 
 @app.route("/api/staff/<int:staff_id>", methods=["GET"])
@@ -343,16 +387,39 @@ def get_staff(staff_id):
 def update_staff(staff_id):
     s = Staff.query.get_or_404(staff_id)
     data = request.get_json() or {}
-    if "password" in data and data["password"]:
-        s.password_hash = generate_password_hash(data["password"])
-    for field in ("full_name", "first_name", "last_name", "email", "phone", "username", "role_id"):
+
+    # optional password change
+    new_password = data.get("password")
+    if new_password:
+        s.password_hash = generate_password_hash(new_password)
+
+    # simple fields
+    for field in (
+        "full_name",
+        "first_name",
+        "last_name",
+        "email",
+        "phone",
+        "address",
+        "username",
+        "role_id",
+        "availability",
+        "days_available",
+        "hours",
+    ):
         if field in data:
             setattr(s, field, data[field])
+
+    # permissions needs JSON dump
+    if "permissions" in data:
+        s.permissions = dumps_field(data.get("permissions"))
+
     try:
         db.session.commit()
         return jsonify(s.to_dict())
     except Exception as e:
         db.session.rollback()
+        print("Error updating staff:", e)
         return jsonify({"error": "Failed to update staff", "detail": str(e)}), 500
 
 @app.route("/api/staff/<int:staff_id>", methods=["DELETE"])
@@ -365,6 +432,28 @@ def delete_staff(staff_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": "Failed to delete staff", "detail": str(e)}), 500
+
+@app.route("/api/staff/dentists", methods=["GET"])
+def get_dentists():
+    """
+    Return ONLY staff whose role is 'Dentist'.
+    Used by the Add Appointment page to populate the dentist dropdown.
+    """
+    dentist_role = Role.query.filter_by(name="Dentist").first()
+    if not dentist_role:
+        return jsonify([])
+
+    dentists = Staff.query.filter_by(role_id=dentist_role.id).all()
+
+    result = []
+    for d in dentists:
+        full_name = d.full_name or f"{d.first_name or ''} {d.last_name or ''}".strip()
+        result.append({
+            "id": d.id,
+            "name": full_name,
+        })
+
+    return jsonify(result)
 
 # ---- AUTH ----
 @app.route("/api/login", methods=["POST"])
