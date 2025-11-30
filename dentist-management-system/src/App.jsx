@@ -1,3 +1,38 @@
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Sidebar from "./components/sidebar/sidebar.jsx";
+import Calendar from "./pages/appointments/calendar.jsx";
+import Add from "./pages/appointments/add.jsx";
+import PostSummary from "./pages/appointments/post_summary.jsx";
+
+import "./index.css";
+import "./components/sidebar/sidebar.css";
+
+export default function App() {
+  return (
+    <Router>
+      <div className="app-layout">
+        <Sidebar />
+        <main className="app-main">
+          <Routes>
+            {/* Calendar main page */}
+            <Route path="/" element={<Calendar />} />
+            <Route path="/calendar" element={<Calendar />} />
+
+            {/* Appointment pages that should still highlight Calendar */}
+            <Route path="/calendar/add" element={<Add />} />
+            <Route path="/calendar/post-summary/:id" element={<PostSummary />} />
+          </Routes>
+        </main>
+      </div>
+    </Router>
+  );
+}
+
+
+
+
+
+
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import AddPatient from './pages/patients/AddPatient.jsx';
