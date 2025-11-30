@@ -1,0 +1,338 @@
+/* Layout */
+.app-layout {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  background-color: transparent;
+}
+
+
+/* Main content */
+.main-content {
+  flex: 1;
+  width: 100%;
+  padding: 32px 40px;
+  overflow-y: auto;
+  color: #111827 !important;
+}
+
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 26px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.page-subtitle {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* Tabs */
+.tabs-row {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 4px;
+  margin-bottom: 24px;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #6b7280;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+}
+
+.tab-btn:hover {
+  background-color: #f3f4f6;
+}
+
+.tab-btn.active {
+  color: #111827;
+  font-weight: 500;
+  border-bottom: 2px solid #111827;
+}
+
+/* Cards */
+.card {
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 20px 24px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+  margin-bottom: 24px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* Buttons (pill style) */
+.pill-button {
+  border-radius: 999px;
+  border: none;
+  padding: 8px 18px;
+  font-size: 13px;
+  background-color: #f3f4f6;
+  color: #111827;
+  cursor: pointer;
+}
+
+.pill-button:hover {
+  background-color: #e5e7eb;
+}
+
+.primary-button {
+  border-radius: 999px;
+  border: none;
+  padding: 8px 18px;
+  font-size: 13px;
+  background-color: #111827;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.primary-button:hover {
+  background-color: #020617;
+}
+
+.secondary-button {
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  padding: 8px 18px;
+  font-size: 13px;
+  background-color: #ffffff;
+  color: #111827;
+  cursor: pointer;
+}
+
+.secondary-button:hover {
+  background-color: #f9fafb;
+}
+
+/* Medical history */
+.history-view,
+.history-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.history-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 60px;
+  padding: 10px 0;
+  border-top: 1px solid #f3f4f6;
+}
+
+.history-row:first-of-type {
+  border-top: none;
+}
+
+.history-label {
+  width: 160px;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.history-value {
+  flex: 1;
+  font-size: 14px;
+  color: #111827;
+}
+
+.history-input {
+  flex: 1;
+  font-size: 14px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  resize: vertical;
+  min-height: 36px;
+}
+
+.history-input:focus {
+  outline: none;
+  border-color: #111827;
+}
+
+.history-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* Add document form */
+.add-doc-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.add-doc-input {
+  flex: 1;
+  min-width: 180px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  font-size: 13px;
+}
+
+.add-doc-input:focus {
+  outline: none;
+  border-color: #111827;
+}
+
+.add-doc-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* Table */
+.table-wrapper {
+  margin-top: 8px;
+}
+
+.records-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.records-table th,
+.records-table td {
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.records-table thead tr {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.records-table tbody tr {
+  border-top: 1px solid #f3f4f6;
+}
+
+.records-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.link-like {
+  color: #2563eb;
+  cursor: pointer;
+}
+
+/* Modal overlay for add/edit prescription */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal {
+  background-color: #ffffff;
+  border-radius: 18px;
+  padding: 24px 28px;
+  width: 560px;
+  max-width: 90%;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.25);
+  color: #020810;
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+}
+
+.modal-row {
+  width: 100%;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* Small edit button inside table */
+.table-edit-button {
+  border-radius: 999px;
+  border: 1px solid #020810;
+  padding: 4px 10px;
+  font-size: 12px;
+  background-color: #ffffff;
+  cursor: pointer;
+  color: #020810;
+}
+
+.table-edit-button:hover {
+  background-color: #f3f4f6;
+}
+
+/* Force light inputs in patient profile modals & forms */
+.add-doc-input,
+.history-input,
+.modal input {
+  background-color: #e5eff8 !important;
+  color: #111827 !important;
+}
+
+/* Placeholder text style */
+.add-doc-input::placeholder,
+.modal input::placeholder {
+  color: #91959e;
+}
+.modal input[type="date"] {
+  color: #111827 !important;
+}
+
+/* Status pill for treatment plans */
+.status-pill {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.status-pill.proposed {
+  background-color: #e5e7eb;
+  color: #4b5563;
+}
+
+.status-pill.completed {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+

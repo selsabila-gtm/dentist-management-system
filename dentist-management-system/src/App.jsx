@@ -1,35 +1,46 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+// src/App.jsx
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+
+// Patient pages
+import MedicalRecordsPage from "./pages/patients/MedicalRecords.jsx";
+import PrescriptionsPage from "./pages/patients/Prescriptions.jsx";
+import TreatmentPlansPage from "./pages/patients/TreatmentPlans.jsx";
+
+import "./App.css";
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <BrowserRouter>
+      <Routes>
+        {/* Default: go to medical records */}
+        <Route
+          path="/"
+          element={<Navigate to="/patients/medical-records" replace />}
+        />
+
+        {/* Patient profile tabs */}
+        <Route
+          path="/patients/medical-records"
+          element={<MedicalRecordsPage />}
+        />
+        <Route
+          path="/patients/prescriptions"
+          element={<PrescriptionsPage />}
+        />
+        <Route
+          path="/patients/treatment-plans"
+          element={<TreatmentPlansPage />}
+        />
+
+        {/* Fallback: anything unknown goes to medical records */}
+        <Route
+          path="*"
+          element={<Navigate to="/patients/medical-records" replace />}
+        />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
-export default App
+export default App;
