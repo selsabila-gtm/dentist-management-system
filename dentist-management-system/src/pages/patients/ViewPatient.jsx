@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Sidebar from '../../components/sidebar/sidebar'; // adjust path if needed
 
 export default function ViewPatient() {
   const [activeTab, setActiveTab] = useState('General Info');
@@ -29,8 +28,6 @@ export default function ViewPatient() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar Component */}
-      <Sidebar />
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">

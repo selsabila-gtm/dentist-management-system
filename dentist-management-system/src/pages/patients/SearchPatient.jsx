@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Sidebar from '../../components/sidebar/sidebar'; // adjust path if needed
 import { Search, ChevronDown } from 'lucide-react';
 
 export default function PatientsList() {
@@ -37,8 +36,6 @@ export default function PatientsList() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <Sidebar />
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">

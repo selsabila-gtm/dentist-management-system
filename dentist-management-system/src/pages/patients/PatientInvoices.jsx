@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Sidebar from '../../components/sidebar/sidebar'; // adjust the path if needed
 
 export default function InvoicesPayments() {
   const [activeTab, setActiveTab] = useState('Invoices/Payments');
@@ -34,8 +33,6 @@ export default function InvoicesPayments() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <Sidebar />
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">

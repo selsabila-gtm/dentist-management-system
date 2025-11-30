@@ -2,8 +2,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./patientProfile.css";
-import Sidebar from "../../components/sidebar/sidebar.jsx";
-
 const API_BASE = "http://localhost:5000/api";
 const PATIENT_ID = 1; // demo patient created in backend seed
 
@@ -147,7 +145,6 @@ export default function MedicalRecordsPage() {
   if (loading) {
     return (
       <div className="app-layout">
-        <Sidebar />
         <main className="main-content">
           <p>Loading medical record...</p>
         </main>
@@ -157,8 +154,6 @@ export default function MedicalRecordsPage() {
 
   return (
     <div className="app-layout">
-      {/* Shared sidebar */}
-      <Sidebar />
 
       {/* ───── Main Content ───── */}
       <main className="main-content">
