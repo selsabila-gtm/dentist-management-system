@@ -219,6 +219,11 @@ deactivate -nondestructive
 # that there is an activated venv.
 $env:VIRTUAL_ENV = $VenvDir
 
+<<<<<<< HEAD
+=======
+$env:VIRTUAL_ENV_PROMPT = $Prompt
+
+>>>>>>> a1dd83e2606c2cf848831384c559b1bb3c5b41a7
 if (-not $Env:VIRTUAL_ENV_DISABLE_PROMPT) {
 
     Write-Verbose "Setting prompt to '$Prompt'"
@@ -233,7 +238,10 @@ if (-not $Env:VIRTUAL_ENV_DISABLE_PROMPT) {
         Write-Host -NoNewline -ForegroundColor Green "($_PYTHON_VENV_PROMPT_PREFIX) "
         _OLD_VIRTUAL_PROMPT
     }
+<<<<<<< HEAD
     $env:VIRTUAL_ENV_PROMPT = $Prompt
+=======
+>>>>>>> a1dd83e2606c2cf848831384c559b1bb3c5b41a7
 }
 
 # Clear PYTHONHOME
