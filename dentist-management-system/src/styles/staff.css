@@ -9,7 +9,7 @@ body,
 body {
   margin: 0;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background-color: #f3f4f6;  /* light background to match content */
+  background-color: #F7FAFC;  /* light background to match content */
 }
 
 .staff-layout {
