@@ -1,48 +1,90 @@
+import React from "react";
 import { NavLink } from "react-router-dom";
-import "./sidebar.css";
+import profileImg from "../../assets/images/profile_img.png";
+import {
+  FiHome,
+  FiCalendar,
+  FiUsers,
+  FiUser,
+  FiDollarSign,
+  FiBox,
+  FiBarChart2,
+  FiSettings
+} from "react-icons/fi";
+import "./Sidebar.css";
 
-export default function Sidebar() {
+const Sidebar = () => {
   return (
-    <aside className="sidebar">
+    <div className="sidebar">
+      {/* Logo & User */}
       <div className="sidebar-header">
-        <div className="avatar" />
-        <div className="app-name">DentalPro</div>
+        <img src={profileImg} alt="User" className="profile-img" />
+        <h3 className="app-title">DentalCloud</h3>
       </div>
 
+      {/* Menu */}
       <nav className="sidebar-menu">
-        <NavLink to="/" className="sidebar-item">
-          <span>Dashboard</span>
+        <NavLink
+          to="/dashboard"
+          className={({ isActive }) => (isActive ? "menu-item active" : "menu-item")}
+        >
+          <FiHome className="icon" /> Dashboard
         </NavLink>
 
         <NavLink
-          to="/appointments/calendar"
-          className={({ isActive }) =>
-            "sidebar-item" + (isActive ? " active" : "")
-          }
+          to="/calendar"
+          className={({ isActive }) => (isActive ? "menu-item active" : "menu-item")}
         >
-          <span>Calendar</span>
+          <FiCalendar className="icon" /> Calendar
         </NavLink>
 
-        <div className="sidebar-item">
-          <span>Staff</span>
-        </div>
-        <div className="sidebar-item">
-          <span>Patients</span>
-        </div>
-        <div className="sidebar-item">
-          <span>Billing</span>
-        </div>
-        <div className="sidebar-item">
-          <span>Inventory</span>
-        </div>
-        <div className="sidebar-item">
-          <span>Reports</span>
-        </div>
+        <NavLink
+          to="/staff"
+          className={({ isActive }) => (isActive ? "menu-item active" : "menu-item")}
+        >
+          <FiUsers className="icon" /> Staff
+        </NavLink>
+
+        <NavLink
+          to="/patients"
+          className={({ isActive }) => (isActive ? "menu-item active" : "menu-item")}
+        >
+          <FiUser className="icon" /> Patients
+        </NavLink>
+
+        <NavLink
+          to="/billing"
+          className={({ isActive }) => (isActive ? "menu-item active" : "menu-item")}
+        >
+          <FiDollarSign className="icon" /> Billing
+        </NavLink>
+
+        <NavLink
+          to="/inventory"
+          className={({ isActive }) => (isActive ? "menu-item active" : "menu-item")}
+        >
+          <FiBox className="icon" /> Inventory
+        </NavLink>
+
+        <NavLink
+          to="/reports"
+          className={({ isActive }) => (isActive ? "menu-item active" : "menu-item")}
+        >
+          <FiBarChart2 className="icon" /> Reports
+        </NavLink>
       </nav>
 
+      {/* Settings at bottom */}
       <div className="sidebar-footer">
-        <span>⚙ Settings</span>
+        <NavLink
+          to="/settings"
+          className={({ isActive }) => (isActive ? "menu-item active" : "menu-item")}
+        >
+          <FiSettings className="icon" /> Settings
+        </NavLink>
       </div>
-    </aside>
+    </div>
   );
-}
+};
+
+export default Sidebar;

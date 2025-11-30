@@ -1,58 +1,72 @@
 .sidebar {
-  width: 220px;
-  background-color: #f6f8fb;
-  padding: 16px 12px;
+  width: 350px;
+  height: 100vh; /* full viewport height */
+  background: #F7FAFC; /* baby blue */
+  padding: 24px 16px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  border-right: 1px solid #e2e8f0;
+  border-right: 1px solid #e6e6e6;
+  box-sizing: border-box;
 }
 
 .sidebar-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding-bottom: 16px;
+  gap: 12px;
+  margin-bottom: 32px;
 }
 
-.avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
-  background: #cbd5f5;
+.profile-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
 }
 
-.app-name {
-  font-weight: 600;
+.app-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #4d6e9d;
+}
+
+.username {
   font-size: 14px;
+  color: #333;
 }
 
 .sidebar-menu {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 14px;
+  gap: 12px;
+  flex: 1;
 }
 
-.sidebar-item {
-  padding: 8px 12px;
-  border-radius: 6px;
-  color: #4a5568;
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  color: #333;
   text-decoration: none;
-  cursor: pointer;
+  font-size: 15px;
+  transition: 0.2s;
 }
 
-.sidebar-item:hover {
-  background-color: #e2e8f0;
+.menu-item .icon {
+  font-size: 25px;
 }
 
-.sidebar-item.active {
-  background-color: #1e293b;
-  color: white;
+.menu-item:hover {
+  background: #e3e9f3;
+}
+
+.menu-item.active {
+  background: #d4e1ff;
+  font-weight: 600;
 }
 
 .sidebar-footer {
-  font-size: 13px;
-  color: #718096;
-  padding: 8px 12px;
+  margin-top: auto;
+  border-top: 1px solid #ddd;
+  padding-top: 16px;
 }
