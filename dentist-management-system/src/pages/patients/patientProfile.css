@@ -88,13 +88,13 @@
   border: none;
   padding: 8px 18px;
   font-size: 13px;
-  background-color: #f3f4f6;
-  color: #111827;
+  background-color: #2563eb;
+  color: #ffffff;
   cursor: pointer;
 }
 
 .pill-button:hover {
-  background-color: #e5e7eb;
+  background-color: #082f7b;
 }
 
 .primary-button {
