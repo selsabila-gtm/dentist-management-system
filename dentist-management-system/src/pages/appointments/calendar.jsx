@@ -134,7 +134,7 @@ export default function Calendar() {
           throw new Error(data.error || "Error updating status");
         }
         if (newStatus === "completed") {
-          navigate(`/appointments/post-summary/${appt.id}`);
+          navigate(`/calendar/post-summary/${appt.id}`);
           return;
         }
         setAppointments((prev) =>
@@ -153,7 +153,7 @@ export default function Calendar() {
         <h1>Calendar</h1>
         <button
           className="primary-button pill-button"
-          onClick={() => navigate("/appointments/add")}
+          onClick={() => navigate("/calendar/add")}
         >
           New Appointment
         </button>
@@ -189,11 +189,23 @@ export default function Calendar() {
       <section className="appointments-section">
         <div className="appointments-header">
           <h2>Appointments</h2>
+
           <div className="appointments-date-label">
             {selectedDateKey && formatDisplayDate(selectedDateKey)} ·{" "}
             {filteredAppointments.length} appointment
             {filteredAppointments.length !== 1 ? "s" : ""}
           </div>
+          <div >
+
+            <button
+               className="primary-button"
+                   onClick={() => navigate(`/calendar/add?date=${selectedDateKey}`)}
+                    >
+                Add Appointment
+            </button>
+          </div>
+
+          
         </div>
 
         {errorMessage && <div className="error-banner">{errorMessage}</div>}
@@ -249,15 +261,7 @@ export default function Calendar() {
               )}
             </tbody>
           </table>
-        <div style={{ marginTop: "12px", display: "flex", justifyContent: "center" }}>
-
-  <button
-    className="primary-button"
-    onClick={() => navigate(`/appointments/add?date=${selectedDateKey}`)}
-  >
-    Add Appointment
-  </button>
-</div>
+       
 
         </div>
       </section>

@@ -67,7 +67,7 @@ export default function AddAppointment() {
       body: JSON.stringify(payload),
     })
       .then((res) => res.json())
-      .then(() => navigate("/appointments/calendar"))
+      .then(() => navigate("/calendar"))
       .catch(() => alert("Failed to save appointment"));
   }
 
@@ -156,7 +156,7 @@ export default function AddAppointment() {
           <button
             type="button"
             className="secondary-button"
-            onClick={() => navigate("/appointments/calendar")}
+            onClick={() => navigate("/calendar")}
           >
             Cancel
           </button>

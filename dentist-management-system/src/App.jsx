@@ -3,6 +3,7 @@ import Sidebar from "./components/sidebar/sidebar.jsx";
 import Calendar from "./pages/appointments/calendar.jsx";
 import Add from "./pages/appointments/add.jsx";
 import PostSummary from "./pages/appointments/post_summary.jsx";
+
 import "./index.css";
 import "./components/sidebar/sidebar.css";
 
@@ -13,18 +14,22 @@ export default function App() {
         <Sidebar />
         <main className="app-main">
           <Routes>
+            {/* Calendar main page */}
             <Route path="/" element={<Calendar />} />
-            <Route path="/appointments/calendar" element={<Calendar />} />
-            <Route path="/appointments/add" element={<Add />} />
-            <Route
-              path="/appointments/post-summary/:id"
-              element={<PostSummary />}
-            />
+            <Route path="/calendar" element={<Calendar />} />
+
+            {/* Appointment pages that should still highlight Calendar */}
+            <Route path="/calendar/add" element={<Add />} />
+            <Route path="/calendar/post-summary/:id" element={<PostSummary />} />
           </Routes>
         </main>
       </div>
     </Router>
   );
 }
+
+
+
+
 
 

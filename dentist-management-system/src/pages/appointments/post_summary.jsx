@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "./summary.css";
-
 
 const API_BASE = "http://127.0.0.1:5000";
 
@@ -29,6 +28,12 @@ export default function PostSummary() {
   const [docType, setDocType] = useState("pdf");
   const [docFile, setDocFile] = useState(null);
 
+  // Track if this appointment already had a summary before opening this page
+  const [hasExistingSummary, setHasExistingSummary] = useState(false);
+  
+  // NEW: Use ref to track if user actually saved
+  const userSavedRef = useRef(false);
+
   // Load existing summary
   useEffect(() => {
     fetch(`${API_BASE}/api/appointments/${id}/summary`)
@@ -38,8 +43,31 @@ export default function PostSummary() {
         if (data.prescriptions) setPrescriptions(data.prescriptions);
         if (data.documents) setDocuments(data.documents);
         if (data.inventory) setInventory(data.inventory);
+
+        // Was there already some content? (then it's an old completed appointment)
+        const existed =
+          (data.notes && data.notes.trim() !== "") ||
+          (data.prescriptions && data.prescriptions.length > 0) ||
+          (data.documents && data.documents.length > 0) ||
+          (data.inventory && data.inventory.length > 0);
+
+        setHasExistingSummary(existed);
       });
   }, [id]);
+
+  // NEW: Cleanup on unmount - revert to scheduled if user didn't save
+  useEffect(() => {
+    return () => {
+      // Only revert if this was a new summary AND user didn't click save
+      if (!hasExistingSummary && !userSavedRef.current) {
+        fetch(`${API_BASE}/api/appointments/${id}/status`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "scheduled" }),
+        }).catch(err => console.error("Failed to revert status:", err));
+      }
+    };
+  }, [id, hasExistingSummary]);
 
   /* ------------------------------------------------------ */
   /*                   PRESCRIPTIONS                        */
@@ -61,7 +89,11 @@ export default function PostSummary() {
   }
 
   function saveNewPrescription() {
-    if (!newPresc.name.trim() || !newPresc.dosage.trim() || !newPresc.instructions.trim()) {
+    if (
+      !newPresc.name.trim() ||
+      !newPresc.dosage.trim() ||
+      !newPresc.instructions.trim()
+    ) {
       alert("All fields are required.");
       return;
     }
@@ -223,6 +255,18 @@ export default function PostSummary() {
   /* ------------------------------------------------------ */
 
   function saveSummary() {
+    // Block saving if EVERYTHING is empty
+    const hasContent =
+      (notes && notes.trim() !== "") ||
+      prescriptions.length > 0 ||
+      documents.length > 0 ||
+      inventory.length > 0;
+
+    if (!hasContent) {
+      alert("Please fill at least one field before saving the summary.");
+      return;
+    }
+
     const payload = {
       notes,
       prescriptions,
@@ -235,9 +279,38 @@ export default function PostSummary() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     })
-      .then(() => navigate("/appointments/calendar"))
+      .then(() => {
+        // Mark that user successfully saved
+        userSavedRef.current = true;
+        // backend sets status = completed here
+        navigate("/calendar");
+      })
       .catch(() => alert("Failed to save summary"));
   }
+
+  /* ------------------------------------------------------ */
+  /*                     CANCEL LOGIC                       */
+  /* ------------------------------------------------------ */
+
+  function handleCancel() {
+  // Prevent cleanup from running
+  userSavedRef.current = true;
+
+  if (!hasExistingSummary) {
+    fetch(`${API_BASE}/api/appointments/${id}/status`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "scheduled" }),
+    })
+      .finally(() => {
+        navigate("/calendar");
+      });
+  } else {
+    navigate("/calendar");
+  }
+}
+
+
 
   /* ------------------------------------------------------ */
   /*                     RENDER UI                          */
@@ -535,11 +608,17 @@ export default function PostSummary() {
                   <td>{it.item}</td>
                   <td>{it.quantity}</td>
                   <td>
-                    <button className="link-button" onClick={() => startEditInv(idx)}>
+                    <button
+                      className="link-button"
+                      onClick={() => startEditInv(idx)}
+                    >
                       Edit
                     </button>
                     {" | "}
-                    <button className="link-button" onClick={() => deleteInv(idx)}>
+                    <button
+                      className="link-button"
+                      onClick={() => deleteInv(idx)}
+                    >
                       Delete
                     </button>
                   </td>
@@ -592,7 +671,7 @@ export default function PostSummary() {
 
       {/* SAVE SUMMARY */}
       <div className="summary-actions">
-        <button className="secondary-button" onClick={() => navigate("/appointments/calendar")}>
+        <button className="secondary-button" onClick={handleCancel}>
           Cancel
         </button>
 
@@ -603,6 +682,8 @@ export default function PostSummary() {
     </div>
   );
 }
+
+
 
 
 
