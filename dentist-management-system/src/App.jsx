@@ -1,4 +1,10 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 import Sidebar from "./components/sidebar/sidebar.jsx";
 
 // Appointment pages
@@ -28,46 +34,61 @@ import "./index.css";
 import "./components/sidebar/sidebar.css";
 import "./App.css";
 
+// Inner app that can use useLocation (must be inside Router)
+function AppInner() {
+  const location = useLocation();
+
+  // Routes where we DON'T want the sidebar
+  const hideSidebarRoutes = ["/login", "/reset-password"];
+  const hideSidebar = hideSidebarRoutes.includes(location.pathname);
+
+  return (
+    <div className="app-layout">
+      {/* Show sidebar on all pages except login / reset-password */}
+      {!hideSidebar && <Sidebar />}
+
+      <main className="app-main">
+        <Routes>
+          {/* ---------- CALENDAR / APPOINTMENTS ---------- */}
+          <Route path="/calendar" element={<Calendar />} />
+          <Route path="/calendar/add" element={<Add />} />
+          <Route path="/calendar/post-summary/:id" element={<PostSummary />} />
+
+          {/* ---------- PATIENTS ---------- */}
+          <Route path="/patients" element={<SearchPatient />} />
+          <Route path="/patients/add" element={<AddPatient />} />
+          <Route path="/patients/appointments" element={<Appointment />} />
+          <Route path="/patients/invoices" element={<PatientInvoices />} />
+          <Route path="/patients/view" element={<ViewPatient />} />
+
+          {/* Patient profile tabs */}
+          <Route path="/patients/medical-records" element={<MedicalRecordsPage />} />
+          <Route path="/patients/prescriptions" element={<PrescriptionsPage />} />
+          <Route path="/patients/treatment-plans" element={<TreatmentPlansPage />} />
+
+          {/* ---------- STAFF ---------- */}
+          <Route path="/staff" element={<StaffListPage />} />
+          <Route path="/staff/add" element={<StaffAddPage />} />
+          <Route path="/staff/:id" element={<StaffProfilePage />} />
+          <Route path="/staff/:id/password" element={<ChangePasswordPage />} />
+
+          {/* Authentication */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+          {/* ---------- DEFAULT REDIRECT ---------- */}
+          <Route path="/" element={<Navigate to="/calendar" replace />} />
+          <Route path="*" element={<Navigate to="/calendar" replace />} />
+        </Routes>
+      </main>
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <Router>
-      <div className="app-layout">
-        <Sidebar />
-        <main className="app-main">
-          <Routes>
-            {/* ---------- CALENDAR / APPOINTMENTS ---------- */}
-            <Route path="/calendar" element={<Calendar />} />
-            <Route path="/calendar/add" element={<Add />} />
-            <Route path="/calendar/post-summary/:id" element={<PostSummary />} />
-
-            {/* ---------- PATIENTS ---------- */}
-            <Route path="/patients" element={<SearchPatient />} />
-            <Route path="/patients/add" element={<AddPatient />} />
-            <Route path="/patients/appointments" element={<Appointment />} />
-            <Route path="/patients/invoices" element={<PatientInvoices />} />
-            <Route path="/patients/view" element={<ViewPatient />} />
-
-            {/* Patient profile tabs */}
-            <Route path="/patients/medical-records" element={<MedicalRecordsPage />} />
-            <Route path="/patients/prescriptions" element={<PrescriptionsPage />} />
-            <Route path="/patients/treatment-plans" element={<TreatmentPlansPage />} />
-
-            {/* ---------- STAFF ---------- */}
-            <Route path="/staff" element={<StaffListPage />} />
-            <Route path="/staff/add" element={<StaffAddPage />} />
-            <Route path="/staff/:id" element={<StaffProfilePage />} />
-            <Route path="/staff/:id/password" element={<ChangePasswordPage />} />
-
-            {/* Authentication */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
-
-            {/* ---------- DEFAULT REDIRECT ---------- */}
-            <Route path="/" element={<Navigate to="/calendar" replace />} />
-            <Route path="*" element={<Navigate to="/calendar" replace />} />
-          </Routes>
-        </main>
-      </div>
+      <AppInner />
     </Router>
   );
 }
