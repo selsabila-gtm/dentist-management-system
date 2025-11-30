@@ -32,6 +32,8 @@ engine = create_engine("sqlite:///appointments.db", echo=False)
 Base = declarative_base()
 SessionLocal = sessionmaker(bind=engine)
 
+
+# === EXISTING MODELS (UNCHANGED) ===
 class Appointment(Base):
     __tablename__ = "appointments"
 
@@ -45,6 +47,7 @@ class Appointment(Base):
 
     summary = relationship("Summary", back_populates="appointment", uselist=False)
 
+
 class Summary(Base):
     __tablename__ = "summaries"
 
@@ -56,6 +59,26 @@ class Summary(Base):
     inventory = Column(Text)
 
     appointment = relationship("Appointment", back_populates="summary")
+
+
+# === ADDED MODELS FOR PATIENTS + STAFF (ONLY ADDITION) ===
+class Patient(Base):
+    __tablename__ = "patients"
+
+    id = Column(Integer, primary_key=True, index=True)
+    first_name = Column(String(100))
+    last_name = Column(String(100))
+    phone = Column(String(50))
+    email = Column(String(100))
+
+
+class Staff(Base):
+    __tablename__ = "staff"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100))
+    role = Column(String(50))
+
 
 Base.metadata.create_all(bind=engine)
 
@@ -93,7 +116,54 @@ def seed_data():
         db.commit()
     db.close()
 
+
 seed_data()
+
+
+# ---------- NEW SEED FOR PATIENTS + STAFF (ONLY IF EMPTY) ----------
+def seed_people():
+    db = SessionLocal()
+
+    # 3 example patients (only inserted if table empty)
+    if db.query(Patient).count() == 0:
+        patients = [
+            Patient(
+                first_name="Sophia",
+                last_name="Clark",
+                phone="555-0101",
+                email="sophia.clark@example.com",
+            ),
+            Patient(
+                first_name="Ethan",
+                last_name="Harper",
+                phone="555-0102",
+                email="ethan.harper@example.com",
+            ),
+            Patient(
+                first_name="Ava",
+                last_name="Mitchell",
+                phone="555-0103",
+                email="ava.mitchell@example.com",
+            ),
+        ]
+        db.add_all(patients)
+
+    # some staff, including dentists
+    if db.query(Staff).count() == 0:
+        staff = [
+            Staff(name="Dr. Smith", role="dentist"),
+            Staff(name="Dr. Adams", role="dentist"),
+            Staff(name="Dr. Carter", role="dentist"),
+            Staff(name="Emma Lopez", role="assistant"),
+        ]
+        db.add_all(staff)
+
+    db.commit()
+    db.close()
+
+
+seed_people()
+
 
 def load_json_field(value):
     if not value:
@@ -102,6 +172,7 @@ def load_json_field(value):
         return json.loads(value)
     except:
         return []
+
 
 def appointment_to_dict(a):
     return {
@@ -121,6 +192,7 @@ def get_appointments():
     appts = db.query(Appointment).order_by(Appointment.time).all()
     db.close()
     return jsonify([appointment_to_dict(a) for a in appts])
+
 
 @app.route("/api/appointments/<int:id>/status", methods=["PUT"])
 def update_status(id):
@@ -147,6 +219,7 @@ def update_status(id):
     db.close()
     return jsonify(res)
 
+
 @app.route("/api/appointments/<int:id>/summary", methods=["GET"])
 def get_summary(id):
     db = SessionLocal()
@@ -167,6 +240,7 @@ def get_summary(id):
         "documents": load_json_field(s.documents),
         "inventory": load_json_field(s.inventory),
     })
+
 
 @app.route("/api/appointments/<int:id>/summary", methods=["POST"])
 def save_summary(id):
@@ -192,6 +266,7 @@ def save_summary(id):
     db.commit()
     db.close()
     return jsonify({"message": "saved"})
+
 
 @app.route("/api/appointments/<int:id>/documents", methods=["POST"])
 def upload_document(id):
@@ -235,12 +310,80 @@ def upload_document(id):
 
     return jsonify({"documents": docs})
 
+
 @app.route("/uploads/<path:filename>")
 def serve_upload(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
+
+# ============================================================
+#   NEW ENDPOINTS FOR ADD APPOINTMENT PAGE (ONLY ADDITIONS)
+# ============================================================
+
+@app.route("/api/patients", methods=["GET"])
+def get_patients():
+    """
+    Return patients from patients table.
+    Frontend uses: id + full name.
+    """
+    db = SessionLocal()
+    rows = db.query(Patient).all()
+    result = [
+        {
+            "id": p.id,
+            "name": f"{p.first_name} {p.last_name}".strip()
+        }
+        for p in rows
+    ]
+    db.close()
+    return jsonify(result)
+
+
+@app.route("/api/staff/dentists", methods=["GET"])
+def get_dentists():
+    """
+    Return ONLY dentists from staff table (role='dentist')
+    """
+    db = SessionLocal()
+    dentists = db.query(Staff).filter(Staff.role == "dentist").all()
+    result = [{"id": d.id, "name": d.name} for d in dentists]
+    db.close()
+    return jsonify(result)
+
+
+@app.route("/api/appointments", methods=["POST"])
+def create_appointment():
+    """
+    Create new appointment with status 'scheduled'
+    Used by Add Appointment page.
+    """
+    data = request.json or {}
+
+    required = ["patient", "date", "time", "dentist", "procedure"]
+    for field in required:
+        if not data.get(field):
+            return jsonify({"error": f"{field} is required"}), 400
+
+    db = SessionLocal()
+    appt = Appointment(
+        date=data["date"],
+        time=data["time"],
+        patient=data["patient"],
+        dentist=data["dentist"],
+        procedure=data["procedure"],
+        status="scheduled",
+    )
+    db.add(appt)
+    db.commit()
+    db.close()
+
+    return jsonify({"message": "created"}), 201
+# ============================================================
+
+
 if __name__ == "__main__":
     app.run(debug=True)
+
 
 
 

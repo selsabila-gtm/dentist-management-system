@@ -249,6 +249,16 @@ export default function Calendar() {
               )}
             </tbody>
           </table>
+        <div style={{ marginTop: "12px", display: "flex", justifyContent: "center" }}>
+
+  <button
+    className="primary-button"
+    onClick={() => navigate(`/appointments/add?date=${selectedDateKey}`)}
+  >
+    Add Appointment
+  </button>
+</div>
+
         </div>
       </section>
     </div>
