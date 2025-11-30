@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchStaff, deleteStaff } from "../../services/staffApi";
 import StaffLayout from "../../components/StaffLayout";
+import "../../styles/staff.css";
 
 export default function StaffListPage() {
   const [staff, setStaff] = useState([]);

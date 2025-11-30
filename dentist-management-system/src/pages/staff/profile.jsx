@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import StaffLayout from "../../components/StaffLayout";
+import "../../styles/staff.css";
 import {
   fetchRoles,
   fetchStaffById,

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { updateStaff } from "../../services/staffApi";
 import { useNavigate } from "react-router-dom";
 import StaffLayout from "../../components/StaffLayout";
+import "../../styles/staff.css";
 
 // FIXED: extract ID safely
 const getIdFromLocation = () => {

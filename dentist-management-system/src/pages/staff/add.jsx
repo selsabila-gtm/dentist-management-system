@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import StaffLayout from "../../components/StaffLayout";
 import { createStaff, fetchRoles } from "../../services/staffApi";
+import "../../styles/staff.css";
 
 const defaultPermissions = {
   can_access_records: false,
@@ -260,54 +261,7 @@ export default function StaffAddPage() {
 
         {/* RIGHT COLUMN: Permissions, Login Credentials, Work Schedule */}
         <div className="staff-form-section">
-          <h2>Permissions</h2>
-          <div className="staff-checkbox-group">
-            <label className="staff-checkbox-label">
-              <input
-                type="checkbox"
-                name="can_access_records"
-                checked={form.permissions.can_access_records}
-                onChange={handlePermissionChange}
-              />
-              Access Patient Records
-            </label>
-            <label className="staff-checkbox-label">
-              <input
-                type="checkbox"
-                name="can_manage_appointments"
-                checked={form.permissions.can_manage_appointments}
-                onChange={handlePermissionChange}
-              />
-              Manage Appointments
-            </label>
-            <label className="staff-checkbox-label">
-              <input
-                type="checkbox"
-                name="can_manage_billing"
-                checked={form.permissions.can_manage_billing}
-                onChange={handlePermissionChange}
-              />
-              Billing and Invoicing
-            </label>
-            <label className="staff-checkbox-label">
-              <input
-                type="checkbox"
-                name="can_generate_reports"
-                checked={form.permissions.can_generate_reports}
-                onChange={handlePermissionChange}
-              />
-              Generate Reports
-            </label>
-            <label className="staff-checkbox-label">
-              <input
-                type="checkbox"
-                name="is_admin"
-                checked={form.permissions.is_admin}
-                onChange={handlePermissionChange}
-              />
-              Admin Settings
-            </label>
-          </div>
+          
 
           <h2>Login Credentials</h2>
           <div className="staff-field">

@@ -1,8 +1,7 @@
 // src/pages/staff/login.jsx
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import axios from "axios";
-import "../../styles/staff.css"; // keep using your main styles
+import "../../styles/staff.css";
 
 const API_BASE = "http://localhost:5000/api";
 
@@ -25,36 +24,35 @@ export default function LoginPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-const API_BASE = "http://localhost:5000/api";
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setSubmitting(true);
+    setSubmitting(true);
 
-  try {
-    const res = await fetch(`${API_BASE}/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
+    try {
+      const res = await fetch(`${API_BASE}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok || !data.success) {
-      alert(data.message || "Invalid username or password.");
-      return;
+      if (!res.ok || !data.success) {
+        alert(data.message || "Invalid username or password.");
+        return;
+      }
+
+      // success → go to staff dashboard
+      navigate("/staff");
+    } catch (err) {
+      console.error(err);
+      alert("Could not connect to server.");
+    } finally {
+      setSubmitting(false);
     }
-
-    // success → go to staff dashboard
-    window.location.href = "/staff";
-  } catch (err) {
-    console.error(err);
-    alert("Could not connect to server.");
-  } finally {
-    setSubmitting(false);
-  }
-};
-
+  };
 
   return (
     <div className="login-page">
@@ -109,7 +107,11 @@ const handleSubmit = async (e) => {
           </label>
         </div>
 
-        <button type="submit" className="btn-primary login-button" disabled={submitting}>
+        <button
+          type="submit"
+          className="btn-primary login-button"
+          disabled={submitting}
+        >
           {submitting ? "Logging in..." : "Log In"}
         </button>
       </form>

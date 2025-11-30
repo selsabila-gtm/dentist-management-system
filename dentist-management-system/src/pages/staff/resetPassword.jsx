@@ -1,7 +1,6 @@
 // src/pages/staff/resetPassword.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import "../../styles/staff.css";
 
 const API_BASE = "http://localhost:5000/api";
@@ -33,40 +32,39 @@ export default function ResetPasswordPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-const API_BASE = "http://localhost:5000/api";
+  const handleReset = async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
 
-const handleReset = async (e) => {
-  e.preventDefault();
-  setSaving(true);
+    setSaving(true);
 
-  try {
-    const res = await fetch(`${API_BASE}/reset-password`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, new_password: newPassword }),
-    });
+    try {
+      const res = await fetch(`${API_BASE}/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, new_password: newPassword }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) {
-      alert(data.error || "Failed to reset password.");
-      return;
+      if (!res.ok) {
+        alert(data.error || "Failed to reset password.");
+        return;
+      }
+
+      alert(data.message || "Password updated.");
+      navigate("/login");
+    } catch (err) {
+      console.error(err);
+      alert("Could not connect to server.");
+    } finally {
+      setSaving(false);
     }
-
-    alert(data.message || "Password updated.");
-    window.location.href = "/login";
-  } catch (err) {
-    console.error(err);
-    alert("Could not connect to server.");
-  } finally {
-    setSaving(false);
-  }
-};
-
+  };
 
   return (
     <div className="login-page">
-      <form className="login-panel" onSubmit={handleSubmit}>
+      <form className="login-panel" onSubmit={handleReset}>
         <h1 className="login-title">Reset Password</h1>
 
         <div className="staff-field">
