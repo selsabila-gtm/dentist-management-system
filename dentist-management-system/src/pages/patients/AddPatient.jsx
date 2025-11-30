@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import Sidebar from '../../components/sidebar/sidebar'; // adjust path if needed
 
 export default function AddPatient() {
-  const [activeTab, setActiveTab] = useState('General Info');
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -15,15 +14,6 @@ export default function AddPatient() {
     policyNumber: '',
     groupNumber: ''
   });
-
-  const tabs = [
-    'General Info',
-    'Appointments',
-    'Treatment Plans',
-    'Medical Records',
-    'Prescriptions',
-    'Invoices/Payments'
-  ];
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -68,30 +58,11 @@ export default function AddPatient() {
             <p className="text-gray-500">Manage patient information and history</p>
           </div>
 
-          {/* Tabs */}
-          <div className="border-b border-gray-200 mb-8">
-            <div className="flex gap-8">
-              {tabs.map(tab => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`pb-4 px-1 bg-white font-medium transition-colors ${
-                    activeTab === tab
-                      ? 'text-blue-600 border-b-2 border-blue-600'
-                      : 'text-gray-500 hover:text-gray-600'
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Patient Details Form */}
           <div className="bg-white rounded-lg shadow-sm p-8 mb-8">
             <h2 className="text-xl font-semibold text-gray-800 mb-6">Patient Details</h2>
             
-            <div className="grid bg-white grid-cols-2 gap-6 mb-6">
+            <div className="grid grid-cols-2 gap-6 mb-6">
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2">
                   First Name
@@ -114,7 +85,7 @@ export default function AddPatient() {
                   name="lastName"
                   value={formData.lastName}
                   onChange={handleInputChange}
-                  className="w-full  text-gray-800 bg-white  px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors"
+                  className="w-full text-gray-800 bg-white px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors"
                 />
               </div>
             </div>
@@ -129,7 +100,7 @@ export default function AddPatient() {
                   name="dateOfBirth"
                   value={formData.dateOfBirth}
                   onChange={handleInputChange}
-                  className="w-full  text-gray-800 bg-white px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors"
+                  className="w-full text-gray-800 bg-white px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors"
                 />
               </div>
               
@@ -141,8 +112,9 @@ export default function AddPatient() {
                   name="gender"
                   value={formData.gender}
                   onChange={handleInputChange}
-                  className="w-full  text-gray-800 bg-white  px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white transition-colors"
+                  className="w-full text-gray-800 bg-white px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors"
                 >
+                  <option value="">Select gender</option>
                   <option value="male">Male</option>
                   <option value="female">Female</option>
                   <option value="other">Other</option>
@@ -161,7 +133,7 @@ export default function AddPatient() {
                   name="phoneNumber"
                   value={formData.phoneNumber}
                   onChange={handleInputChange}
-                  className="w-full  text-gray-800 bg-white  px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors"
+                  className="w-full text-gray-800 bg-white px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors"
                 />
               </div>
               
@@ -174,7 +146,7 @@ export default function AddPatient() {
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="w-full  text-gray-800 bg-white  px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors"
+                  className="w-full text-gray-800 bg-white px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors"
                 />
               </div>
             </div>
@@ -188,7 +160,7 @@ export default function AddPatient() {
                 name="address"
                 value={formData.address}
                 onChange={handleInputChange}
-                className="w-full  text-gray-800 bg-white  px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors"
+                className="w-full text-gray-800 bg-white px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors"
               />
             </div>
           </div>
@@ -207,7 +179,7 @@ export default function AddPatient() {
                   name="insuranceProvider"
                   value={formData.insuranceProvider}
                   onChange={handleInputChange}
-                  className="w-full  text-gray-800 bg-white px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors"
+                  className="w-full text-gray-800 bg-white px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors"
                 />
               </div>
               
@@ -220,7 +192,7 @@ export default function AddPatient() {
                   name="policyNumber"
                   value={formData.policyNumber}
                   onChange={handleInputChange}
-                  className="w-full  text-gray-800 bg-white px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors"
+                  className="w-full text-gray-800 bg-white px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors"
                 />
               </div>
             </div>
@@ -234,7 +206,7 @@ export default function AddPatient() {
                 name="groupNumber"
                 value={formData.groupNumber}
                 onChange={handleInputChange}
-                className="w-full  text-gray-800 bg-white  px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors"
+                className="w-full text-gray-800 bg-white px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors"
               />
             </div>
           </div>
