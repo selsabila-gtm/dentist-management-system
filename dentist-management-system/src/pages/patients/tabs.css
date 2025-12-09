@@ -1,0 +1,33 @@
+.tabs-row {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 25px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  font-size: 14px;
+  padding: 12px 0;
+  cursor: pointer;
+  color: #6b7280;
+  text-decoration: none;
+}
+
+.tab-btn.active {
+  color: #111827;
+  font-weight: 600;
+  position: relative;
+}
+
+.tab-btn.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: #2563eb;
+  border-radius: 999px;
+}

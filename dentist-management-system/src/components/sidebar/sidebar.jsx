@@ -31,12 +31,20 @@ const Sidebar = () => {
           <FiHome className="icon" /> Dashboard
         </NavLink>
 
+
+
+
         <NavLink
           to="/calendar"
           className={({ isActive }) => (isActive ? "menu-item active" : "menu-item")}
         >
           <FiCalendar className="icon" /> Calendar
         </NavLink>
+
+
+
+
+
 
         <NavLink
           to="/staff"
