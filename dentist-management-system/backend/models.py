@@ -9,71 +9,59 @@ class Role(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, nullable=False)
 
-<<<<<<< HEAD
     def to_dict(self):
         return {"id": self.id, "name": self.name}
-=======
+
     def __repr__(self):
         return f"<Role {self.name}>"
->>>>>>> a1dd83e2606c2cf848831384c559b1bb3c5b41a7
 
 
 class Staff(db.Model):
     __tablename__ = "staff"
 
     id = db.Column(db.Integer, primary_key=True)
-<<<<<<< HEAD
 
+    # identity
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(120), nullable=False)
+    # optional full_name if you want to store it too
+    full_name = db.Column(db.String(120))
+
+    # contact
+    email = db.Column(db.String(120), unique=True, nullable=False)
     phone = db.Column(db.String(50))
     address = db.Column(db.String(255))
 
+    # auth
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
 
+    # role
     role_id = db.Column(db.Integer, db.ForeignKey("roles.id"), nullable=False)
     role = db.relationship("Role", backref="staff_members")
 
+    # permissions & schedule
     permissions = db.Column(db.JSON, nullable=False, default=dict)
-
     availability = db.Column(db.String(50))
     days_available = db.Column(db.String(255))
     hours = db.Column(db.String(100))
 
-    # NEW: when the employee was created
+    # when the employee was created
     created_at = db.Column(
         db.DateTime, nullable=False, server_default=db.func.now()
     )
-=======
-    full_name = db.Column(db.String(120), nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(255), nullable=False)
-    role_id = db.Column(db.Integer, db.ForeignKey("roles.id"), nullable=True)
-
-    role = db.relationship("Role", backref="staff_members")
-
-    def __repr__(self):
-        return f"<Staff {self.email}>"
-
-
-class Patient(db.Model):
-    __tablename__ = "patients"
-
-    id = db.Column(db.Integer, primary_key=True)
-    full_name = db.Column(db.String(120), nullable=False)
-    date_of_birth = db.Column(db.String(10), nullable=True)  # YYYY-MM-DD
-    phone = db.Column(db.String(50), nullable=True)
-    email = db.Column(db.String(120), nullable=True)
->>>>>>> a1dd83e2606c2cf848831384c559b1bb3c5b41a7
 
     def to_dict(self):
+        full_name = (
+            self.full_name
+            or f"{self.first_name or ''} {self.last_name or ''}".strip()
+        )
+
         return {
             "id": self.id,
-<<<<<<< HEAD
             "first_name": self.first_name,
             "last_name": self.last_name,
+            "full_name": full_name,
             "email": self.email,
             "phone": self.phone,
             "address": self.address,
@@ -85,8 +73,34 @@ class Patient(db.Model):
             "days_available": self.days_available,
             "hours": self.hours,
             "created_at": self.created_at.isoformat() if self.created_at else None,
-=======
-            "full_name": self.full_name,
+        }
+
+    def __repr__(self):
+        return f"<Staff {self.email}>"
+
+
+class Patient(db.Model):
+    __tablename__ = "patients"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    full_name = db.Column(db.String(120), nullable=False)
+    # optional split fields if you use them elsewhere
+    first_name = db.Column(db.String(100))
+    last_name = db.Column(db.String(100))
+
+    date_of_birth = db.Column(db.String(10), nullable=True)  # YYYY-MM-DD
+    phone = db.Column(db.String(50), nullable=True)
+    email = db.Column(db.String(120), nullable=True)
+
+    def to_dict(self):
+        # prefer stored full_name, fall back to first/last
+        name = self.full_name or f"{self.first_name or ''} {self.last_name or ''}".strip()
+        return {
+            "id": self.id,
+            "full_name": name,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
             "date_of_birth": self.date_of_birth,
             "phone": self.phone,
             "email": self.email,
@@ -187,5 +201,4 @@ class TreatmentPlan(db.Model):
             "date": self.date,
             "cost": self.cost,
             "status": self.status,
->>>>>>> a1dd83e2606c2cf848831384c559b1bb3c5b41a7
         }
