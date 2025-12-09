@@ -1,14 +1,22 @@
+/* Root sidebar container */
 .sidebar {
   width: 350px;
-  height: 100vh; /* full viewport height */
-  background: #F7FAFC; /* baby blue */
+  height: 100vh;              /* full viewport height */
+  background: #F7FAFC;        /* baby blue */
   padding: 24px 16px;
   display: flex;
   flex-direction: column;
   border-right: 1px solid #e6e6e6;
   box-sizing: border-box;
+
+  /* make it stay visible on scroll inside the layout */
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  flex-shrink: 0;             /* don't let flexbox squeeze it */
 }
 
+/* Header (avatar + app name) */
 .sidebar-header {
   display: flex;
   align-items: center;
@@ -33,6 +41,7 @@
   color: #333;
 }
 
+/* Menu section */
 .sidebar-menu {
   display: flex;
   flex-direction: column;
@@ -65,6 +74,7 @@
   font-weight: 600;
 }
 
+/* Footer (settings link at bottom) */
 .sidebar-footer {
   margin-top: auto;
   border-top: 1px solid #ddd;
