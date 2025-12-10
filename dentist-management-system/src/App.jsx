@@ -20,13 +20,15 @@ import MedicalRecordsPage from "./pages/patients/MedicalRecords.jsx";
 import PrescriptionsPage from "./pages/patients/Prescriptions.jsx";
 import TreatmentPlansPage from "./pages/patients/TreatmentPlans.jsx";
 
+import ReportsPage from "./pages/reports/reports.jsx";
+
+
 // ----- SIMPLE PLACEHOLDER PAGES FOR OTHER SECTIONS -----
 // (Replace these later with your team’s real pages if they exist)
 const DashboardPage = () => <h1 style={{ padding: "2rem" }}>Dashboard</h1>;
 const CalendarPage = () => <h1 style={{ padding: "2rem" }}>Calendar</h1>;
 const BillingPage = () => <h1 style={{ padding: "2rem" }}>Billing</h1>;
 const InventoryPage = () => <h1 style={{ padding: "2rem" }}>Inventory</h1>;
-const ReportsPage = () => <h1 style={{ padding: "2rem" }}>Reports</h1>;
 const SettingsPage = () => <h1 style={{ padding: "2rem" }}>Settings</h1>;
 
 // ----- WRAPPER LAYOUT WITH SIDEBAR -----
