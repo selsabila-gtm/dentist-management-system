@@ -5,7 +5,6 @@ import "./App.css";
 
 // Auth pages
 import LoginPage from "./pages/auth/login";
-import DashboardPage from "./pages/dashboard/dashboard";
 
 // Inventory pages
 import InventoryListPage from "./pages/inventory/list";
@@ -53,7 +52,7 @@ function App() {
           path="/"
           element={
             <ProtectedRoute>
-              <Navigate to="/dashboard" replace />
+              <div>dashboard Page (Coming Soon)</div>
             </ProtectedRoute>
           }
         />
@@ -63,7 +62,7 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <DashboardPage />
+              <div>dashboard Page (Coming Soon)</div>
             </ProtectedRoute>
           }
         />
