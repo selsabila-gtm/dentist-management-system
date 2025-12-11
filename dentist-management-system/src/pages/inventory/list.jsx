@@ -1,4 +1,3 @@
-// src/pages/inventory/list.jsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../../components/Sidebar/Sidebar";
@@ -6,8 +5,13 @@ import { FiSearch } from "react-icons/fi";
 import "./inventory.css";
 import Notifications from "../../components/notification/notifications";
 
-
 const API_BASE = "http://127.0.0.1:5000";
+
+const currency = new Intl.NumberFormat(undefined, {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 2,
+});
 
 export default function InventoryListPage() {
   const navigate = useNavigate();
@@ -26,7 +30,7 @@ export default function InventoryListPage() {
     try {
       const res = await fetch(`${API_BASE}/api/inventory`);
       const data = await res.json();
-      setItems(data);
+      setItems(data || []);
     } catch (err) {
       console.error("Error fetching inventory:", err);
     } finally {
@@ -38,7 +42,7 @@ export default function InventoryListPage() {
     try {
       const res = await fetch(`${API_BASE}/api/inventory/categories`);
       const data = await res.json();
-      setCategories(data);
+      setCategories(data || []);
     } catch (err) {
       console.error("Error fetching categories:", err);
     }
@@ -53,6 +57,8 @@ export default function InventoryListPage() {
       });
       if (res.ok) {
         setItems(items.filter((item) => item.id !== id));
+      } else {
+        console.error("Failed to delete item", await res.text());
       }
     } catch (err) {
       console.error("Error deleting item:", err);
@@ -60,7 +66,7 @@ export default function InventoryListPage() {
   };
 
   const filteredItems = items.filter((item) => {
-    const matchesSearch = item.item_name
+    const matchesSearch = (item.item_name || "")
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
     const matchesCategory =
@@ -75,19 +81,18 @@ export default function InventoryListPage() {
       <main className="app-main">
         <div className="page">
           <header className="page-header">
-  <h1>Inventory</h1>
+            <h1>Inventory</h1>
 
-  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-    <Notifications onOpenItem={(id) => navigate(`/inventory/${id}`)} />
-    <button
-      className="primary-button"
-      onClick={() => navigate("/inventory/add")}
-    >
-      Add New Item
-    </button>
-  </div>
-</header>
-
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <Notifications onOpenItem={(id) => navigate(`/inventory/${id}`)} />
+              <button
+                className="primary-button"
+                onClick={() => navigate("/inventory/add")}
+              >
+                Add New Item
+              </button>
+            </div>
+          </header>
 
           {/* Search and Filter */}
           <div className="inventory-controls">
@@ -129,50 +134,58 @@ export default function InventoryListPage() {
                     <th>Category</th>
                     <th>Quantity</th>
                     <th>Minimum Stock</th>
+                    <th>Price / Unit</th>
+                    <th>Total Value</th>
                     <th>Supplier</th>
                     <th>Expiration Date</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredItems.map((item) => (
-                    <tr key={item.id}>
-                      <td>{item.item_name}</td>
-                      <td>{item.category_name || "—"}</td>
-                      <td>
-                        <span
-                          className={
-                            item.quantity <= item.minimum_stock
-                              ? "stock-low"
-                              : "stock-ok"
-                          }
-                        >
-                          {item.quantity}
-                        </span>
-                      </td>
-                      <td>{item.minimum_stock}</td>
-                      <td>{item.supplier || "—"}</td>
-                      <td>{item.expiration_date || "N/A"}</td>
-                      <td className="actions-cell">
-                        <button
-                          className="link-button"
-                          onClick={() => navigate(`/inventory/${item.id}`)}
-                        >
-                          View
-                        </button>
-                        {" | "}
-                        <button
-                          className="link-button"
-                          onClick={() => handleDelete(item.id)}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredItems.map((item) => {
+                    const price = Number(item.price_per_unit ?? item.price ?? 0);
+                    const totalValue = (Number(item.quantity || 0) * (isNaN(price) ? 0 : price));
+                    return (
+                      <tr key={item.id}>
+                        <td>{item.item_name}</td>
+                        <td>{item.category_name || "—"}</td>
+                        <td>
+                          <span
+                            className={
+                              item.quantity <= item.minimum_stock
+                                ? "stock-low"
+                                : "stock-ok"
+                            }
+                          >
+                            {item.quantity}
+                          </span>
+                        </td>
+                        <td>{item.minimum_stock}</td>
+                        <td>{isNaN(price) ? "—" : currency.format(price)}</td>
+                        <td>{currency.format(totalValue)}</td>
+                        <td>{item.supplier || "—"}</td>
+                        <td>{item.expiration_date || "N/A"}</td>
+                        <td className="actions-cell">
+                          <button
+                            className="link-button"
+                            onClick={() => navigate(`/inventory/${item.id}`)}
+                          >
+                            View
+                          </button>
+                          {" | "}
+                          <button
+                            className="link-button"
+                            onClick={() => handleDelete(item.id)}
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {filteredItems.length === 0 && (
                     <tr>
-                      <td colSpan={7} style={{ textAlign: "center", padding: 16 }}>
+                      <td colSpan={9} style={{ textAlign: "center", padding: 16 }}>
                         No inventory items found.
                       </td>
                     </tr>

@@ -366,6 +366,9 @@ class InventoryItem(db.Model):
     notes = db.Column(db.Text)
     last_updated = db.Column(db.String(20))
 
+    # NEW: price per unit (nullable, numeric stored as float)
+    price_per_unit = db.Column(db.Float, nullable=True)
+
     category = db.relationship("InventoryCategory", backref="items")
 
     def to_dict(self):
@@ -380,7 +383,9 @@ class InventoryItem(db.Model):
             "expiration_date": self.expiration_date,
             "notes": self.notes,
             "last_updated": self.last_updated,
+            "price_per_unit": float(self.price_per_unit) if self.price_per_unit is not None else None,
         }
+
 
 
 # ---------- DB SEED ----------

@@ -209,3 +209,74 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* === Inventory: wider form layout (paste into inventory.css) === */
+
+/* Make the page container a bit wider on desktop */
+.page {
+  max-width: 1200px; /* increase container width for inventory pages */
+  margin: 0 auto;
+}
+
+/* Make the form card wider and center it */
+.card.form-card {
+  max-width: 1000px;    /* wider form */
+  margin: 0 auto;       /* center */
+  padding: 20px 28px;   /* slightly more padding */
+  box-shadow: 0 2px 8px rgba(16,24,40,0.04);
+}
+
+/* If you have a separate wrapper for the form, ensure it stretches */
+.form-card form {
+  max-width: 100%;
+  width: 100%;
+}
+
+/* Allow form rows to use more horizontal space */
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+/* For details view where you had a 2-column grid, allow more columns on wide screens */
+@media (min-width: 1100px) {
+  /* show three columns for item info when there is space */
+  .form-card .item-info-grid,
+  .form-card > .item-info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+}
+
+/* Keep mobile/tablet friendly: stack on narrow screens */
+@media (max-width: 900px) {
+  .card.form-card {
+    padding: 14px;
+  }
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  .form-card .item-info-grid,
+  .form-card > .item-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* tweak table cell so the details view doesn't overflow */
+.card.form-card table,
+.card.form-card .appt-table {
+  width: 100%;
+  table-layout: auto;
+  word-break: break-word;
+}
+
+/* small visual tweak for inputs to fill horizontal space nicely */
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+

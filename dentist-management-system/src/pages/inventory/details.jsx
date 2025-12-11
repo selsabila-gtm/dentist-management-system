@@ -1,10 +1,15 @@
-// src/pages/inventory/details.jsx
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import "./inventory.css";
 
 const API_BASE = "http://127.0.0.1:5000";
+
+const currency = new Intl.NumberFormat(undefined, {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 2,
+});
 
 export default function InventoryDetailsPage() {
   const navigate = useNavigate();
@@ -23,18 +28,20 @@ export default function InventoryDetailsPage() {
     supplier: "",
     expiration_date: "",
     notes: "",
+    price_per_unit: "", // new field
   });
 
   useEffect(() => {
     fetchCategories();
     fetchItem();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchCategories = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/inventory/categories`);
       const data = await res.json();
-      setCategories(data);
+      setCategories(data || []);
     } catch (err) {
       console.error("Error fetching categories:", err);
     }
@@ -50,11 +57,12 @@ export default function InventoryDetailsPage() {
       setFormData({
         item_name: data.item_name || "",
         category_id: data.category_id || "",
-        quantity: data.quantity || 0,
-        minimum_stock: data.minimum_stock || 0,
+        quantity: data.quantity ?? 0,
+        minimum_stock: data.minimum_stock ?? 0,
         supplier: data.supplier || "",
         expiration_date: data.expiration_date || "",
         notes: data.notes || "",
+        price_per_unit: data.price_per_unit ?? data.price ?? "", // accept either field
       });
     } catch (err) {
       setError(err.message || "Failed to load item");
@@ -101,6 +109,12 @@ export default function InventoryDetailsPage() {
       return;
     }
 
+    if (formData.price_per_unit !== "" && (isNaN(formData.price_per_unit) || parseFloat(formData.price_per_unit) < 0)) {
+      setError("Please enter a valid non-negative price per unit");
+      setSaving(false);
+      return;
+    }
+
     try {
       const res = await fetch(`${API_BASE}/api/inventory/${id}`, {
         method: "PUT",
@@ -111,6 +125,7 @@ export default function InventoryDetailsPage() {
           ...formData,
           quantity: parseInt(formData.quantity),
           minimum_stock: parseInt(formData.minimum_stock),
+          price_per_unit: formData.price_per_unit === "" ? null : parseFloat(formData.price_per_unit),
         }),
       });
 
@@ -171,6 +186,8 @@ export default function InventoryDetailsPage() {
 
   const categoryName = categories.find((c) => c.id === parseInt(formData.category_id))?.name || "N/A";
   const isLowStock = parseInt(formData.quantity) <= parseInt(formData.minimum_stock);
+  const price = parseFloat(formData.price_per_unit);
+  const totalValue = (Number(formData.quantity || 0) * (isNaN(price) ? 0 : price));
 
   return (
     <div className="app-layout">
@@ -273,6 +290,20 @@ export default function InventoryDetailsPage() {
                 </div>
 
                 <div className="form-group">
+                  <label htmlFor="price_per_unit">Price per Unit</label>
+                  <input
+                    type="number"
+                    id="price_per_unit"
+                    name="price_per_unit"
+                    value={formData.price_per_unit}
+                    onChange={handleChange}
+                    min="0"
+                    step="0.01"
+                  />
+                  <small style={{ color: "#6b7280" }}>Optional. Use for inventory valuation.</small>
+                </div>
+
+                <div className="form-group">
                   <label htmlFor="supplier">Supplier</label>
                   <input
                     type="text"
@@ -330,8 +361,8 @@ export default function InventoryDetailsPage() {
                   <h3 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "16px" }}>
                     Item Information
                   </h3>
-                  
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+
+                  <div className="item-info-grid" style={{ gap: "16px" }}>
                     <div>
                       <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "4px" }}>Item Name</p>
                       <p style={{ fontSize: "15px", fontWeight: "500" }}>{formData.item_name}</p>
@@ -359,6 +390,16 @@ export default function InventoryDetailsPage() {
                     <div>
                       <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "4px" }}>Minimum Stock</p>
                       <p style={{ fontSize: "15px", fontWeight: "500" }}>{formData.minimum_stock}</p>
+                    </div>
+
+                    <div>
+                      <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "4px" }}>Price per Unit</p>
+                      <p style={{ fontSize: "15px", fontWeight: "500" }}>{isNaN(price) ? "N/A" : currency.format(price)}</p>
+                    </div>
+
+                    <div>
+                      <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "4px" }}>Total Value</p>
+                      <p style={{ fontSize: "15px", fontWeight: "500" }}>{currency.format(totalValue)}</p>
                     </div>
 
                     <div>

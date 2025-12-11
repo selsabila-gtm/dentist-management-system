@@ -1,4 +1,3 @@
-// src/pages/inventory/add.jsx
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../../components/Sidebar/Sidebar";
@@ -20,6 +19,7 @@ export default function InventoryAddPage() {
     supplier: "",
     expiration_date: "",
     notes: "",
+    price_per_unit: "", // new field
   });
 
   // modal state
@@ -78,7 +78,6 @@ export default function InventoryAddPage() {
   const validateCategoryName = (name) => {
     if (!name || !name.trim()) return "Category name is required.";
     if (name.trim().length < 2) return "Category name must be at least 2 characters.";
-    // duplicate check (case-insensitive)
     const exists = categories.some((c) => (c.name || "").toLowerCase() === name.trim().toLowerCase());
     if (exists) return "A category with that name already exists.";
     return "";
@@ -100,14 +99,12 @@ export default function InventoryAddPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        // server-side validation error
         const serverErr = data && (data.error || data.detail);
         setCategoryError(serverErr || "Failed to create category");
         setAddingCategory(false);
         return;
       }
 
-      // success: append, auto-select, close modal
       setCategories((prev) => [...prev, data]);
       setFormData((prev) => ({ ...prev, category_id: String(data.id) }));
       closeModal();
@@ -148,12 +145,20 @@ export default function InventoryAddPage() {
       return;
     }
 
+    // price_per_unit validation: optional but if provided must be a non-negative number
+    if (formData.price_per_unit !== "" && (isNaN(formData.price_per_unit) || parseFloat(formData.price_per_unit) < 0)) {
+      setError("Please enter a valid non-negative price per unit");
+      setLoading(false);
+      return;
+    }
+
     try {
       const body = {
         ...formData,
         quantity: parseInt(formData.quantity),
         minimum_stock: parseInt(formData.minimum_stock),
         category_id: formData.category_id ? parseInt(formData.category_id) : null,
+        price_per_unit: formData.price_per_unit === "" ? null : parseFloat(formData.price_per_unit),
       };
 
       const res = await fetch(`${API_BASE}/api/inventory`, {
@@ -276,6 +281,22 @@ export default function InventoryAddPage() {
                     required
                   />
                 </div>
+              </div>
+
+              {/* Price per unit */}
+              <div className="form-group">
+                <label htmlFor="price_per_unit">Price per Unit</label>
+                <input
+                  type="number"
+                  id="price_per_unit"
+                  name="price_per_unit"
+                  value={formData.price_per_unit}
+                  onChange={handleChange}
+                  placeholder="e.g. 12.50"
+                  min="0"
+                  step="0.01"
+                />
+                <small style={{ color: "#6b7280" }}>Optional. Leave empty if not tracked.</small>
               </div>
 
               {/* Supplier */}
