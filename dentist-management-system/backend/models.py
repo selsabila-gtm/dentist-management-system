@@ -1,5 +1,4 @@
 # backend/models.py
-
 import os
 import json
 from datetime import datetime
@@ -8,7 +7,6 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash
 
 # ---------- CONFIG (shared) ----------
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 INSTANCE_DIR = os.path.join(BASE_DIR, "instance")
@@ -25,11 +23,9 @@ ALLOWED_PDF_EXT = {"pdf"}
 MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB
 
 # ---------- DB EXTENSION (single instance) ----------
-
 db = SQLAlchemy()
 
 # ---------- HELPERS ----------
-
 def allowed_file(filename, doc_type):
     if "." not in filename:
         return False
@@ -58,7 +54,6 @@ def dumps_field(value):
 
 
 # ---------- MODELS ----------
-
 class Role(db.Model):
     __tablename__ = "roles"
     id = db.Column(db.Integer, primary_key=True)
@@ -91,7 +86,7 @@ class Staff(db.Model):
     role = db.relationship("Role", backref="staff_members")
 
     # permissions & schedule
-    permissions = db.Column(db.Text)
+    permissions = db.Column(db.Text)  # JSON string
     availability = db.Column(db.String(50))
     days_available = db.Column(db.String(100))
     hours = db.Column(db.String(100))
@@ -133,10 +128,10 @@ class Patient(db.Model):
     phone = db.Column(db.String(50))
     email = db.Column(db.String(150))
     gender = db.Column(db.String(20))
-    adress = db.Column(db.String(255))
+    address = db.Column(db.String(255))
     insurance_provider = db.Column(db.String(150))
     insurance_policy_number = db.Column(db.String(100))
-    groupe_number = db.Column(db.String(100))
+    group_number = db.Column(db.String(100))
 
     def to_dict(self):
         return {
@@ -147,10 +142,10 @@ class Patient(db.Model):
             "phone": self.phone,
             "email": self.email,
             "gender": self.gender,
-            "adress": self.adress,
+            "address": self.address,
             "insurance_provider": self.insurance_provider,
             "insurance_policy_number": self.insurance_policy_number,
-            "groupe_number": self.groupe_number,
+            "group_number": self.group_number,
         }
 
 
@@ -160,6 +155,7 @@ class Appointment(db.Model):
     date = db.Column(db.String(20))
     time = db.Column(db.String(20))
 
+    # display name strings (used by routes + frontend)
     patient = db.Column(db.String(200))
     dentist = db.Column(db.String(200))
 
@@ -167,6 +163,10 @@ class Appointment(db.Model):
     dentist_id = db.Column(db.Integer, db.ForeignKey("staff.id"), nullable=True)
     procedure = db.Column(db.String(200))
     status = db.Column(db.String(20), default="scheduled")
+
+    # NEW: cost of this appointment / visit
+    cost = db.Column(db.Float, default=0.0)
+
     summary_id = db.Column(db.Integer, db.ForeignKey("summaries.id"), nullable=True)
 
     summary = db.relationship(
@@ -189,6 +189,7 @@ class Appointment(db.Model):
             "procedure": self.procedure,
             "status": self.status,
             "summary_id": self.summary_id,
+            "cost": self.cost,
         }
 
 
@@ -197,9 +198,9 @@ class Summary(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     appointment_id = db.Column(db.Integer, db.ForeignKey("appointments.id"))
     notes = db.Column(db.Text)
-    prescriptions = db.Column(db.Text)
-    documents = db.Column(db.Text)
-    inventory = db.Column(db.Text)
+    prescriptions = db.Column(db.Text)  # JSON list
+    documents = db.Column(db.Text)  # JSON list of docs
+    inventory = db.Column(db.Text)  # JSON list
 
     appointment = db.relationship(
         "Appointment",
@@ -245,7 +246,7 @@ class MedicalDocument(db.Model):
     name = db.Column(db.String(200))
     date = db.Column(db.String(20))
     doc_type = db.Column(db.String(100))
-    file_path = db.Column(db.String(300), nullable=True)
+    file_path = db.Column(db.String(300), nullable=True)  # optional path
 
     def to_dict(self):
         return {
@@ -302,8 +303,43 @@ class TreatmentPlan(db.Model):
         }
 
 
-# ---------- INVENTORY MODELS ----------
+class Invoice(db.Model):
+    __tablename__ = "invoices"
 
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey("patients.id"), nullable=False)
+    appointment_id = db.Column(db.Integer, db.ForeignKey("appointments.id"), nullable=True)
+
+    invoice_number = db.Column(db.String(50), unique=True)
+    date = db.Column(db.String(20))
+    due_date = db.Column(db.String(20))
+
+    # Amount of this invoice = amount actually charged / paid now (partial payment)
+    amount = db.Column(db.Float, default=0.0)
+
+    # relationships
+    patient = db.relationship("Patient", backref="invoices")
+    appointment = db.relationship("Appointment", backref="invoices")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "patient_id": self.patient_id,
+            "appointment_id": self.appointment_id,
+            "invoice_number": self.invoice_number,
+            "date": self.date,
+            "due_date": self.due_date,
+            "amount": self.amount,
+            "patient_name": (
+                self.patient.full_name
+                or f"{self.patient.first_name or ''} {self.patient.last_name or ''}".strip()
+                if self.patient
+                else None
+            ),
+        }
+
+
+# ---------- INVENTORY MODELS ----------
 class InventoryCategory(db.Model):
     __tablename__ = "inventory_categories"
     id = db.Column(db.Integer, primary_key=True)
@@ -348,8 +384,9 @@ class InventoryItem(db.Model):
 
 
 # ---------- DB SEED ----------
-
 def seed_initial_data():
+    # Called with app context
+    # Roles
     if Role.query.count() == 0:
         roles = [
             Role(name="Admin"),
@@ -360,6 +397,7 @@ def seed_initial_data():
         db.session.add_all(roles)
         db.session.commit()
 
+    # Staff
     if Staff.query.count() == 0:
         dentist_role = Role.query.filter_by(name="Dentist").first()
         admin_role = Role.query.filter_by(name="Admin").first()
@@ -396,6 +434,7 @@ def seed_initial_data():
         db.session.add_all(staff_items)
         db.session.commit()
 
+    # Patients
     if Patient.query.count() == 0:
         p = Patient(
             full_name="John Doe",
@@ -422,6 +461,7 @@ def seed_initial_data():
         db.session.add_all([p, p2, p3])
         db.session.commit()
 
+    # Appointments
     if Appointment.query.count() == 0:
         sophia = Patient.query.filter_by(first_name="Sophia").first()
         ethan = Patient.query.filter_by(first_name="Ethan").first()
@@ -435,6 +475,7 @@ def seed_initial_data():
                 dentist="Dr. Sarah Miller",
                 procedure="Routine Checkup",
                 status="scheduled",
+                cost=150.0,
             ),
             Appointment(
                 date="2025-11-26",
@@ -444,11 +485,13 @@ def seed_initial_data():
                 dentist="Dr. David Lee",
                 procedure="Teeth Cleaning",
                 status="scheduled",
+                cost=200.0,
             ),
         ]
         db.session.add_all(appts)
         db.session.commit()
 
+    # Medical record / prescriptions / treatment plans for John Doe
     john = Patient.query.filter_by(full_name="John Doe").first()
     if john and MedicalRecord.query.filter_by(patient_id=john.id).count() == 0:
         record = MedicalRecord(
@@ -458,6 +501,7 @@ def seed_initial_data():
             medications="Ibuprofen",
         )
         db.session.add(record)
+
     if john and Prescription.query.filter_by(patient_id=john.id).count() == 0:
         presc = Prescription(
             patient_id=john.id,
@@ -468,6 +512,7 @@ def seed_initial_data():
             prescribing_dentist="Dr. Sarah Miller",
         )
         db.session.add(presc)
+
     if john and TreatmentPlan.query.filter_by(patient_id=john.id).count() == 0:
         t = TreatmentPlan(
             patient_id=john.id,
@@ -479,7 +524,7 @@ def seed_initial_data():
         )
         db.session.add(t)
 
-    # Seed inventory categories
+    # Inventory categories
     if InventoryCategory.query.count() == 0:
         categories = [
             InventoryCategory(name="Consumables", description="Single-use items"),
@@ -491,7 +536,7 @@ def seed_initial_data():
         db.session.add_all(categories)
         db.session.commit()
 
-    # Seed inventory items
+    # Inventory items
     if InventoryItem.query.count() == 0:
         consumables = InventoryCategory.query.filter_by(name="Consumables").first()
         medications = InventoryCategory.query.filter_by(name="Medications").first()
@@ -526,4 +571,5 @@ def seed_initial_data():
         db.session.add_all(items)
         db.session.commit()
 
+    # final commit if any leftover
     db.session.commit()
