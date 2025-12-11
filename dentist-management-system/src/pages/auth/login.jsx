@@ -38,14 +38,22 @@ export default function LoginPage() {
       });
 
       const data = await res.json();
+      console.log("Login response:", data); // Debug log
 
       if (!res.ok || !data.success) {
         alert(data.message || "Invalid username or password.");
         return;
       }
 
-      // success → go to staff dashboard
-      navigate("/staff");
+      // Store user info in localStorage
+      localStorage.setItem("staff_id", data.staff_id);
+      localStorage.setItem("username", data.username);
+      localStorage.setItem("role", data.role || "");
+
+      console.log("Login successful, redirecting..."); // Debug log
+
+      // Success → force redirect to dashboard using window.location
+      window.location.href = "/dashboard";
     } catch (err) {
       console.error(err);
       alert("Could not connect to server.");

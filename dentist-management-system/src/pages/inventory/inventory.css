@@ -1,0 +1,211 @@
+/* src/pages/inventory/inventory.css */
+
+.inventory-controls {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  align-items: center;
+}
+
+.search-box {
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  font-size: 16px;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 10px 12px 10px 36px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  background-color: white;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: #1A73F0;
+}
+
+.category-filter {
+  padding: 10px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  background-color: white;
+  cursor: pointer;
+  min-width: 200px;
+}
+
+.category-filter:focus {
+  outline: none;
+  border-color: #1A73F0;
+}
+
+/* Stock status indicators */
+.stock-low {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.stock-ok {
+  color: #16a34a;
+}
+
+/* Form Styles */
+.form-card {
+  max-width: 600px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background-color: white;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #1A73F0;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.error-banner {
+  background-color: #fee2e2;
+  color: #dc2626;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.add-category-box {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.category-input {
+  flex: 1;
+  padding: 8px;
+}
+
+/* Modal overlay + box */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  padding: 20px;
+}
+
+.modal {
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+  box-sizing: border-box;
+}
+
+.modal h2 {
+  margin: 0 0 8px 0;
+  font-size: 1.25rem;
+}
+
+/* Small tweaks */
+.field-error {
+  margin-top: 8px;
+  color: #b00020;
+  font-size: 0.9rem;
+}
+
+.add-category-box {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.category-input {
+  flex: 1;
+  padding: 8px;
+}
+
+/* Keep modal inputs visually consistent */
+.modal input[type="text"] {
+  width: 100%;
+  padding: 8px 10px;
+  margin-top: 6px;
+  box-sizing: border-box;
+}
+
+/* Slightly style primary/secondary buttons if they don't exist */
+.primary-button {
+  background: #2b6cb0;
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.secondary-button {
+  background: #eef2f7;
+  color: #111;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.primary-button[disabled],
+.secondary-button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

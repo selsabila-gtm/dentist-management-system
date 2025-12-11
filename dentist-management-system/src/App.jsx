@@ -3,53 +3,104 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
 
-// Staff pages
-import StaffListPage from "./pages/staff/list.jsx";
-import StaffAddPage from "./pages/staff/add.jsx";
-import LoginPage from "./pages/staff/login";
-import ResetPasswordPage from "./pages/staff/resetPassword";
-import ChangePasswordPage from "./pages/staff/changePassword.jsx";
-import StaffProfilePage from "./pages/staff/profile.jsx";
+// Auth pages
+import LoginPage from "./pages/auth/login";
+import DashboardPage from "./pages/dashboard/dashboard";
 
-// Patient pages
-import MedicalRecordsPage from "./pages/patients/MedicalRecords.jsx";
-import PrescriptionsPage from "./pages/patients/Prescriptions.jsx";
-import TreatmentPlansPage from "./pages/patients/TreatmentPlans.jsx";
+// Inventory pages
+import InventoryListPage from "./pages/inventory/list";
+import InventoryAddPage from "./pages/inventory/add";
+import InventoryDetailsPage from "./pages/inventory/details";
+
+// Calendar pages
+import Calendar from "./pages/appointments/calendar";
+
+import Staff from "./pages/staff/list";
+
+// Protected Route Component
+function ProtectedRoute({ children }) {
+  const staffId = localStorage.getItem("staff_id");
+  
+  if (!staffId) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return children;
+}
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Home: redirect to staff list (change to patients if you want) */}
-        <Route path="/" element={<Navigate to="/staff" replace />} />
-
-        {/* Staff management */}
+        {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/staff" element={<StaffListPage />} />
-        <Route path="/staff/add" element={<StaffAddPage />} />
-        <Route path="/staff/:id" element={<StaffProfilePage />} />
+
+        {/* Protected routes */}
         <Route
-          path="/staff/:id/password"
-          element={<ChangePasswordPage />}
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Navigate to="/dashboard" replace />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          }
         />
 
-        {/* Patient pages */}
+        {/* Inventory routes */}
         <Route
-          path="/patients/medical-records"
-          element={<MedicalRecordsPage />}
+          path="/inventory"
+          element={
+            <ProtectedRoute>
+              <InventoryListPage />
+            </ProtectedRoute>
+          }
         />
+        
         <Route
-          path="/patients/prescriptions"
-          element={<PrescriptionsPage />}
+          path="/inventory/add"
+          element={
+            <ProtectedRoute>
+              <InventoryAddPage />
+            </ProtectedRoute>
+          }
         />
+        
         <Route
-          path="/patients/treatment-plans"
-          element={<TreatmentPlansPage />}
+          path="/inventory/:id"
+          element={
+            <ProtectedRoute>
+              <InventoryDetailsPage />
+            </ProtectedRoute>
+          }
         />
 
-        {/* Fallback: unknown routes -> staff */}
-        <Route path="*" element={<Navigate to="/staff" replace />} />
+        {/* Calendar routes */}
+        <Route
+          path="/calendar"
+          element={
+            <ProtectedRoute>
+              <Calendar />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Placeholder routes for other sections */}
+        <Route path="/staff" element={<ProtectedRoute><Staff /></ProtectedRoute>} />
+        <Route path="/patients" element={<ProtectedRoute><div>Patients Page (Coming Soon)</div></ProtectedRoute>} />
+        <Route path="/billing" element={<ProtectedRoute><div>Billing Page (Coming Soon)</div></ProtectedRoute>} />
+        <Route path="/reports" element={<ProtectedRoute><div>Reports Page (Coming Soon)</div></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><div>Settings Page (Coming Soon)</div></ProtectedRoute>} />
+        
+        {/* Fallback route */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   );
