@@ -9,32 +9,29 @@ export default function PostSummary() {
   const navigate = useNavigate();
 
   const [notes, setNotes] = useState("");
+  const [cost, setCost] = useState("");  // NEW: Cost field
 
   const [prescriptions, setPrescriptions] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [documents, setDocuments] = useState([]);
 
-  // Editing states
   const [editingPresc, setEditingPresc] = useState(null);
   const [editingInv, setEditingInv] = useState(null);
 
-  // For adding NEW prescriptions / inventory
   const [newPresc, setNewPresc] = useState(null);
   const [newInv, setNewInv] = useState(null);
 
-  // Document upload UI
   const [showDocRow, setShowDocRow] = useState(false);
   const [docName, setDocName] = useState("");
   const [docType, setDocType] = useState("pdf");
   const [docFile, setDocFile] = useState(null);
 
-  // Track if this appointment already had a summary before opening this page
   const [hasExistingSummary, setHasExistingSummary] = useState(false);
-  
-  // NEW: Use ref to track if user actually saved
   const userSavedRef = useRef(false);
+  
+  // Error states
+  const [errors, setErrors] = useState({});
 
-  // Load existing summary
   useEffect(() => {
     fetch(`${API_BASE}/api/appointments/${id}/summary`)
       .then((res) => res.json())
@@ -43,22 +40,21 @@ export default function PostSummary() {
         if (data.prescriptions) setPrescriptions(data.prescriptions);
         if (data.documents) setDocuments(data.documents);
         if (data.inventory) setInventory(data.inventory);
+        if (data.cost !== undefined) setCost(String(data.cost));
 
-        // Was there already some content? (then it's an old completed appointment)
         const existed =
           (data.notes && data.notes.trim() !== "") ||
           (data.prescriptions && data.prescriptions.length > 0) ||
           (data.documents && data.documents.length > 0) ||
-          (data.inventory && data.inventory.length > 0);
+          (data.inventory && data.inventory.length > 0) ||
+          (data.cost && data.cost > 0);
 
         setHasExistingSummary(existed);
       });
   }, [id]);
 
-  // NEW: Cleanup on unmount - revert to scheduled if user didn't save
   useEffect(() => {
     return () => {
-      // Only revert if this was a new summary AND user didn't click save
       if (!hasExistingSummary && !userSavedRef.current) {
         fetch(`${API_BASE}/api/appointments/${id}/status`, {
           method: "PUT",
@@ -69,10 +65,7 @@ export default function PostSummary() {
     };
   }, [id, hasExistingSummary]);
 
-  /* ------------------------------------------------------ */
-  /*                   PRESCRIPTIONS                        */
-  /* ------------------------------------------------------ */
-
+  /* PRESCRIPTIONS */
   function startEditPresc(index) {
     setEditingPresc({
       index,
@@ -89,12 +82,8 @@ export default function PostSummary() {
   }
 
   function saveNewPrescription() {
-    if (
-      !newPresc.name.trim() ||
-      !newPresc.dosage.trim() ||
-      !newPresc.instructions.trim()
-    ) {
-      alert("All fields are required.");
+    if (!newPresc.name.trim() || !newPresc.dosage.trim() || !newPresc.instructions.trim()) {
+      alert("All prescription fields are required.");
       return;
     }
 
@@ -115,12 +104,8 @@ export default function PostSummary() {
   }
 
   function saveEditPresc() {
-    if (
-      !editingPresc.name.trim() ||
-      !editingPresc.dosage.trim() ||
-      !editingPresc.instructions.trim()
-    ) {
-      alert("All fields are required.");
+    if (!editingPresc.name.trim() || !editingPresc.dosage.trim() || !editingPresc.instructions.trim()) {
+      alert("All prescription fields are required.");
       return;
     }
 
@@ -143,10 +128,7 @@ export default function PostSummary() {
     setPrescriptions((prev) => prev.filter((_, i) => i !== index));
   }
 
-  /* ------------------------------------------------------ */
-  /*                       INVENTORY                        */
-  /* ------------------------------------------------------ */
-
+  /* INVENTORY */
   function startEditInv(index) {
     setEditingInv({
       index,
@@ -206,10 +188,7 @@ export default function PostSummary() {
     setInventory((prev) => prev.filter((_, i) => i !== index));
   }
 
-  /* ------------------------------------------------------ */
-  /*                       DOCUMENTS                        */
-  /* ------------------------------------------------------ */
-
+  /* DOCUMENTS */
   function handleUploadDocument() {
     if (!docName.trim()) return alert("Document name required.");
     if (!docFile) return alert("Choose a file.");
@@ -231,8 +210,6 @@ export default function PostSummary() {
         }
 
         setDocuments(data.documents);
-
-        // reset fields
         setDocName("");
         setDocFile(null);
         setShowDocRow(false);
@@ -250,20 +227,28 @@ export default function PostSummary() {
     setDocuments((prev) => prev.filter((_, i) => i !== index));
   }
 
-  /* ------------------------------------------------------ */
-  /*                     SAVE SUMMARY                       */
-  /* ------------------------------------------------------ */
-
+  /* SAVE SUMMARY */
   function saveSummary() {
-    // Block saving if EVERYTHING is empty
-    const hasContent =
-      (notes && notes.trim() !== "") ||
-      prescriptions.length > 0 ||
-      documents.length > 0 ||
-      inventory.length > 0;
+    const newErrors = {};
 
-    if (!hasContent) {
-      alert("Please fill at least one field before saving the summary.");
+    // Cost validation - REQUIRED
+    if (!cost || cost.trim() === "") {
+      newErrors.cost = "Cost is required";
+    } else {
+      const costValue = parseFloat(cost);
+      if (isNaN(costValue) || costValue < 0) {
+        newErrors.cost = "Cost must be a positive number";
+      }
+    }
+
+    // Inventory validation - REQUIRED (at least one item)
+    if (inventory.length === 0) {
+      newErrors.inventory = "At least one inventory item is required";
+    }
+
+    // Show errors if validation fails
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
@@ -272,6 +257,7 @@ export default function PostSummary() {
       prescriptions,
       documents,
       inventory,
+      cost: parseFloat(cost),
     };
 
     fetch(`${API_BASE}/api/appointments/${id}/summary`, {
@@ -280,41 +266,31 @@ export default function PostSummary() {
       body: JSON.stringify(payload),
     })
       .then(() => {
-        // Mark that user successfully saved
         userSavedRef.current = true;
-        // backend sets status = completed here
         navigate("/calendar");
       })
-      .catch(() => alert("Failed to save summary"));
-  }
-
-  /* ------------------------------------------------------ */
-  /*                     CANCEL LOGIC                       */
-  /* ------------------------------------------------------ */
-
-  function handleCancel() {
-  // Prevent cleanup from running
-  userSavedRef.current = true;
-
-  if (!hasExistingSummary) {
-    fetch(`${API_BASE}/api/appointments/${id}/status`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "scheduled" }),
-    })
-      .finally(() => {
-        navigate("/calendar");
+      .catch(() => {
+        setErrors({ submit: "Failed to save summary. Please try again." });
       });
-  } else {
-    navigate("/calendar");
   }
-}
 
+  /* CANCEL */
+  function handleCancel() {
+    userSavedRef.current = true;
 
-
-  /* ------------------------------------------------------ */
-  /*                     RENDER UI                          */
-  /* ------------------------------------------------------ */
+    if (!hasExistingSummary) {
+      fetch(`${API_BASE}/api/appointments/${id}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "scheduled" }),
+      })
+        .finally(() => {
+          navigate("/calendar");
+        });
+    } else {
+      navigate("/calendar");
+    }
+  }
 
   return (
     <div className="page summary-page">
@@ -327,12 +303,32 @@ export default function PostSummary() {
           className="notes-textarea"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
+          placeholder="Enter appointment notes..."
         />
       </section>
 
-      {/* ------------------------------------------------------ */}
-      {/*                     PRESCRIPTIONS                      */}
-      {/* ------------------------------------------------------ */}
+      {/* COST - NEW SECTION */}
+      <section className="card summary-section">
+        <h2>Appointment Cost *</h2>
+        <div className="cost-input-wrapper">
+          <span className="cost-currency">$</span>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            className={`cost-input ${errors.cost ? 'error' : ''}`}
+            value={cost}
+            onChange={(e) => {
+              setCost(e.target.value);
+              setErrors(prev => ({ ...prev, cost: undefined }));
+            }}
+            placeholder="0.00"
+          />
+        </div>
+        {errors.cost && <div className="error-message">{errors.cost}</div>}
+      </section>
+
+      {/* PRESCRIPTIONS */}
       <section className="card summary-section">
         <h2>Prescriptions</h2>
 
@@ -347,7 +343,6 @@ export default function PostSummary() {
           </thead>
 
           <tbody>
-            {/* Existing Rows */}
             {prescriptions.map((p, idx) =>
               editingPresc && editingPresc.index === idx ? (
                 <tr key={idx}>
@@ -412,7 +407,6 @@ export default function PostSummary() {
               )
             )}
 
-            {/* New Prescription Row */}
             {newPresc && (
               <tr>
                 <td>
@@ -422,6 +416,7 @@ export default function PostSummary() {
                     onChange={(e) =>
                       setNewPresc({ ...newPresc, name: e.target.value })
                     }
+                    placeholder="Medication name"
                   />
                 </td>
 
@@ -432,6 +427,7 @@ export default function PostSummary() {
                     onChange={(e) =>
                       setNewPresc({ ...newPresc, dosage: e.target.value })
                     }
+                    placeholder="Dosage"
                   />
                 </td>
 
@@ -442,6 +438,7 @@ export default function PostSummary() {
                     onChange={(e) =>
                       setNewPresc({ ...newPresc, instructions: e.target.value })
                     }
+                    placeholder="Instructions"
                   />
                 </td>
 
@@ -456,6 +453,14 @@ export default function PostSummary() {
                 </td>
               </tr>
             )}
+
+            {prescriptions.length === 0 && !newPresc && (
+              <tr>
+                <td colSpan={4} style={{ textAlign: "center", color: "#94a3b8" }}>
+                  No prescriptions added yet.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
 
@@ -464,9 +469,7 @@ export default function PostSummary() {
         </button>
       </section>
 
-      {/* ------------------------------------------------------ */}
-      {/*                        DOCUMENTS                       */}
-      {/* ------------------------------------------------------ */}
+      {/* DOCUMENTS */}
       <section className="card summary-section">
         <h2>Documents</h2>
 
@@ -552,11 +555,10 @@ export default function PostSummary() {
         )}
       </section>
 
-      {/* ------------------------------------------------------ */}
-      {/*                        INVENTORY                       */}
-      {/* ------------------------------------------------------ */}
+      {/* INVENTORY */}
       <section className="card summary-section">
-        <h2>Inventory Used</h2>
+        <h2>Inventory Used *</h2>
+        {errors.inventory && <div className="error-message">{errors.inventory}</div>}
 
         <table className="appointments-table">
           <thead>
@@ -568,7 +570,6 @@ export default function PostSummary() {
           </thead>
 
           <tbody>
-            {/* Existing rows */}
             {inventory.map((it, idx) =>
               editingInv && editingInv.index === idx ? (
                 <tr key={idx}>
@@ -626,7 +627,6 @@ export default function PostSummary() {
               )
             )}
 
-            {/* NEW inventory row */}
             {newInv && (
               <tr>
                 <td>
@@ -636,6 +636,7 @@ export default function PostSummary() {
                     onChange={(e) =>
                       setNewInv({ ...newInv, item: e.target.value })
                     }
+                    placeholder="Item name"
                   />
                 </td>
 
@@ -647,6 +648,7 @@ export default function PostSummary() {
                     onChange={(e) =>
                       setNewInv({ ...newInv, quantity: e.target.value })
                     }
+                    placeholder="Quantity"
                   />
                 </td>
 
@@ -661,6 +663,14 @@ export default function PostSummary() {
                 </td>
               </tr>
             )}
+
+            {inventory.length === 0 && !newInv && (
+              <tr>
+                <td colSpan={3} style={{ textAlign: "center", color: "#94a3b8" }}>
+                  No inventory items added yet.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
 
@@ -668,6 +678,9 @@ export default function PostSummary() {
           Add Item
         </button>
       </section>
+
+      {/* Submit error */}
+      {errors.submit && <div className="error-message submit-error">{errors.submit}</div>}
 
       {/* SAVE SUMMARY */}
       <div className="summary-actions">
@@ -682,11 +695,3 @@ export default function PostSummary() {
     </div>
   );
 }
-
-
-
-
-
-
-
-

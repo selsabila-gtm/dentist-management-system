@@ -8,22 +8,31 @@ export default function AddAppointment() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // extract date from URL
   const query = new URLSearchParams(location.search);
   const preselectedDate = query.get("date") || "";
 
-  // form fields
+  // State declarations
   const [patients, setPatients] = useState([]);
   const [dentists, setDentists] = useState([]);
+  const [allStaff, setAllStaff] = useState([]);
 
   const [patient, setPatient] = useState("");
   const [date, setDate] = useState(preselectedDate);
   const [time, setTime] = useState("");
   const [dentist, setDentist] = useState("");
+  const [dentistId, setDentistId] = useState("");
   const [procedure, setProcedure] = useState("");
-  const [cost, setCost] = useState("");  // NEW
   const [notes, setNotes] = useState("");
 
+  // Validation errors
+  const [errors, setErrors] = useState({});
+
+  // Dentist availability states
+  const [availableDays, setAvailableDays] = useState([]);
+  const [availableTimeRange, setAvailableTimeRange] = useState({
+    start: "08:30",
+    end: "17:00"
+  });
 
   const procedureOptions = [
     "Routine",
@@ -34,7 +43,28 @@ export default function AddAppointment() {
     "Orthodontics",
   ];
 
-  // Load patients + dentists from backend
+  // Helper function - defined before useEffect
+  function convertTo24Hour(time, period) {
+    if (!time) return "08:30";
+    
+    let [hours, minutes] = time.split(':');
+    hours = parseInt(hours);
+    
+    if (!minutes) minutes = "00";
+    
+    if (!period) {
+      return `${String(hours).padStart(2, '0')}:${minutes}`;
+    }
+    
+    if (period.toUpperCase() === 'PM' && hours !== 12) {
+      hours += 12;
+    } else if (period.toUpperCase() === 'AM' && hours === 12) {
+      hours = 0;
+    }
+    
+    return `${String(hours).padStart(2, '0')}:${minutes}`;
+  }
+
   useEffect(() => {
     fetch(`${API_BASE}/api/patients`)
       .then((res) => res.json())
@@ -43,24 +73,178 @@ export default function AddAppointment() {
     fetch(`${API_BASE}/api/staff/dentists`)
       .then((res) => res.json())
       .then((data) => setDentists(data));
+
+    fetch(`${API_BASE}/api/staff`)
+      .then((res) => res.json())
+      .then((data) => setAllStaff(data));
   }, []);
+
+  // Update available days when dentist changes
+  useEffect(() => {
+    if (!dentistId || allStaff.length === 0) {
+      if (availableDays.length > 0) setAvailableDays([]);
+      if (availableTimeRange.start !== "08:30" || availableTimeRange.end !== "17:00") {
+        setAvailableTimeRange({ start: "08:30", end: "17:00" });
+      }
+      return;
+    }
+
+    const selectedStaff = allStaff.find(s => s.id === parseInt(dentistId));
+    if (!selectedStaff) return;
+
+    let newDays = [];
+    if (selectedStaff.days_available) {
+      newDays = selectedStaff.days_available.split(",").map(d => d.trim());
+    } else {
+      newDays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Saturday"];
+    }
+
+    let newTimeRange = { start: "08:30", end: "17:00" };
+    
+    if (selectedStaff.hours) {
+      let hoursMatch = selectedStaff.hours.match(/(\d{1,2}):(\d{2})\s*(AM|PM)\s*-\s*(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+      
+      if (hoursMatch) {
+        const startTime = convertTo24Hour(`${hoursMatch[1]}:${hoursMatch[2]}`, hoursMatch[3]);
+        const endTime = convertTo24Hour(`${hoursMatch[4]}:${hoursMatch[5]}`, hoursMatch[6]);
+        newTimeRange = { start: startTime, end: endTime };
+      } else {
+        hoursMatch = selectedStaff.hours.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+        if (hoursMatch) {
+          const startTime = `${hoursMatch[1].padStart(2, '0')}:${hoursMatch[2]}`;
+          const endTime = `${hoursMatch[3].padStart(2, '0')}:${hoursMatch[4]}`;
+          newTimeRange = { start: startTime, end: endTime };
+        }
+      }
+    }
+
+    setAvailableDays(newDays);
+    setAvailableTimeRange(newTimeRange);
+    
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dentistId]);
+
+  function validateForm() {
+    const newErrors = {};
+
+    // Patient validation
+    if (!patient) {
+      newErrors.patient = "Patient is required";
+    }
+
+    // Dentist validation
+    if (!dentist) {
+      newErrors.dentist = "Dentist/Staff is required";
+    }
+
+    // Date validation
+    if (!date) {
+      newErrors.date = "Date is required";
+    } else {
+      const selectedDate = new Date(date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (selectedDate < today) {
+        newErrors.date = "Cannot schedule appointments in the past";
+      } else {
+        const dayOfWeek = selectedDate.getDay();
+        if (dayOfWeek === 5) {
+          newErrors.date = "Cannot schedule appointments on Fridays";
+        } else if (dentistId && availableDays.length > 0) {
+          const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+          const selectedDay = dayNames[dayOfWeek];
+          
+          if (!availableDays.includes(selectedDay)) {
+            newErrors.date = `Selected dentist is not available on ${selectedDay}`;
+          }
+        }
+      }
+    }
+
+    // Time validation
+    if (!time) {
+      newErrors.time = "Time is required";
+    } else {
+      const [hours, minutes] = time.split(':').map(Number);
+      const timeInMinutes = hours * 60 + minutes;
+      
+      // Always enforce 8:30 AM to 5:00 PM (08:30 to 17:00)
+      const minTime = 8 * 60 + 30; // 8:30 AM = 510 minutes
+      const maxTime = 17 * 60; // 5:00 PM = 1020 minutes
+
+      if (timeInMinutes < minTime || timeInMinutes > maxTime) {
+        newErrors.time = "Time must be between 8:30 AM and 5:00 PM";
+      } else if (dentistId) {
+        // Additionally check dentist's specific hours if more restrictive
+        const [startHours, startMinutes] = availableTimeRange.start.split(':').map(Number);
+        const startInMinutes = startHours * 60 + startMinutes;
+        
+        const [endHours, endMinutes] = availableTimeRange.end.split(':').map(Number);
+        const endInMinutes = endHours * 60 + endMinutes;
+
+        if (timeInMinutes < startInMinutes || timeInMinutes > endInMinutes) {
+          newErrors.time = `Dentist available ${availableTimeRange.start} - ${availableTimeRange.end}`;
+        }
+      }
+    }
+
+    // Procedure validation
+    if (!procedure) {
+      newErrors.procedure = "Procedure type is required";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }
+
+  function handleDentistChange(e) {
+    const selectedName = e.target.value;
+    setDentist(selectedName);
+    
+    const selectedDentist = dentists.find(d => d.name === selectedName);
+    if (selectedDentist) {
+      setDentistId(selectedDentist.id);
+    } else {
+      setDentistId("");
+    }
+    
+    setDate("");
+    setTime("");
+    
+    // Clear related errors
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors.dentist;
+      delete newErrors.date;
+      delete newErrors.time;
+      return newErrors;
+    });
+  }
 
   function handleSubmit(e) {
     e.preventDefault();
 
-    if (!patient || !date || !time || !dentist || !procedure) {
-      alert("All fields except notes and cost are required.");
+    if (!validateForm()) {
       return;
     }
+
+    // Convert 24-hour time to 12-hour format for display
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    const displayTime = `${displayHour}:${minutes} ${ampm}`;
 
     const payload = {
       patient,
       date,
-      time,
+      time: displayTime,
       dentist,
+      dentist_id: dentistId,
       procedure,
       notes,
-      cost: cost ? parseFloat(cost) : 0.0,  // NEW
+      cost: 0.0,
     };
 
     fetch(`${API_BASE}/api/appointments`, {
@@ -70,7 +254,9 @@ export default function AddAppointment() {
     })
       .then((res) => res.json())
       .then(() => navigate("/calendar"))
-      .catch(() => alert("Failed to save appointment"));
+      .catch(() => {
+        setErrors({ submit: "Failed to save appointment. Please try again." });
+      });
   }
 
   return (
@@ -79,13 +265,16 @@ export default function AddAppointment() {
 
       <form className="add-form" onSubmit={handleSubmit}>
         {/* PATIENT */}
-        <label className="add-label">Patient</label>
+        <label className="add-label">Patient *</label>
         <select
-          className="add-select"
+          className={`add-select ${errors.patient ? 'error' : ''}`}
           value={patient}
           onChange={(e) => {
             if (e.target.value === "new") navigate("/patients/add");
-            else setPatient(e.target.value);
+            else {
+              setPatient(e.target.value);
+              setErrors(prev => ({ ...prev, patient: undefined }));
+            }
           }}
         >
           <option value="">Select Patient</option>
@@ -94,33 +283,16 @@ export default function AddAppointment() {
               {p.name}
             </option>
           ))}
-          <option value="new">➕ Add New Patient</option>
+          <option value="new">âž• Add New Patient</option>
         </select>
-
-        {/* DATE */}
-        <label className="add-label">Date</label>
-        <input
-          type="date"
-          className="add-input"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-        />
-
-        {/* TIME */}
-        <label className="add-label">Time</label>
-        <input
-          type="time"
-          className="add-input"
-          value={time}
-          onChange={(e) => setTime(e.target.value)}
-        />
+        {errors.patient && <div className="error-message">{errors.patient}</div>}
 
         {/* DENTIST */}
-        <label className="add-label">Dentist/Staff</label>
+        <label className="add-label">Dentist/Staff *</label>
         <select
-          className="add-select"
+          className={`add-select ${errors.dentist ? 'error' : ''}`}
           value={dentist}
-          onChange={(e) => setDentist(e.target.value)}
+          onChange={handleDentistChange}
         >
           <option value="">Select Dentist/Staff</option>
           {dentists.map((d) => (
@@ -129,13 +301,54 @@ export default function AddAppointment() {
             </option>
           ))}
         </select>
+        {errors.dentist && <div className="error-message">{errors.dentist}</div>}
+
+        {dentistId && availableDays.length > 0 && (
+          <div className="availability-info">
+            Available: {availableDays.join(", ")} â€¢ {availableTimeRange.start} - {availableTimeRange.end}
+          </div>
+        )}
+
+        {/* DATE */}
+        <label className="add-label">Date *</label>
+        <input
+          type="date"
+          className={`add-input ${errors.date ? 'error' : ''}`}
+          value={date}
+          onChange={(e) => {
+            setDate(e.target.value);
+            setErrors(prev => ({ ...prev, date: undefined }));
+          }}
+          disabled={!dentistId}
+          min={new Date().toISOString().split('T')[0]}
+        />
+        {errors.date && <div className="error-message">{errors.date}</div>}
+
+        {/* TIME */}
+        <label className="add-label">Time *</label>
+        <input
+          type="time"
+          className={`add-input ${errors.time ? 'error' : ''}`}
+          value={time}
+          onChange={(e) => {
+            setTime(e.target.value);
+            setErrors(prev => ({ ...prev, time: undefined }));
+          }}
+          disabled={!dentistId}
+          min="08:30"
+          max="17:00"
+        />
+        {errors.time && <div className="error-message">{errors.time}</div>}
 
         {/* PROCEDURE TYPE */}
-        <label className="add-label">Procedure Type</label>
+        <label className="add-label">Procedure Type *</label>
         <select
-          className="add-select"
+          className={`add-select ${errors.procedure ? 'error' : ''}`}
           value={procedure}
-          onChange={(e) => setProcedure(e.target.value)}
+          onChange={(e) => {
+            setProcedure(e.target.value);
+            setErrors(prev => ({ ...prev, procedure: undefined }));
+          }}
         >
           <option value="">Select Procedure Type</option>
           {procedureOptions.map((proc) => (
@@ -144,18 +357,7 @@ export default function AddAppointment() {
             </option>
           ))}
         </select>
-
-        {/* COST - NEW */}
-        <label className="add-label">Cost (Optional)</label>
-        <input
-          type="number"
-          step="0.01"
-          min="0"
-          className="add-input"
-          value={cost}
-          onChange={(e) => setCost(e.target.value)}
-          placeholder="0.00"
-        />
+        {errors.procedure && <div className="error-message">{errors.procedure}</div>}
 
         {/* NOTES */}
         <label className="add-label">Notes (Optional)</label>
@@ -163,7 +365,10 @@ export default function AddAppointment() {
           className="add-notes"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
+          placeholder="Add any additional notes..."
         />
+
+        {errors.submit && <div className="error-message submit-error">{errors.submit}</div>}
 
         {/* BUTTONS */}
         <div className="add-actions">
@@ -183,4 +388,3 @@ export default function AddAppointment() {
     </div>
   );
 }
-

@@ -452,4 +452,5 @@ def seed_initial_data():
             status="Completed",
         )
         db.session.add(t)
+        
     db.session.commit()

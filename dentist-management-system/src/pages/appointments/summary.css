@@ -20,7 +20,7 @@
   font-size: 13px;
 }
 
-/* NEW: Cost input styling */
+/* Cost input styling */
 .cost-input-wrapper {
   display: flex;
   align-items: center;
@@ -44,14 +44,44 @@
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.cost-input:hover {
+.cost-input:hover:not(.error) {
   border-color: #cbd5f5;
 }
 
-.cost-input:focus {
+.cost-input:focus:not(.error) {
   outline: none;
   border-color: #2563eb;
   box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.35);
+}
+
+/* Error state */
+.cost-input.error {
+  border-color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.cost-input.error:focus {
+  outline: none;
+  border-color: #dc2626;
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.35);
+}
+
+/* Error message styling */
+.error-message {
+  color: #dc2626;
+  font-size: 13px;
+  margin-top: 6px;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+.submit-error {
+  margin-top: 0;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background-color: #fef2f2;
+  border-radius: 8px;
+  border-left: 3px solid #dc2626;
 }
 
 .table-input {

@@ -1,4 +1,4 @@
-/* CALENDAR PAGE ONLY — original code unchanged */
+/* CALENDAR PAGE ONLY – original code unchanged */
 
 .calendar-page .calendar-section {
   display: flex;
@@ -51,15 +51,59 @@
   font-size: 12px;
   cursor: pointer;
   margin: 2px auto;
+  transition: background-color 0.15s ease;
 }
 
 .month-day:hover {
   background-color: #e5e7eb;
 }
 
+/* Selected day - Dark blue */
 .month-day.selected {
   background-color: #2563eb;
   color: white;
+  font-weight: 600;
+}
+
+/* Today - Grey background */
+.month-day.today {
+  background-color: #e5e7eb;
+  font-weight: 600;
+}
+
+/* Days with scheduled appointments - Blue */
+.month-day.has-scheduled {
+  background-color: #dbeafe;
+  color: #1e40af;
+  font-weight: 500;
+}
+
+/* Days with all completed appointments - Green */
+.month-day.all-completed {
+  background-color: #d1fae5;
+  color: #047857;
+  font-weight: 500;
+}
+
+/* Selected state takes priority */
+.month-day.selected.today,
+.month-day.selected.has-scheduled,
+.month-day.selected.all-completed {
+  background-color: #2563eb;
+  color: white;
+}
+
+/* Hover states for different day types */
+.month-day.has-scheduled:hover {
+  background-color: #bfdbfe;
+}
+
+.month-day.all-completed:hover {
+  background-color: #a7f3d0;
+}
+
+.month-day.today:hover {
+  background-color: #d1d5db;
 }
 
 .month-arrow {

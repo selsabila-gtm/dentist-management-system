@@ -23,13 +23,52 @@ function formatDisplayDate(dateKey) {
   });
 }
 
-function MonthView({ year, monthIndex, selectedDateKey, onSelectDate }) {
+function MonthView({
+  year,
+  monthIndex,
+  selectedDateKey,
+  onSelectDate,
+  appointments,
+}) {
   const firstDay = new Date(year, monthIndex, 1).getDay();
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
   const monthLabel = new Date(year, monthIndex, 1).toLocaleDateString(
     "en-US",
     { month: "long", year: "numeric" }
   );
+
+  // Get today's date key for comparison
+  const today = new Date();
+  const todayKey = formatDateKey(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+
+  // Helper function to determine day status
+  function getDayStatus(dateKey) {
+    const dayAppointments = appointments.filter(
+      (appt) => appt.date === dateKey
+    );
+
+    if (dayAppointments.length === 0) {
+      return null; // No appointments
+    }
+
+    const allCompleted = dayAppointments.every(
+      (appt) => appt.status === "completed"
+    );
+    const hasScheduled = dayAppointments.some(
+      (appt) => appt.status === "scheduled"
+    );
+
+    if (allCompleted) {
+      return "all-completed"; // Green
+    } else if (hasScheduled) {
+      return "has-scheduled"; // Blue
+    }
+    return null;
+  }
 
   const cells = [];
   for (let i = 0; i < 42; i++) {
@@ -38,7 +77,10 @@ function MonthView({ year, monthIndex, selectedDateKey, onSelectDate }) {
       cells.push(null);
     } else {
       const key = formatDateKey(year, monthIndex, dayNum);
-      cells.push({ dayNum, key });
+      const dayStatus = getDayStatus(key);
+      const isToday = key === todayKey;
+
+      cells.push({ dayNum, key, dayStatus, isToday });
     }
   }
 
@@ -58,7 +100,10 @@ function MonthView({ year, monthIndex, selectedDateKey, onSelectDate }) {
               key={idx}
               className={
                 "month-day" +
-                (selectedDateKey === cell.key ? " selected" : "")
+                (selectedDateKey === cell.key ? " selected" : "") +
+                (cell.isToday ? " today" : "") +
+                (cell.dayStatus === "has-scheduled" ? " has-scheduled" : "") +
+                (cell.dayStatus === "all-completed" ? " all-completed" : "")
               }
               onClick={() => onSelectDate(cell.key)}
             >
@@ -78,16 +123,14 @@ export default function Calendar() {
   const [appointments, setAppointments] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // today-based initial month / selected date
   const today = new Date();
   const initialMonth =
-    today.getFullYear() === CALENDAR_YEAR ? today.getMonth() : 10; // November if not 2025
+    today.getFullYear() === CALENDAR_YEAR ? today.getMonth() : 10;
 
   const [monthIndex, setMonthIndex] = useState(
     CALENDAR_YEAR * 12 + initialMonth
   );
 
-  // initial selected date: today if in 2025, else 2025-11-01
   const initialSelectedDateKey =
     today.getFullYear() === CALENDAR_YEAR
       ? formatDateKey(CALENDAR_YEAR, initialMonth, today.getDate())
@@ -97,7 +140,8 @@ export default function Calendar() {
     initialSelectedDateKey
   );
 
-  useEffect(() => {
+  // Define loadAppointments before useEffect
+  function loadAppointments() {
     fetch(`${API_BASE}/api/appointments`)
       .then((res) => res.json())
       .then((data) => setAppointments(data))
@@ -105,6 +149,16 @@ export default function Calendar() {
         console.error("Error loading appointments", err);
         setErrorMessage("Failed to load appointments.");
       });
+  }
+
+  // NEW: wrapper to clear error when changing day
+  function handleSelectDate(dateKey) {
+    setSelectedDateKey(dateKey);
+    setErrorMessage(""); // clear the red banner when the user picks another day
+  }
+
+  useEffect(() => {
+    loadAppointments();
   }, []);
 
   const filteredAppointments = useMemo(() => {
@@ -126,36 +180,58 @@ export default function Calendar() {
     setMonthIndex((prev) => prev - 2);
   }
 
+  function handleAddAppointmentClick() {
+    // Check if selected date is in the past
+    if (selectedDateKey) {
+      const selectedDate = new Date(selectedDateKey);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (selectedDate < today) {
+        setErrorMessage("Cannot add appointments for past dates.");
+        return;
+      }
+    }
+
+    navigate(`/calendar/add?date=${selectedDateKey}`);
+  }
+
   function handleStatusChange(appt, newStatus) {
     setErrorMessage("");
 
+    // If appointment is already completed or cancelled, it's locked
     if (appt.status !== "scheduled") {
       setErrorMessage("This appointment status is locked.");
       return;
     }
 
-    fetch(`${API_BASE}/api/appointments/${appt.id}/status`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus }),
-    })
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.error || "Error updating status");
-        }
-        if (newStatus === "completed") {
-          navigate(`/calendar/post-summary/${appt.id}`);
-          return;
-        }
-        setAppointments((prev) =>
-          prev.map((a) => (a.id === data.id ? data : a))
-        );
+    // If user selects "completed", navigate to post-summary page
+    // Do NOT update status in database yet
+    if (newStatus === "completed") {
+      navigate(`/calendar/post-summary/${appt.id}`);
+      return;
+    }
+
+    // If user selects "cancelled", update directly
+    if (newStatus === "cancelled") {
+      fetch(`${API_BASE}/api/appointments/${appt.id}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
       })
-      .catch((err) => {
-        console.error(err);
-        setErrorMessage(err.message);
-      });
+        .then(async (res) => {
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.error || "Error updating status");
+          }
+          // Reload appointments to reflect the change
+          loadAppointments();
+        })
+        .catch((err) => {
+          console.error(err);
+          setErrorMessage(err.message);
+        });
+    }
   }
 
   return (
@@ -183,13 +259,15 @@ export default function Calendar() {
               year={currentYear}
               monthIndex={currentMonth}
               selectedDateKey={selectedDateKey}
-              onSelectDate={setSelectedDateKey}
+              onSelectDate={handleSelectDate} // changed here
+              appointments={appointments}
             />
             <MonthView
               year={secondYear}
               monthIndex={secondMonth}
               selectedDateKey={selectedDateKey}
-              onSelectDate={setSelectedDateKey}
+              onSelectDate={handleSelectDate} // and here
+              appointments={appointments}
             />
           </div>
 
@@ -212,9 +290,7 @@ export default function Calendar() {
             <div>
               <button
                 className="primary-button"
-                onClick={() =>
-                  navigate(`/calendar/add?date=${selectedDateKey}`)
-                }
+                onClick={handleAddAppointmentClick}
               >
                 Add Appointment
               </button>
@@ -283,4 +359,3 @@ export default function Calendar() {
     </div>
   );
 }
-
