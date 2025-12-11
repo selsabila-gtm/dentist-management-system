@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Sidebar from '../../components/sidebar/sidebar'; // adjust path if needed
 
 export default function AppointmentHistory() {
   const [activeTab, setActiveTab] = useState('Appointments');
@@ -42,8 +41,6 @@ export default function AppointmentHistory() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <Sidebar />
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">

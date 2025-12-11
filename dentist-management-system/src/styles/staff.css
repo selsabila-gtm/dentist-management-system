@@ -8,17 +8,19 @@ body,
 
 body {
   margin: 0;
+  overflow-x: hidden;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background-color: #F7FAFC;  /* light background to match content */
 }
 
 .staff-layout {
   display: flex;
-  height: 100vh;          /* full viewport height, no more min-height */
-  width: 100vw;
-  background-color: #0f172a; /* dark frame outside the page */
-  overflow: hidden;       /* only the right side scrolls */
+  height: 100vh;
+  width: 100%;          /* or delete this line */
+  background-color: #0f172a;
+  overflow: hidden;
 }
+
 
 
 /* Sidebar used inside StaffLayout / Sidebar component */

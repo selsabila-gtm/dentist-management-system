@@ -1,94 +1,40 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Sidebar from "./components/sidebar/sidebar.jsx";
-import Calendar from "./pages/appointments/calendar.jsx";
-import Add from "./pages/appointments/add.jsx";
-import PostSummary from "./pages/appointments/post_summary.jsx";
-
-import "./index.css";
-import "./components/sidebar/sidebar.css";
-
-export default function App() {
-  return (
-    <Router>
-      <div className="app-layout">
-        <Sidebar />
-        <main className="app-main">
-          <Routes>
-            {/* Calendar main page */}
-            <Route path="/" element={<Calendar />} />
-            <Route path="/calendar" element={<Calendar />} />
-
-            {/* Appointment pages that should still highlight Calendar */}
-            <Route path="/calendar/add" element={<Add />} />
-            <Route path="/calendar/post-summary/:id" element={<PostSummary />} />
-          </Routes>
-        </main>
-      </div>
-    </Router>
-  );
-}
-
-
-
-
-
-
-import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import AddPatient from './pages/patients/AddPatient.jsx';
-import Appointment from './pages/patients/PatientAppointment.jsx'; 
-import PatientInvoices from './pages/patients/PatientInvoices.jsx';
-import SearchPatient from './pages/patients/SearchPatient.jsx';
-import ViewPatient from './pages/patients/ViewPatient.jsx';
-
 // src/App.jsx
+import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import "./App.css";
 
+// Staff pages
 import StaffListPage from "./pages/staff/list.jsx";
 import StaffAddPage from "./pages/staff/add.jsx";
 import LoginPage from "./pages/staff/login";
 import ResetPasswordPage from "./pages/staff/resetPassword";
 import ChangePasswordPage from "./pages/staff/changePassword.jsx";
 import StaffProfilePage from "./pages/staff/profile.jsx";
-import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 // Patient pages
 import MedicalRecordsPage from "./pages/patients/MedicalRecords.jsx";
 import PrescriptionsPage from "./pages/patients/Prescriptions.jsx";
 import TreatmentPlansPage from "./pages/patients/TreatmentPlans.jsx";
 
-import "./App.css";
-
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/a" element={<AddPatient />} />
-        <Route path="/b" element={<Appointment />} /> 
-        <Route path="/c" element={<PatientInvoices />} /> 
-        <Route path="/" element={<SearchPatient />} /> 
-        <Route path="/d" element={<ViewPatient />} /> 
+        {/* Home: redirect to staff list (change to patients if you want) */}
+        <Route path="/" element={<Navigate to="/staff" replace />} />
 
-
-        {/* redirect home to /staff for now */}
-        <Route path="/" element={<Navigate to="/staff" />} />
-
-        {/* staff management */}
-        <Route path="/staff" element={<StaffListPage />} />
+        {/* Staff management */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/staff" element={<StaffListPage />} />
         <Route path="/staff/add" element={<StaffAddPage />} />
         <Route path="/staff/:id" element={<StaffProfilePage />} />
-        <Route path="/staff/:id/password" element={<ChangePasswordPage />} />  {/* NEW */}
-        <Route path="/login" element={<LoginPage />} />
-        {/* Default: go to medical records */}
         <Route
-          path="/"
-          element={<Navigate to="/patients/medical-records" replace />}
+          path="/staff/:id/password"
+          element={<ChangePasswordPage />}
         />
 
-        {/* Patient profile tabs */}
+        {/* Patient pages */}
         <Route
           path="/patients/medical-records"
           element={<MedicalRecordsPage />}
@@ -102,11 +48,8 @@ function App() {
           element={<TreatmentPlansPage />}
         />
 
-        {/* Fallback: anything unknown goes to medical records */}
-        <Route
-          path="*"
-          element={<Navigate to="/patients/medical-records" replace />}
-        />
+        {/* Fallback: unknown routes -> staff */}
+        <Route path="*" element={<Navigate to="/staff" replace />} />
       </Routes>
     </BrowserRouter>
   );
