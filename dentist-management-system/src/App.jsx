@@ -16,6 +16,11 @@ import MedicalRecordsPage from "./pages/patients/MedicalRecords.jsx";
 import PrescriptionsPage from "./pages/patients/Prescriptions.jsx";
 import TreatmentPlansPage from "./pages/patients/TreatmentPlans.jsx";
 
+// ✅ Appointments pages
+import CalendarPage from "./pages/appointments/calendar.jsx";
+import AppointmentAddPage from "./pages/appointments/add.jsx";
+import AppointmentPostSummaryPage from "./pages/appointments/post_summary.jsx";
+
 function App() {
   return (
     <BrowserRouter>
@@ -48,6 +53,14 @@ function App() {
           element={<TreatmentPlansPage />}
         />
 
+        {/* ✅ Appointments / calendar pages */}
+        <Route path="/calendar" element={<CalendarPage />} />
+        <Route path="/calendar/add" element={<AppointmentAddPage />} />
+        <Route
+          path="/calendar/post-summary/:id"
+          element={<AppointmentPostSummaryPage />}
+        />
+
         {/* Fallback: unknown routes -> staff */}
         <Route path="*" element={<Navigate to="/staff" replace />} />
       </Routes>
@@ -56,3 +69,4 @@ function App() {
 }
 
 export default App;
+

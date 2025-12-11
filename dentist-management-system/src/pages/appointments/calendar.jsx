@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./calendar.css";
-
+import Sidebar from "../../components/Sidebar/Sidebar";
 
 const API_BASE = "http://127.0.0.1:5000";
 const CALENDAR_YEAR = 2025;
@@ -76,24 +76,35 @@ function MonthView({ year, monthIndex, selectedDateKey, onSelectDate }) {
 export default function Calendar() {
   const navigate = useNavigate();
   const [appointments, setAppointments] = useState([]);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  // initial month: current month if year 2025, otherwise November (10)
+  // today-based initial month / selected date
   const today = new Date();
   const initialMonth =
-    today.getFullYear() === CALENDAR_YEAR ? today.getMonth() : 10;
+    today.getFullYear() === CALENDAR_YEAR ? today.getMonth() : 10; // November if not 2025
 
   const [monthIndex, setMonthIndex] = useState(
     CALENDAR_YEAR * 12 + initialMonth
   );
-  const [selectedDateKey, setSelectedDateKey] = useState("2025-11-26");
 
-  const [errorMessage, setErrorMessage] = useState("");
+  // initial selected date: today if in 2025, else 2025-11-01
+  const initialSelectedDateKey =
+    today.getFullYear() === CALENDAR_YEAR
+      ? formatDateKey(CALENDAR_YEAR, initialMonth, today.getDate())
+      : "2025-11-01";
+
+  const [selectedDateKey, setSelectedDateKey] = useState(
+    initialSelectedDateKey
+  );
 
   useEffect(() => {
     fetch(`${API_BASE}/api/appointments`)
       .then((res) => res.json())
       .then((data) => setAppointments(data))
-      .catch((err) => console.error("Error loading appointments", err));
+      .catch((err) => {
+        console.error("Error loading appointments", err);
+        setErrorMessage("Failed to load appointments.");
+      });
   }, []);
 
   const filteredAppointments = useMemo(() => {
@@ -148,126 +159,128 @@ export default function Calendar() {
   }
 
   return (
-    <div className="page calendar-page">
-      <header className="page-header">
-        <h1>Calendar</h1>
-        <button
-          className="primary-button pill-button"
-          onClick={() => navigate("/calendar/add")}
-        >
-          New Appointment
-        </button>
-      </header>
+    <div className="app-layout">
+      <Sidebar />
+      <div className="page calendar-page">
+        <header className="page-header">
+          <h1>Calendar</h1>
+          <button
+            className="primary-button pill-button"
+            onClick={() => navigate("/calendar/add")}
+          >
+            New Appointment
+          </button>
+        </header>
 
-      {/* CALENDAR */}
-      <section className="calendar-section">
-        <button type="button" className="month-arrow" onClick={goPrev}>
-          &lt;
-        </button>
+        {/* CALENDAR */}
+        <section className="calendar-section">
+          <button type="button" className="month-arrow" onClick={goPrev}>
+            &lt;
+          </button>
 
-        <div className="calendar-months">
-          <MonthView
-            year={currentYear}
-            monthIndex={currentMonth}
-            selectedDateKey={selectedDateKey}
-            onSelectDate={setSelectedDateKey}
-          />
-          <MonthView
-            year={secondYear}
-            monthIndex={secondMonth}
-            selectedDateKey={selectedDateKey}
-            onSelectDate={setSelectedDateKey}
-          />
-        </div>
-
-        <button type="button" className="month-arrow" onClick={goNext}>
-          &gt;
-        </button>
-      </section>
-
-      {/* APPOINTMENTS TABLE */}
-      <section className="appointments-section">
-        <div className="appointments-header">
-          <h2>Appointments</h2>
-
-          <div className="appointments-date-label">
-            {selectedDateKey && formatDisplayDate(selectedDateKey)} ·{" "}
-            {filteredAppointments.length} appointment
-            {filteredAppointments.length !== 1 ? "s" : ""}
+          <div className="calendar-months">
+            <MonthView
+              year={currentYear}
+              monthIndex={currentMonth}
+              selectedDateKey={selectedDateKey}
+              onSelectDate={setSelectedDateKey}
+            />
+            <MonthView
+              year={secondYear}
+              monthIndex={secondMonth}
+              selectedDateKey={selectedDateKey}
+              onSelectDate={setSelectedDateKey}
+            />
           </div>
-          <div >
 
-            <button
-               className="primary-button"
-                   onClick={() => navigate(`/calendar/add?date=${selectedDateKey}`)}
-                    >
+          <button type="button" className="month-arrow" onClick={goNext}>
+            &gt;
+          </button>
+        </section>
+
+        {/* APPOINTMENTS TABLE */}
+        <section className="appointments-section">
+          <div className="appointments-header">
+            <h2>Appointments</h2>
+
+            <div className="appointments-date-label">
+              {selectedDateKey && formatDisplayDate(selectedDateKey)} ·{" "}
+              {filteredAppointments.length} appointment
+              {filteredAppointments.length !== 1 ? "s" : ""}
+            </div>
+
+            <div>
+              <button
+                className="primary-button"
+                onClick={() =>
+                  navigate(`/calendar/add?date=${selectedDateKey}`)
+                }
+              >
                 Add Appointment
-            </button>
+              </button>
+            </div>
           </div>
 
-          
-        </div>
+          {errorMessage && <div className="error-banner">{errorMessage}</div>}
 
-        {errorMessage && <div className="error-banner">{errorMessage}</div>}
-
-        <div className="card">
-          <table className="appointments-table">
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>Patient</th>
-                <th>Dentist</th>
-                <th>Procedure</th>
-                <th>Status</th>
-                <th style={{ width: 180 }}>Change Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAppointments.map((appt) => (
-                <tr key={appt.id}>
-                  <td className="time-link">{appt.time}</td>
-                  <td>{appt.patient}</td>
-                  <td>{appt.dentist}</td>
-                  <td className="link-text">{appt.procedure}</td>
-                  <td>
-                    <span
-                      className={`status-badge status-${appt.status}`}
-                    >
-                      {appt.status}
-                    </span>
-                  </td>
-                  <td>
-                    <select
-                      className="status-select"
-                      value={appt.status}
-                      disabled={appt.status !== "scheduled"}
-                      onChange={(e) =>
-                        handleStatusChange(appt, e.target.value)
-                      }
-                    >
-                      <option value="scheduled">scheduled</option>
-                      <option value="completed">completed</option>
-                      <option value="cancelled">cancelled</option>
-                    </select>
-                  </td>
-                </tr>
-              ))}
-              {filteredAppointments.length === 0 && (
+          <div className="card">
+            <table className="appointments-table">
+              <thead>
                 <tr>
-                  <td colSpan={6} style={{ textAlign: "center", padding: 16 }}>
-                    No appointments on this date.
-                  </td>
+                  <th>Time</th>
+                  <th>Patient</th>
+                  <th>Dentist</th>
+                  <th>Procedure</th>
+                  <th>Status</th>
+                  <th style={{ width: 180 }}>Change Status</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-       
-
-        </div>
-      </section>
+              </thead>
+              <tbody>
+                {filteredAppointments.map((appt) => (
+                  <tr key={appt.id}>
+                    <td className="time-link">{appt.time}</td>
+                    <td>{appt.patient}</td>
+                    <td>{appt.dentist}</td>
+                    <td className="link-text">{appt.procedure}</td>
+                    <td>
+                      <span
+                        className={`status-badge status-${appt.status}`}
+                      >
+                        {appt.status}
+                      </span>
+                    </td>
+                    <td>
+                      <select
+                        className="status-select"
+                        value={appt.status}
+                        disabled={appt.status !== "scheduled"}
+                        onChange={(e) =>
+                          handleStatusChange(appt, e.target.value)
+                        }
+                      >
+                        <option value="scheduled">scheduled</option>
+                        <option value="completed">completed</option>
+                        <option value="cancelled">cancelled</option>
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+                {filteredAppointments.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      style={{ textAlign: "center", padding: 16 }}
+                    >
+                      No appointments on this date.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
-
-
 

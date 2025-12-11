@@ -21,6 +21,7 @@ export default function AddAppointment() {
   const [time, setTime] = useState("");
   const [dentist, setDentist] = useState("");
   const [procedure, setProcedure] = useState("");
+  const [cost, setCost] = useState("");  // NEW
   const [notes, setNotes] = useState("");
 
 
@@ -48,7 +49,7 @@ export default function AddAppointment() {
     e.preventDefault();
 
     if (!patient || !date || !time || !dentist || !procedure) {
-      alert("All fields except notes are required.");
+      alert("All fields except notes and cost are required.");
       return;
     }
 
@@ -59,6 +60,7 @@ export default function AddAppointment() {
       dentist,
       procedure,
       notes,
+      cost: cost ? parseFloat(cost) : 0.0,  // NEW
     };
 
     fetch(`${API_BASE}/api/appointments`, {
@@ -142,6 +144,18 @@ export default function AddAppointment() {
             </option>
           ))}
         </select>
+
+        {/* COST - NEW */}
+        <label className="add-label">Cost (Optional)</label>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          className="add-input"
+          value={cost}
+          onChange={(e) => setCost(e.target.value)}
+          placeholder="0.00"
+        />
 
         {/* NOTES */}
         <label className="add-label">Notes (Optional)</label>

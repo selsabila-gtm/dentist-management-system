@@ -176,6 +176,10 @@ class Appointment(db.Model):
     dentist_id = db.Column(db.Integer, db.ForeignKey("staff.id"), nullable=True)
     procedure = db.Column(db.String(200))
     status = db.Column(db.String(20), default="scheduled")
+    
+    # NEW: cost of this appointment / visit
+    cost = db.Column(db.Float, default=0.0)
+    
     summary_id = db.Column(db.Integer, db.ForeignKey("summaries.id"), nullable=True)
 
     # disambiguate FK path between appointments <-> summaries
@@ -199,6 +203,7 @@ class Appointment(db.Model):
             "procedure": self.procedure,
             "status": self.status,
             "summary_id": self.summary_id,
+            "cost": self.cost,  # NEW
         }
 
 
@@ -394,22 +399,24 @@ def seed_initial_data():
 
         appts = [
             Appointment(
-                date="2025-11-26",
+                date="2025-12-15",
                 time="09:00 AM",
                 patient="Sophia Clark",
                 patient_id=sophia.id if sophia else None,
                 dentist="Dr. Sarah Miller",
                 procedure="Routine Checkup",
                 status="scheduled",
+                cost=150.0,  # NEW
             ),
             Appointment(
-                date="2025-11-26",
+                date="2025-12-15",
                 time="10:30 AM",
                 patient="Ethan Harper",
                 patient_id=ethan.id if ethan else None,
                 dentist="Dr. David Lee",
                 procedure="Teeth Cleaning",
                 status="scheduled",
+                cost=100.0,  # NEW
             ),
         ]
         db.session.add_all(appts)
