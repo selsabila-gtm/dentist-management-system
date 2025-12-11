@@ -44,6 +44,14 @@ function daysBetween(from, to) {
   return Math.ceil((to - from) / msPerDay);
 }
 
+function todayKey(date = new Date()) {
+  const t = new Date(date);
+  const y = t.getFullYear();
+  const m = String(t.getMonth() + 1).padStart(2, "0");
+  const d = String(t.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate();
 
@@ -55,6 +63,7 @@ export default function DashboardPage() {
     alerts: 0,
     totalRevenue: 0,
     avgAppointmentCost: 0,
+    todayAppointments: [], // <-- holds only today's appointments
   });
   const [loading, setLoading] = useState(true);
 
@@ -79,6 +88,7 @@ export default function DashboardPage() {
   const fetchStats = useCallback(async () => {
     setLoading(true);
     try {
+      // fetch main resources in parallel
       const [apptsRes, patientsRes, staffRes, inventoryRes] = await Promise.allSettled([
         fetch(`${API_BASE}/api/appointments`),
         fetch(`${API_BASE}/api/patients`),
@@ -99,7 +109,7 @@ export default function DashboardPage() {
       const staff = (await extract(staffRes)) || [];
       const inventory = (await extract(inventoryRes)) || [];
 
-      // compute low stock and expiry notifications in the same way Notifications component does
+      // compute low stock and expiry notifications (same logic as Notifications component)
       const now = new Date();
       const dismissList = getDismissed();
       const notifs = [];
@@ -158,6 +168,12 @@ export default function DashboardPage() {
       }
       const avgAppointmentCost = countedAppointments > 0 ? totalRevenue / countedAppointments : 0;
 
+      // filter only today's appointments
+      const today = todayKey();
+      const todayAppointments = Array.isArray(appointments)
+        ? appointments.filter((a) => String(a.date) === today)
+        : [];
+
       setStats({
         appointments: Array.isArray(appointments) ? appointments.length : 0,
         patients: Array.isArray(patients) ? patients.length : 0,
@@ -166,6 +182,7 @@ export default function DashboardPage() {
         alerts: notifs.length,
         totalRevenue,
         avgAppointmentCost,
+        todayAppointments,
       });
     } catch (err) {
       console.error("Error fetching dashboard stats:", err);
@@ -207,9 +224,7 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <button className="link-button" onClick={() => navigate("/profile")}>Profile</button>
-            </div>
+            
           </header>
 
           <section className="dashboard-top">
@@ -218,6 +233,7 @@ export default function DashboardPage() {
                 <h3>Today's Appointments</h3>
                 <button className="link-button" onClick={() => navigate("/calendar")}>View Calendar</button>
               </div>
+
               <table className="appt-table">
                 <thead>
                   <tr>
@@ -227,26 +243,37 @@ export default function DashboardPage() {
                     <th>Status</th>
                   </tr>
                 </thead>
+
                 <tbody>
-                  {/* Example / placeholder rows — you can replace these with filtered today's appointments */}
-                  <tr>
-                    <td>9:00 AM</td>
-                    <td>Sophia Clark</td>
-                    <td>Routine Checkup</td>
-                    <td><span className="status-pill">Scheduled</span></td>
-                  </tr>
-                  <tr>
-                    <td>10:30 AM</td>
-                    <td>Ethan Miller</td>
-                    <td>Teeth Cleaning</td>
-                    <td><span className="status-pill">Confirmed</span></td>
-                  </tr>
-                  <tr>
-                    <td>1:00 PM</td>
-                    <td>Olivia Davis</td>
-                    <td>Filling</td>
-                    <td><span className="status-pill completed">Completed</span></td>
-                  </tr>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: "center", padding: 14 }}>Loading…</td>
+                    </tr>
+                  ) : stats.todayAppointments.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: "center", padding: 14 }}>No appointments today.</td>
+                    </tr>
+                  ) : (
+                    stats.todayAppointments
+                      .sort((a, b) => {
+                        // sort by time if available (HH:MM or HH:MM AM/PM)
+                        const tA = String(a.time || "");
+                        const tB = String(b.time || "");
+                        return tA.localeCompare(tB, undefined, { numeric: true, sensitivity: "base" });
+                      })
+                      .map((appt) => (
+                        <tr key={appt.id}>
+                          <td>{appt.time}</td>
+                          <td>{appt.patient}</td>
+                          <td>{appt.procedure}</td>
+                          <td>
+                            <span className={`status-pill status-${appt.status}`}>
+                              {appt.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                  )}
                 </tbody>
               </table>
             </div>
