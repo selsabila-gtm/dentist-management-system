@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./calendar.css";
+import Sidebar from "../../components/Sidebar/Sidebar";
 
 
 const API_BASE = "http://127.0.0.1:5000";
@@ -148,6 +149,8 @@ export default function Calendar() {
   }
 
   return (
+    <div className="app-layout">
+      <Sidebar />
     <div className="page calendar-page">
       <header className="page-header">
         <h1>Calendar</h1>
@@ -265,6 +268,7 @@ export default function Calendar() {
 
         </div>
       </section>
+    </div>
     </div>
   );
 }
