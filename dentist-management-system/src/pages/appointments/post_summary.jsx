@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "./summary.css";
+import Sidebar from "../../components/Sidebar/Sidebar";
 
 const API_BASE = "http://127.0.0.1:5000";
 
@@ -293,6 +294,8 @@ export default function PostSummary() {
   }
 
   return (
+    <div className="app-layout">
+      <Sidebar />
     <div className="page summary-page">
       <h1 className="page-header">Post-Appointment Summary</h1>
 
@@ -692,6 +695,7 @@ export default function PostSummary() {
           Save Summary
         </button>
       </div>
+    </div>
     </div>
   );
 }

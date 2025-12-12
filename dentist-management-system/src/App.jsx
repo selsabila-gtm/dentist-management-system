@@ -3,70 +3,221 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
 
+// Auth pages
+import LoginPage from "./pages/auth/login";
+
+// Inventory pages
+import InventoryListPage from "./pages/inventory/list";
+import InventoryAddPage from "./pages/inventory/add";
+import InventoryDetailsPage from "./pages/inventory/details";
+
+// Calendar / Appointments pages
+import Calendar from "./pages/appointments/calendar";
+import AppointmentAddPage from "./pages/appointments/add";
+import AppointmentPostSummaryPage from "./pages/appointments/post_summary";
+
 // Staff pages
-import StaffListPage from "./pages/staff/list.jsx";
+import Staff from "./pages/staff/list";
 import StaffAddPage from "./pages/staff/add.jsx";
-import LoginPage from "./pages/staff/login";
+import StaffProfilePage from "./pages/staff/profile.jsx";
 import ResetPasswordPage from "./pages/staff/resetPassword";
 import ChangePasswordPage from "./pages/staff/changePassword.jsx";
-import StaffProfilePage from "./pages/staff/profile.jsx";
 
 // Patient pages
 import MedicalRecordsPage from "./pages/patients/MedicalRecords.jsx";
 import PrescriptionsPage from "./pages/patients/Prescriptions.jsx";
 import TreatmentPlansPage from "./pages/patients/TreatmentPlans.jsx";
 
-// ✅ Appointments pages
-import CalendarPage from "./pages/appointments/calendar.jsx";
-import AppointmentAddPage from "./pages/appointments/add.jsx";
-import AppointmentPostSummaryPage from "./pages/appointments/post_summary.jsx";
+// Protected Route Component
+function ProtectedRoute({ children }) {
+  const staffId = localStorage.getItem("staff_id");
+
+  if (!staffId) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Home: redirect to staff list (change to patients if you want) */}
-        <Route path="/" element={<Navigate to="/staff" replace />} />
-
-        {/* Staff management */}
+        {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/staff" element={<StaffListPage />} />
-        <Route path="/staff/add" element={<StaffAddPage />} />
-        <Route path="/staff/:id" element={<StaffProfilePage />} />
+
+        {/* Root redirects to dashboard */}
         <Route
-          path="/staff/:id/password"
-          element={<ChangePasswordPage />}
+          path="/"
+          element={
+            <ProtectedRoute>
+              <div>dashboard Page (Coming Soon)</div>
+            </ProtectedRoute>
+          }
         />
 
-        {/* Patient pages */}
+        {/* Dashboard */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <div>dashboard Page (Coming Soon)</div>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Inventory routes */}
+        <Route
+          path="/inventory"
+          element={
+            <ProtectedRoute>
+              <InventoryListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/add"
+          element={
+            <ProtectedRoute>
+              <InventoryAddPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/:id"
+          element={
+            <ProtectedRoute>
+              <InventoryDetailsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Calendar / Appointments routes */}
+        <Route
+          path="/calendar"
+          element={
+            <ProtectedRoute>
+              <Calendar />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/calendar/add"
+          element={
+            <ProtectedRoute>
+              <AppointmentAddPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/calendar/post-summary/:id"
+          element={
+            <ProtectedRoute>
+              <AppointmentPostSummaryPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Staff management */}
+        <Route
+          path="/staff"
+          element={
+            <ProtectedRoute>
+              <Staff />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/add"
+          element={
+            <ProtectedRoute>
+              <StaffAddPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/:id"
+          element={
+            <ProtectedRoute>
+              <StaffProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/:id/password"
+          element={
+            <ProtectedRoute>
+              <ChangePasswordPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Patient pages (protected) */}
         <Route
           path="/patients/medical-records"
-          element={<MedicalRecordsPage />}
+          element={
+            <ProtectedRoute>
+              <MedicalRecordsPage />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/patients/prescriptions"
-          element={<PrescriptionsPage />}
+          element={
+            <ProtectedRoute>
+              <PrescriptionsPage />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/patients/treatment-plans"
-          element={<TreatmentPlansPage />}
+          element={
+            <ProtectedRoute>
+              <TreatmentPlansPage />
+            </ProtectedRoute>
+          }
         />
 
-        {/* ✅ Appointments / calendar pages */}
-        <Route path="/calendar" element={<CalendarPage />} />
-        <Route path="/calendar/add" element={<AppointmentAddPage />} />
+        {/* Placeholder / other sections (protected) */}
         <Route
-          path="/calendar/post-summary/:id"
-          element={<AppointmentPostSummaryPage />}
+          path="/patients"
+          element={
+            <ProtectedRoute>
+              <div>Patients Page (Coming Soon)</div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/billing"
+          element={
+            <ProtectedRoute>
+              <div>Billing Page (Coming Soon)</div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute>
+              <div>Reports Page (Coming Soon)</div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <div>Settings Page (Coming Soon)</div>
+            </ProtectedRoute>
+          }
         />
 
-        {/* Fallback: unknown routes -> staff */}
-        <Route path="*" element={<Navigate to="/staff" replace />} />
+        {/* Fallback route -> dashboard */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
   );
 }
 
 export default App;
-

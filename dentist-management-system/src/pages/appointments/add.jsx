@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./add.css";
+import Sidebar from "../../components/Sidebar/Sidebar"; 
 
 const API_BASE = "http://127.0.0.1:5000";
 
@@ -260,6 +261,8 @@ export default function AddAppointment() {
   }
 
   return (
+    <div className="app-layout">
+      <Sidebar />
     <div className="page add-page">
       <h1 className="page-header">Add New Appointment</h1>
 
@@ -385,6 +388,7 @@ export default function AddAppointment() {
           </button>
         </div>
       </form>
+    </div>
     </div>
   );
 }

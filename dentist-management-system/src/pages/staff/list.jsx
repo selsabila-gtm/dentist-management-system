@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchStaff, deleteStaff } from "../../services/staffApi";
 import StaffLayout from "../../components/StaffLayout";
+import Sidebar from "../../components/Sidebar/Sidebar";
 import "../../styles/staff.css";
 
 export default function StaffListPage() {
@@ -36,6 +37,8 @@ export default function StaffListPage() {
   };
 
   return (
+    <div className="app-layout">
+      <Sidebar />
     <StaffLayout>
       <div className="staff-page-header">
         <h1 className="staff-page-title">Staff Management</h1>
@@ -87,5 +90,6 @@ export default function StaffListPage() {
         )}
       </div>
     </StaffLayout>
+    </div>
   );
 }

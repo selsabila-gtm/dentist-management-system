@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "./calendar.css";
 import Sidebar from "../../components/Sidebar/Sidebar";
 
+
 const API_BASE = "http://127.0.0.1:5000";
 const CALENDAR_YEAR = 2025;
 
@@ -299,7 +300,7 @@ export default function Calendar() {
 
           {errorMessage && <div className="error-banner">{errorMessage}</div>}
 
-          <div className="card">
+         <div className="card">
             <table className="appointments-table">
               <thead>
                 <tr>
