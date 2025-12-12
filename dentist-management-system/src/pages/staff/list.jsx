@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { fetchStaff, deleteStaff } from "../../services/staffApi";
 import StaffAdminLayout from "../../components/StaffAdminLayout";
 import "../../styles/staff.css";
+import Sidebar from "../../components/Sidebar/Sidebar";
 
 const getCurrentUser = () => {
   try {
@@ -99,6 +100,8 @@ export default function StaffListPage() {
   // 🚫 Not admin → access denied card
   if (!isAdmin) {
     return (
+      <div className="app-layout">
+      <Sidebar />
       <StaffAdminLayout>
         {toast.visible && (
           <div className="toast-container">
@@ -141,11 +144,14 @@ export default function StaffListPage() {
           </div>
         </div>
       </StaffAdminLayout>
+      </div>
     );
   }
 
   // ✅ Admin view (original UI)
   return (
+    <div className="app-layout">
+      <Sidebar />
     <StaffAdminLayout>
       {/* Toast */}
       {toast.visible && (
@@ -269,5 +275,6 @@ export default function StaffListPage() {
         </div>
       )}
     </StaffAdminLayout>
+    </div>
   );
 }

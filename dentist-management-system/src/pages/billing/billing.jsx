@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import "../../styles/staff.css";
 import "./billing.css";
 import { fetchInvoices, fetchPatientsSimple } from "../../services/billingApi";
+import Sidebar from "../../components/Sidebar/Sidebar";
 
 function formatCurrency(value) {
   const num = Number(value || 0);
@@ -90,6 +91,8 @@ export default function BillingPage() {
   };
 
   return (
+    <div className="app-layout">
+      <Sidebar />
     <div className="staff-main">
       <div className="staff-page-header">
         <h1 className="staff-page-title">Billing</h1>
@@ -199,6 +202,7 @@ export default function BillingPage() {
           </table>
         )}
       </div>
+    </div>
     </div>
   );
 }

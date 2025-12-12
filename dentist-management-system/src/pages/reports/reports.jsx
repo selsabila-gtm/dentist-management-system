@@ -7,6 +7,7 @@ import {
   fetchPatientBillingSummary,
 } from "../../services/billingApi";
 import { getCurrentUser, isAdminUser } from "../../utils/auth";
+import Sidebar from "../../components/Sidebar/Sidebar";
 
 const API_BASE = "http://localhost:5000";
 
@@ -293,6 +294,8 @@ export default function ReportsPage() {
     const isLoggedOut = !user;
 
     return (
+        <div className="app-layout">
+      <Sidebar />
       <div className="staff-main reports-main">
         <div className="staff-card">
           <h1 className="staff-page-title">Access denied</h1>
@@ -314,11 +317,15 @@ export default function ReportsPage() {
           </button>
         </div>
       </div>
+        </div>
     );
   }
 
   // ✅ Admin: normal Reports UI
   return (
+    
+    <div className="app-layout">
+      <Sidebar />
     <div className="staff-main reports-main">
       <div className="staff-page-header reports-header">
         <div>
@@ -429,6 +436,7 @@ export default function ReportsPage() {
           )}
         </>
       )}
+    </div>
     </div>
   );
 }
@@ -721,6 +729,7 @@ function InventoryTab({ loading, report, currentRangeLabel }) {
           </tbody>
         </table>
       </div>
+
     </>
   );
 }
