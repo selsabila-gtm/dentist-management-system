@@ -1,7 +1,7 @@
 // src/pages/staff/profile.jsx
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import StaffLayout from "../../components/StaffLayout";
+import StaffAdminLayout from "../../components/StaffAdminLayout";
 import "../../styles/staff.css";
 import {
   fetchRoles,
@@ -14,6 +14,15 @@ const availabilityOptions = ["Full-time", "Part-time", "On-call"];
 const daysPresetOptions = ["Monday – Friday", "Weekends"];
 const hoursPresetOptions = ["9:00 AM – 5:00 PM", "10:00 AM – 6:00 PM"];
 
+const getCurrentUser = () => {
+  try {
+    const raw = localStorage.getItem("currentUser");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
 export default function StaffProfilePage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -25,12 +34,45 @@ export default function StaffProfilePage() {
   const [form, setForm] = useState(null);
   const [errors, setErrors] = useState({});
 
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
   // extra state for "Custom" schedule values
   const [customDays, setCustomDays] = useState("");
   const [customHours, setCustomHours] = useState("");
 
-  // ------- load staff + roles -------
+  // toast
+  const [toast, setToast] = useState({
+    visible: false,
+    type: "success",
+    message: "",
+  });
+
+  const [showDeactivate, setShowDeactivate] = useState(false);
+
+  const showToast = (message, type = "success") => {
+    setToast({ visible: true, type, message });
+    setTimeout(() => {
+      setToast((prev) => ({ ...prev, visible: false }));
+    }, 3000);
+  };
+
+  // ------- auth check -------
   useEffect(() => {
+    const user = getCurrentUser();
+    if (!user || !user.is_admin) {
+      setIsAdmin(false);
+      showToast("You don't have permission to view this staff profile.", "error");
+    } else {
+      setIsAdmin(true);
+    }
+    setAuthChecked(true);
+  }, []);
+
+  // ------- load staff + roles -------  
+  useEffect(() => {
+    if (!isAdmin) return;
+
     const load = async () => {
       try {
         const [staffData, rolesData] = await Promise.all([
@@ -77,21 +119,79 @@ export default function StaffProfilePage() {
         setCustomHours(hoursCustom);
       } catch (err) {
         console.error(err);
-        alert("Failed to load staff member");
+        showToast("Failed to load staff member", "error");
         navigate("/staff");
       }
     };
 
     load();
-  }, [id, navigate]);
+  }, [id, navigate, isAdmin]);
 
-  if (!staff || !form) {
+  // auth loading
+  if (!authChecked) {
     return (
-      <StaffLayout>
+      <StaffAdminLayout>
         <div className="staff-main">
           <p>Loading...</p>
         </div>
-      </StaffLayout>
+      </StaffAdminLayout>
+    );
+  }
+
+  // access denied
+  if (!isAdmin) {
+    return (
+      <StaffAdminLayout>
+        {toast.visible && (
+          <div className="toast-container">
+            <div
+              className={`toast ${
+                toast.type === "error" ? "toast-error" : "toast-success"
+              }`}
+            >
+              <span className="toast-message">{toast.message}</span>
+              <button
+                type="button"
+                className="toast-close"
+                onClick={() =>
+                  setToast((prev) => ({ ...prev, visible: false }))
+                }
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
+
+        <main className="staff-main">
+          <div className="staff-card">
+            <h1 className="staff-page-title" style={{ fontSize: 22 }}>
+              Access denied
+            </h1>
+            <p style={{ marginTop: 8, color: "#6b7280", fontSize: 14 }}>
+              You do not have permission to view or edit staff profiles.
+            </p>
+            <button
+              type="button"
+              className="btn-secondary"
+              style={{ marginTop: 16 }}
+              onClick={() => navigate("/")}
+            >
+              Go back
+            </button>
+          </div>
+        </main>
+      </StaffAdminLayout>
+    );
+  }
+
+  if (!staff || !form) {
+    return (
+      <StaffAdminLayout>
+        <div className="staff-main">
+          <p>Loading...</p>
+        </div>
+      </StaffAdminLayout>
     );
   }
 
@@ -128,10 +228,7 @@ export default function StaffProfilePage() {
       joinedText = `Joined ${diffDays} days ago`;
     } else if (diffDays < 30) {
       const weeks = Math.floor(diffDays / 7);
-      joinedText =
-        weeks === 1
-          ? "Joined 1 week ago"
-          : `Joined ${weeks} weeks ago`;
+      joinedText = weeks === 1 ? "Joined 1 week ago" : `Joined ${weeks} weeks ago`;
     } else {
       const monthsDiff =
         (now.getFullYear() - created.getFullYear()) * 12 +
@@ -211,11 +308,11 @@ export default function StaffProfilePage() {
     try {
       setSaving(true);
       await updateStaff(staff.id, payload);
-      alert("Employee updated");
+      showToast("Employee updated");
       setEditing(false);
     } catch (err) {
       console.error(err);
-      alert("Failed to update employee");
+      showToast("Failed to update employee", "error");
     } finally {
       setSaving(false);
     }
@@ -228,19 +325,41 @@ export default function StaffProfilePage() {
   };
 
   const handleDeactivate = () => {
-    if (
-      window.confirm(
-        "Are you sure you want to deactivate this account? This action can be reverted later in Admin tools."
-      )
-    ) {
-      alert("For the demo, we only show this confirmation.");
-    }
+    setShowDeactivate(true);
+  };
+
+  const confirmDeactivate = () => {
+    // demo only
+    showToast("For the demo, we only show this confirmation.");
+    setShowDeactivate(false);
   };
 
   // ------- render -------
 
   return (
-    <StaffLayout>
+    <StaffAdminLayout>
+      {/* Toast */}
+      {toast.visible && (
+        <div className="toast-container">
+          <div
+            className={`toast ${
+              toast.type === "error" ? "toast-error" : "toast-success"
+            }`}
+          >
+            <span className="toast-message">{toast.message}</span>
+            <button
+              type="button"
+              className="toast-close"
+              onClick={() =>
+                setToast((prev) => ({ ...prev, visible: false }))
+              }
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
       <main className="staff-main">
         <div className="staff-page-header">
           <button className="btn-secondary" onClick={handleBack}>
@@ -548,6 +667,57 @@ export default function StaffProfilePage() {
           </form>
         </div>
       </main>
-    </StaffLayout>
+
+      {/* Deactivate confirm modal */}
+      {showDeactivate && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15,23,42,0.45)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 50,
+          }}
+        >
+          <div
+            className="staff-card"
+            style={{ width: 380, textAlign: "center" }}
+          >
+            <h2 style={{ fontSize: 18, marginBottom: 8 }}>
+              Deactivate this account?
+            </h2>
+            <p style={{ fontSize: 14, color: "#6b7280", marginBottom: 16 }}>
+              This is a demo confirmation. In a real app this would disable the
+              staff login.
+            </p>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setShowDeactivate(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                style={{ backgroundColor: "#b91c1c" }}
+                onClick={confirmDeactivate}
+              >
+                Deactivate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </StaffAdminLayout>
   );
 }

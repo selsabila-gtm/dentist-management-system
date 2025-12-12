@@ -1,4 +1,4 @@
-// src/components/staffLayout.jsx
+// src/components/StaffLayout.jsx
 import React from "react";
 import "../styles/staff.css";
 

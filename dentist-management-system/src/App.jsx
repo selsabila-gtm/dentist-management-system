@@ -22,12 +22,21 @@ import TreatmentPlansPage from "./pages/patients/TreatmentPlans.jsx";
 
 import ReportsPage from "./pages/reports/reports.jsx";
 
+// src/App.jsx
+// ...
+import BillingPage from "./pages/billing/billing.jsx";
+import AddInvoicePage from "./pages/billing/AddInvoice.jsx";
+import InvoicePrintPage from "./pages/billing/InvoicePrint.jsx"; // 👈 NEW
+// ...
+
+
+
 
 // ----- SIMPLE PLACEHOLDER PAGES FOR OTHER SECTIONS -----
 // (Replace these later with your team’s real pages if they exist)
 const DashboardPage = () => <h1 style={{ padding: "2rem" }}>Dashboard</h1>;
 const CalendarPage = () => <h1 style={{ padding: "2rem" }}>Calendar</h1>;
-const BillingPage = () => <h1 style={{ padding: "2rem" }}>Billing</h1>;
+//const BillingPage = () => <h1 style={{ padding: "2rem" }}>Billing</h1>;
 const InventoryPage = () => <h1 style={{ padding: "2rem" }}>Inventory</h1>;
 const SettingsPage = () => <h1 style={{ padding: "2rem" }}>Settings</h1>;
 
@@ -144,6 +153,22 @@ function App() {
           element={
             <LayoutWithSidebar>
               <BillingPage />
+            </LayoutWithSidebar>
+          }
+        />
+        <Route
+          path="/billing/new"
+          element={
+            <LayoutWithSidebar>
+              <AddInvoicePage  />
+            </LayoutWithSidebar>
+          }
+        />
+        <Route
+          path="/billing/invoice/:id"
+          element={
+            <LayoutWithSidebar>
+              <InvoicePrintPage />
             </LayoutWithSidebar>
           }
         />

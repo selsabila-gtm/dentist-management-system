@@ -1,410 +1,726 @@
-// src/pages/reports/Reports.jsx
-import React, { useState, useEffect } from "react";
+// src/pages/reports/reports.jsx
+import React, { useEffect, useState } from "react";
+import "../../styles/staff.css";
 import "./reports.css";
+import {
+  fetchInvoices,
+  fetchPatientBillingSummary,
+} from "../../services/billingApi";
+import { getCurrentUser, isAdminUser } from "../../utils/auth";
 
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = "http://localhost:5000";
+
+const RANGE_DAYS = {
+  week: 7,
+  month: 30,
+  quarter: 90,
+  year: 365,
+};
+
+const RANGE_LABELS = {
+  week: "Last 7 days",
+  month: "Last Month",
+  quarter: "Last 3 Months",
+  year: "Last Year",
+};
+
+function formatCurrency(v) {
+  const num = Number(v || 0);
+  return `$${num.toFixed(2)}`;
+}
+
+function filterInvoicesByRange(invoices, rangeKey) {
+  const days = RANGE_DAYS[rangeKey] || 30;
+  const now = new Date();
+  const from = new Date();
+  from.setDate(now.getDate() - days);
+
+  return invoices.filter((inv) => {
+    if (!inv.date) return false;
+    const d = new Date(inv.date);
+    if (Number.isNaN(d.getTime())) return false;
+
+    // Allow future invoices, just make sure they’re not older than the range
+    return d >= from;
+  });
+}
+
+// ----- helpers to fetch basic data -----
+async function fetchAllPatients() {
+  const res = await fetch(`${API_BASE}/api/patients`);
+  if (!res.ok) throw new Error("Failed to load patients");
+  return res.json();
+}
+
+async function fetchAllAppointments() {
+  const res = await fetch(`${API_BASE}/api/appointments`);
+  if (!res.ok) throw new Error("Failed to load appointments");
+  return res.json();
+}
+
+// Load all staff then keep only dentists
+async function fetchDentists() {
+  const res = await fetch(`${API_BASE}/api/staff`);
+  if (!res.ok) throw new Error("Failed to load staff");
+
+  const staff = await res.json();
+
+  const dentistStaff = staff.filter(
+    (s) =>
+      s.role_name === "Dentist" ||
+      (s.role && (s.role.name === "Dentist" || s.role.Name === "Dentist"))
+  );
+
+  return dentistStaff.map((s) => ({
+    id: s.id,
+    name:
+      s.full_name ||
+      s.name ||
+      `${s.first_name || ""} ${s.last_name || ""}`.trim() ||
+      `Staff #${s.id}`,
+  }));
+}
+
+// ----- helper to trigger a CSV download -----
+function downloadCsv(csvText, filename) {
+  const blob = new Blob([csvText], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  URL.revokeObjectURL(url);
+}
+
+// ---------- MAIN PAGE COMPONENT ----------
 
 export default function ReportsPage() {
-  const [activeTab, setActiveTab] = useState("billing");
+  // 🔐 auth state
+  const [user, setUser] = useState(null);
+  const [checkedUser, setCheckedUser] = useState(false);
+
+  const [activeTab, setActiveTab] = useState("billing"); // 'billing' | 'inventory'
   const [dateRange, setDateRange] = useState("month");
-  const [loading, setLoading] = useState(true);
+  const [selectedDoctorId, setSelectedDoctorId] = useState("all");
 
-  // Mock data - replace with actual API calls later
-  const [billingData, setBillingData] = useState({
-    totalRevenue: 90000,
-    paidInvoices: 85500,
-    outstanding: 4500,
-    avgInvoice: 245,
-    totalInvoices: 367,
-    pendingCount: 15,
-    collectionRate: 95,
-  });
+  const [loading, setLoading] = useState(false);
+  const [loadingInventory, setLoadingInventory] = useState(false);
+  const [error, setError] = useState("");
 
-  const [paymentData, setPaymentData] = useState({
-    paid: { count: 312, amount: 85500 },
-    unpaid: { count: 37, amount: 4200 },
-    partial: { count: 18, amount: 300 },
-  });
+  const [invoices, setInvoices] = useState([]);
+  const [patients, setPatients] = useState([]);
+  const [appointments, setAppointments] = useState([]);
+  const [dentists, setDentists] = useState([]);
+  const [patientSummaries, setPatientSummaries] = useState({}); // { patientId: summary }
 
-  const [inventoryData, setInventoryData] = useState([
-    { id: 1, item: "Dental Masks", stock: 450, consumed: 120, cost: 890, status: "good" },
-    { id: 2, item: "Gloves", stock: 1200, consumed: 350, cost: 420, status: "good" },
-    { id: 3, item: "Syringes", stock: 300, consumed: 85, cost: 650, status: "good" },
-    { id: 4, item: "Anesthetics", stock: 150, consumed: 45, cost: 1200, status: "low" },
-    { id: 5, item: "Cotton Rolls", stock: 800, consumed: 200, cost: 180, status: "good" },
-  ]);
+  const [billingStats, setBillingStats] = useState(null);
+  const [inventoryReport, setInventoryReport] = useState(null);
 
-  const [procedureRevenue, setProcedureRevenue] = useState([
-    { procedure: "Routine Checkup", count: 145, revenue: 7250 },
-    { procedure: "Teeth Cleaning", count: 98, revenue: 9800 },
-    { procedure: "Filling", count: 67, revenue: 10050 },
-    { procedure: "Root Canal", count: 23, revenue: 11500 },
-    { procedure: "Extraction", count: 34, revenue: 5100 },
-  ]);
-
-  const [recentPayments, setRecentPayments] = useState([
-    { id: 1, date: "2025-12-10", patient: "John Doe", invoice: "INV-2341", amount: 250, status: "paid" },
-    { id: 2, date: "2025-12-10", patient: "Sarah Smith", invoice: "INV-2340", amount: 180, status: "paid" },
-    { id: 3, date: "2025-12-09", patient: "Mike Johnson", invoice: "INV-2339", amount: 420, status: "partial" },
-    { id: 4, date: "2025-12-09", patient: "Emma Wilson", invoice: "INV-2338", amount: 150, status: "paid" },
-    { id: 5, date: "2025-12-08", patient: "David Brown", invoice: "INV-2337", amount: 300, status: "unpaid" },
-  ]);
-
+  // ----- read current user once -----
   useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 500);
-
-    return () => clearTimeout(timer);
+    const u = getCurrentUser();
+    setUser(u);
+    setCheckedUser(true);
   }, []);
 
+  // ----- Load base data (only for admins) -----
+  useEffect(() => {
+    if (!checkedUser || !isAdminUser(user)) return;
+
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const [inv, pats, appts, docs] = await Promise.all([
+          fetchInvoices({ sortBy: "date", sortDir: "desc" }),
+          fetchAllPatients(),
+          fetchAllAppointments(),
+          fetchDentists(),
+        ]);
+
+        setInvoices(inv || []);
+        setPatients(pats || []);
+        setAppointments(appts || []);
+        setDentists(docs || []);
+
+        // fetch billing summaries for ALL patients
+        const summaryPairs = await Promise.all(
+          (pats || []).map(async (p) => {
+            try {
+              const s = await fetchPatientBillingSummary(p.id);
+              return [p.id, s];
+            } catch (err) {
+              console.error("Failed billing summary for patient", p.id, err);
+              return [p.id, null];
+            }
+          })
+        );
+        const summaryMap = {};
+        for (const [pid, s] of summaryPairs) {
+          if (s) summaryMap[pid] = s;
+        }
+        setPatientSummaries(summaryMap);
+      } catch (err) {
+        console.error(err);
+        setError(err.message || "Failed to load reports data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, [checkedUser, user]);
+
+  // ----- Compute billing stats whenever filters or data change -----
+  useEffect(() => {
+    // Only compute if admin + we have patients
+    if (!patients.length || !isAdminUser(user)) {
+      setBillingStats(null);
+      return;
+    }
+
+    const stats = computeBillingStats({
+      invoices,
+      patients,
+      appointments,
+      patientSummaries,
+      dateRange,
+      selectedDoctorId,
+    });
+
+    setBillingStats(stats);
+  }, [
+    invoices,
+    patients,
+    appointments,
+    patientSummaries,
+    dateRange,
+    selectedDoctorId,
+    user,
+  ]);
+
+  // ----- Load inventory report only when needed (admin only) -----
+  useEffect(() => {
+    if (activeTab !== "inventory" || !isAdminUser(user)) return;
+
+    const loadInventory = async () => {
+      try {
+        setLoadingInventory(true);
+        setError("");
+
+        const res = await fetch(
+          `${API_BASE}/api/reports/inventory?date_range=${dateRange}`
+        );
+        if (!res.ok) {
+          throw new Error(
+            `Failed to load inventory report (status ${res.status})`
+          );
+        }
+
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+          throw new Error("Inventory report did not return JSON.");
+        }
+
+        const data = await res.json();
+        setInventoryReport(data);
+      } catch (err) {
+        console.error(err);
+        setError(err.message || "Failed to load inventory report");
+      } finally {
+        setLoadingInventory(false);
+      }
+    };
+
+    loadInventory();
+  }, [activeTab, dateRange, user]);
+
+  const currentRangeLabel = RANGE_LABELS[dateRange] || "Last Month";
+
   const handleExport = () => {
-    alert("Export functionality will be implemented soon!");
+    if (activeTab === "billing" && billingStats) {
+      // ----- BILLING CSV -----
+      const doctorName =
+        selectedDoctorId === "all"
+          ? "All doctors"
+          : dentists.find((d) => String(d.id) === String(selectedDoctorId))
+              ?.name || "Unknown doctor";
+
+      let csv = "";
+      csv += "Billing Report\n";
+      csv += `Doctor,${doctorName}\n`;
+      csv += `Date range,${currentRangeLabel}\n\n`;
+
+      csv +=
+        "Patient,Invoices (period),Total Paid (period),Outstanding (overall)\n";
+
+      billingStats.rows.forEach((row) => {
+        // Use raw numbers (no $) so Excel can treat them as numeric
+        csv += `"${row.name}",${row.invoicesCount},${row.paidAmount},${row.outstanding}\n`;
+      });
+
+      const filename = `billing-report-${Date.now()}.csv`;
+      downloadCsv(csv, filename);
+    } else if (activeTab === "inventory" && inventoryReport) {
+      // ----- INVENTORY CSV -----
+      let csv = "";
+      csv += "Inventory Report\n";
+      csv += `Date range,${currentRangeLabel}\n\n`;
+
+      csv += "Item Name,Current Stock,Consumed,Cost,Status\n";
+
+      (inventoryReport.items || []).forEach((item) => {
+        csv += `"${item.item}",${item.stock},${item.consumed},${item.cost},${item.status}\n`;
+      });
+
+      const filename = `inventory-report-${Date.now()}.csv`;
+      downloadCsv(csv, filename);
+    }
   };
 
+  // ✅ Wait until we know if there is a user
+  if (!checkedUser) {
+    return null;
+  }
+
+  // ❌ Not logged in OR not admin → block Reports entirely
+  if (!user || !isAdminUser(user)) {
+    const isLoggedOut = !user;
+
+    return (
+      <div className="staff-main reports-main">
+        <div className="staff-card">
+          <h1 className="staff-page-title">Access denied</h1>
+          <p style={{ marginTop: 6, color: "#6b7280", fontSize: 14 }}>
+            {isLoggedOut
+              ? "You must be logged in as an administrator to view reports."
+              : "You do not have permission to view reports. Please contact an administrator if you think this is a mistake."}
+          </p>
+          <button
+            className="btn-secondary"
+            style={{ marginTop: 16 }}
+            onClick={() =>
+              isLoggedOut
+                ? (window.location.href = "/login")
+                : window.history.back()
+            }
+          >
+            {isLoggedOut ? "Go to login" : "Go back"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ Admin: normal Reports UI
+  return (
+    <div className="staff-main reports-main">
+      <div className="staff-page-header reports-header">
+        <div>
+          <h1 className="staff-page-title">Reports</h1>
+          <p className="reports-subtitle">
+            Track revenue, payments, and inventory performance.
+          </p>
+        </div>
+
+        <div className="reports-header-right">
+          {activeTab === "billing" && (
+            <select
+              className="staff-input reports-doctor-select"
+              value={selectedDoctorId}
+              onChange={(e) => setSelectedDoctorId(e.target.value)}
+            >
+              <option value="all">All doctors</option>
+              {dentists.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          )}
+
+          <select
+            className="staff-input reports-range-select"
+            value={dateRange}
+            onChange={(e) => setDateRange(e.target.value)}
+          >
+            <option value="week">Last 7 days</option>
+            <option value="month">Last Month</option>
+            <option value="quarter">Last 3 Months</option>
+            <option value="year">Last Year</option>
+          </select>
+
+          <button
+            className="btn-primary"
+            onClick={handleExport}
+            disabled={
+              loading ||
+              (activeTab === "billing" && !billingStats) ||
+              (activeTab === "inventory" && !inventoryReport)
+            }
+          >
+            Export Report
+          </button>
+        </div>
+      </div>
+
+      <div className="reports-tabs">
+        <button
+          className={
+            activeTab === "billing"
+              ? "reports-tab-button active"
+              : "reports-tab-button"
+          }
+          onClick={() => setActiveTab("billing")}
+        >
+          Billing Reports
+        </button>
+
+        <button
+          className={
+            activeTab === "inventory"
+              ? "reports-tab-button active"
+              : "reports-tab-button"
+          }
+          onClick={() => setActiveTab("inventory")}
+        >
+          Inventory Reports
+        </button>
+      </div>
+
+      {error && (
+        <div
+          className="inline-message inline-message-error"
+          style={{ marginBottom: 12 }}
+        >
+          <div className="inline-message-title">Unable to load reports</div>
+          <div className="inline-message-body">{error}</div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="inline-message inline-message-neutral">
+          <div className="inline-message-title">Loading reports…</div>
+          <div className="inline-message-body">
+            This might take a few seconds if there are many invoices and
+            patients.
+          </div>
+        </div>
+      ) : (
+        <>
+          {activeTab === "billing" && billingStats && (
+            <BillingTab
+              stats={billingStats}
+              currentRangeLabel={currentRangeLabel}
+            />
+          )}
+
+          {activeTab === "inventory" && (
+            <InventoryTab
+              loading={loadingInventory}
+              report={inventoryReport}
+              currentRangeLabel={currentRangeLabel}
+            />
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ---------- COMPUTE BILLING STATS (PURE LOGIC) ----------
+
+function computeBillingStats({
+  invoices,
+  patients,
+  appointments,
+  patientSummaries,
+  dateRange,
+  selectedDoctorId,
+}) {
+  // 1) Figure out which patients belong to the selected doctor
+  const allPatientIds = patients.map((p) => p.id);
+
+  const doctorIdNum =
+    selectedDoctorId === "all" ? null : Number(selectedDoctorId) || null;
+
+  let allowedPatientIdsSet;
+
+  if (!doctorIdNum) {
+    // All doctors -> ALL patients
+    allowedPatientIdsSet = new Set(allPatientIds);
+  } else {
+    // patients that have at least one appointment with this doctor
+    const patientIdsForDoctor = appointments
+      .filter((a) => a.dentist_id === doctorIdNum && a.patient_id != null)
+      .map((a) => a.patient_id);
+
+    allowedPatientIdsSet = new Set(patientIdsForDoctor);
+  }
+
+  // 2) Filter invoices by date range AND by allowed patients
+  const invoicesInRange = filterInvoicesByRange(invoices, dateRange).filter(
+    (inv) => inv.patient_id != null && allowedPatientIdsSet.has(inv.patient_id)
+  );
+
+  let totalPaidPeriod = 0;
+  const patientIdsWithPaymentInPeriod = new Set();
+
+  invoicesInRange.forEach((inv) => {
+    const amt = Number(inv.amount || 0);
+    totalPaidPeriod += amt;
+    if (inv.patient_id != null) {
+      patientIdsWithPaymentInPeriod.add(inv.patient_id);
+    }
+  });
+
+  const invoiceCount = invoicesInRange.length;
+  const distinctPayers = patientIdsWithPaymentInPeriod.size;
+  const avgPaidPerPerson = distinctPayers
+    ? totalPaidPeriod / distinctPayers
+    : 0;
+
+  // 3) Use billing summaries for ALL allowed patients (even if no payment)
+  const allowedPatientIds = Array.from(allowedPatientIdsSet);
+
+  let totalCostAll = 0;
+  let totalPaidAll = 0;
+  let outstandingAll = 0;
+
+  const rows = [];
+
+  allowedPatientIds.forEach((pid) => {
+    const patient = patients.find((p) => p.id === pid);
+    const summary = patientSummaries[pid] || {};
+
+    const totalCost = Number(summary.total_cost || 0);
+    const totalPaidAllForPatient = Number(summary.total_paid || 0);
+    const outstanding =
+      summary.outstanding != null
+        ? Number(summary.outstanding)
+        : Math.max(totalCost - totalPaidAllForPatient, 0);
+
+    totalCostAll += totalCost;
+    totalPaidAll += totalPaidAllForPatient;
+    outstandingAll += outstanding;
+
+    const invoicesForPatientInPeriod = invoicesInRange.filter(
+      (inv) => inv.patient_id === pid
+    );
+    const invoicesCountPeriod = invoicesForPatientInPeriod.length;
+    const paidPeriodForPatient = invoicesForPatientInPeriod.reduce(
+      (sum, inv) => sum + Number(inv.amount || 0),
+      0
+    );
+
+    rows.push({
+      patient_id: pid,
+      name: patient?.name || summary.patient_name || `Patient #${pid}`,
+      invoicesCount: invoicesCountPeriod,
+      paidAmount: paidPeriodForPatient,
+      outstanding,
+    });
+  });
+
+  // Sort by paid amount in period desc (but still includes everyone)
+  rows.sort((a, b) => b.paidAmount - a.paidAmount);
+
+  const collectionRate =
+    totalCostAll > 0 ? Math.round((totalPaidAll / totalCostAll) * 100) : 0;
+
+  return {
+    totalRevenue: totalPaidPeriod,
+    invoiceCount,
+    avgPaidPerPerson,
+    totalOutstanding: outstandingAll,
+    collectionRate,
+    rows,
+  };
+}
+
+// ---------- BILLING TAB UI ----------
+
+function BillingTab({ stats, currentRangeLabel }) {
+  return (
+    <>
+      <div className="reports-card-grid">
+        <div className="reports-card">
+          <p className="reports-card-label">Total Revenue</p>
+          <p className="reports-card-value">
+            {formatCurrency(stats.totalRevenue)}
+          </p>
+          <p className="reports-card-sub">
+            {stats.invoiceCount} invoice
+            {stats.invoiceCount === 1 ? "" : "s"} • {currentRangeLabel}
+          </p>
+        </div>
+
+        <div className="reports-card">
+          <p className="reports-card-label">Average Paid per Patient</p>
+          <p className="reports-card-value">
+            {formatCurrency(stats.avgPaidPerPerson)}
+          </p>
+          <p className="reports-card-sub">
+            Among patients who paid in this period
+          </p>
+        </div>
+
+        <div className="reports-card">
+          <p className="reports-card-label">Outstanding Balance</p>
+          <p className="reports-card-value">
+            {formatCurrency(stats.totalOutstanding)}
+          </p>
+          <p className="reports-card-sub">All patients combined</p>
+        </div>
+
+        <div className="reports-card">
+          <p className="reports-card-label">Collection Rate</p>
+          <p className="reports-card-value">{stats.collectionRate}%</p>
+          <p className="reports-card-sub">Paid vs total billed (all time)</p>
+        </div>
+      </div>
+
+      <div className="staff-card reports-table-card">
+        <div className="reports-table-header">
+          <h2>Patients by Revenue</h2>
+          <p className="reports-table-sub">
+            All patients in the selected doctor filter. Sorted by amount paid in
+            the selected period.
+          </p>
+        </div>
+
+        {stats.rows.length === 0 ? (
+          <p className="reports-table-sub">
+            No patients found for this filter and date range.
+          </p>
+        ) : (
+          <table className="staff-table">
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Invoices (period)</th>
+                <th>Total Paid (period)</th>
+                <th>Outstanding (overall)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stats.rows.map((p) => (
+                <tr key={p.patient_id}>
+                  <td>{p.name}</td>
+                  <td>{p.invoicesCount}</td>
+                  <td>{formatCurrency(p.paidAmount)}</td>
+                  <td>{formatCurrency(p.outstanding)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ---------- INVENTORY TAB ----------
+
+function InventoryTab({ loading, report, currentRangeLabel }) {
   if (loading) {
     return (
-      <div className="app-layout">
-        <main className="main-content">
-          <p>Loading reports...</p>
-        </main>
+      <div className="inline-message inline-message-neutral">
+        <div className="inline-message-title">Loading inventory report…</div>
+        <div className="inline-message-body">
+          Please wait while we fetch inventory usage for {currentRangeLabel}.
+        </div>
+      </div>
+    );
+  }
+
+  if (!report) {
+    return (
+      <div className="staff-card">
+        <p className="reports-table-sub">
+          No inventory data available yet for this range.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="app-layout">
-      <main className="main-content">
-        {/* Header */}
-        <header className="page-header">
-          <h1 className="page-title">Reports</h1>
-          <p className="page-subtitle">
-            Track revenue, payments, and inventory performance
+    <>
+      <div className="reports-card-grid">
+        <div className="reports-card">
+          <p className="reports-card-label">Total Items</p>
+          <p className="reports-card-value">{report.total_items}</p>
+          <p className="reports-card-sub">
+            {report.items?.length || 0} tracked categories
           </p>
-        </header>
-
-        {/* Filter Controls */}
-        <div className="reports-controls">
-          <select
-            value={dateRange}
-            onChange={(e) => setDateRange(e.target.value)}
-            className="date-range-select"
-          >
-            <option value="week">Last Week</option>
-            <option value="month">Last Month</option>
-            <option value="quarter">Last Quarter</option>
-            <option value="year">Last Year</option>
-          </select>
-          <button className="pill-button" onClick={handleExport}>
-            Export Report
-          </button>
         </div>
 
-        {/* Tabs */}
-        <div className="tabs-row">
-          <button
-            className={`tab-btn ${activeTab === "billing" ? "active" : ""}`}
-            onClick={() => setActiveTab("billing")}
-          >
-            Billing Reports
-          </button>
-          <button
-            className={`tab-btn ${activeTab === "payments" ? "active" : ""}`}
-            onClick={() => setActiveTab("payments")}
-          >
-            Payment Tracking
-          </button>
-          <button
-            className={`tab-btn ${activeTab === "inventory" ? "active" : ""}`}
-            onClick={() => setActiveTab("inventory")}
-          >
-            Inventory Reports
-          </button>
+        <div className="reports-card">
+          <p className="reports-card-label">
+            Consumed ({currentRangeLabel})
+          </p>
+          <p className="reports-card-value">
+            {report.consumed_this_period}
+          </p>
+          <p className="reports-card-sub">
+            {report.low_stock_count} low-stock item
+            {report.low_stock_count === 1 ? "" : "s"}
+          </p>
         </div>
 
-        {/* BILLING TAB */}
-        {activeTab === "billing" && (
-          <div className="reports-content">
-            {/* Summary Cards */}
-            <div className="summary-grid">
-              <div className="summary-card blue">
-                <div className="summary-content">
-                  <p className="summary-label">Total Revenue</p>
-                  <p className="summary-value">${billingData.totalRevenue.toLocaleString()}</p>
-                  <p className="summary-trend positive">↑ 12% from last month</p>
-                </div>
-                <div className="summary-icon blue">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="12" y1="1" x2="12" y2="23"></line>
-                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                  </svg>
-                </div>
-              </div>
+        <div className="reports-card">
+          <p className="reports-card-label">Total Cost</p>
+          <p className="reports-card-value">
+            {formatCurrency(report.total_cost)}
+          </p>
+          <p className="reports-card-sub">Current inventory value</p>
+        </div>
 
-              <div className="summary-card green">
-                <div className="summary-content">
-                  <p className="summary-label">Paid Invoices</p>
-                  <p className="summary-value">${billingData.paidInvoices.toLocaleString()}</p>
-                  <p className="summary-trend">{billingData.collectionRate}% collection rate</p>
-                </div>
-                <div className="summary-icon green">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
-                    <polyline points="16 7 22 7 22 13"></polyline>
-                  </svg>
-                </div>
-              </div>
+        <div className="reports-card">
+          <p className="reports-card-label">Low Stock Items</p>
+          <p className="reports-card-value">
+            {report.low_stock_count}
+          </p>
+          <p className="reports-card-sub">Need reorder</p>
+        </div>
+      </div>
 
-              <div className="summary-card orange">
-                <div className="summary-content">
-                  <p className="summary-label">Outstanding</p>
-                  <p className="summary-value">${billingData.outstanding.toLocaleString()}</p>
-                  <p className="summary-trend">{billingData.pendingCount} pending invoices</p>
-                </div>
-                <div className="summary-icon orange">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                  </svg>
-                </div>
-              </div>
+      <div className="staff-card reports-table-card">
+        <div className="reports-table-header">
+          <h2>Inventory Details</h2>
+          <p className="reports-table-sub">
+            Item stock levels and consumption.
+          </p>
+        </div>
 
-              <div className="summary-card purple">
-                <div className="summary-content">
-                  <p className="summary-label">Avg. Invoice</p>
-                  <p className="summary-value">${billingData.avgInvoice}</p>
-                  <p className="summary-trend">{billingData.totalInvoices} total invoices</p>
-                </div>
-                <div className="summary-icon purple">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="12" y1="1" x2="12" y2="23"></line>
-                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            {/* Revenue by Procedure */}
-            <section className="card">
-              <div className="card-header">
-                <h2 className="card-title">Revenue by Procedure</h2>
-              </div>
-
-              <div className="table-wrapper">
-                <table className="records-table">
-                  <thead>
-                    <tr>
-                      <th>Procedure</th>
-                      <th>Count</th>
-                      <th>Revenue</th>
-                      <th>Avg. Price</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {procedureRevenue.map((item, idx) => (
-                      <tr key={idx}>
-                        <td>{item.procedure}</td>
-                        <td>{item.count}</td>
-                        <td className="link-like">${item.revenue.toLocaleString()}</td>
-                        <td>${Math.round(item.revenue / item.count)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          </div>
-        )}
-
-        {/* PAYMENTS TAB */}
-        {activeTab === "payments" && (
-          <div className="reports-content">
-            {/* Payment Status Cards */}
-            <div className="payment-status-grid">
-              <div className="payment-status-card paid">
-                <div className="payment-status-content">
-                  <div>
-                    <p className="payment-status-label">Paid</p>
-                    <p className="payment-status-count">{paymentData.paid.count} invoices</p>
-                  </div>
-                  <div className="payment-status-amount">
-                    <p className="payment-amount-label">Amount</p>
-                    <p className="payment-amount-value">${paymentData.paid.amount.toLocaleString()}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="payment-status-card unpaid">
-                <div className="payment-status-content">
-                  <div>
-                    <p className="payment-status-label">Unpaid</p>
-                    <p className="payment-status-count">{paymentData.unpaid.count} invoices</p>
-                  </div>
-                  <div className="payment-status-amount">
-                    <p className="payment-amount-label">Amount</p>
-                    <p className="payment-amount-value">${paymentData.unpaid.amount.toLocaleString()}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="payment-status-card partial">
-                <div className="payment-status-content">
-                  <div>
-                    <p className="payment-status-label">Partial</p>
-                    <p className="payment-status-count">{paymentData.partial.count} invoices</p>
-                  </div>
-                  <div className="payment-status-amount">
-                    <p className="payment-amount-label">Amount</p>
-                    <p className="payment-amount-value">${paymentData.partial.amount.toLocaleString()}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Recent Payments */}
-            <section className="card">
-              <div className="card-header">
-                <h2 className="card-title">Recent Payments</h2>
-                <button className="view-all-link">View All</button>
-              </div>
-
-              <div className="table-wrapper">
-                <table className="records-table">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Patient</th>
-                      <th>Invoice #</th>
-                      <th>Amount</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentPayments.map((payment) => (
-                      <tr key={payment.id}>
-                        <td>{payment.date}</td>
-                        <td>{payment.patient}</td>
-                        <td className="link-like">{payment.invoice}</td>
-                        <td>${payment.amount}</td>
-                        <td>
-                          <span className={`status-pill ${payment.status}`}>
-                            {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          </div>
-        )}
-
-        {/* INVENTORY TAB */}
-        {activeTab === "inventory" && (
-          <div className="reports-content">
-            {/* Inventory Summary Cards */}
-            <div className="summary-grid">
-              <div className="summary-card blue">
-                <div className="summary-content">
-                  <p className="summary-label">Total Items</p>
-                  <p className="summary-value">2,900</p>
-                  <p className="summary-trend">5 categories</p>
-                </div>
-                <div className="summary-icon blue">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                  </svg>
-                </div>
-              </div>
-
-              <div className="summary-card orange">
-                <div className="summary-content">
-                  <p className="summary-label">Consumed (Month)</p>
-                  <p className="summary-value">800</p>
-                  <p className="summary-trend">28% of stock</p>
-                </div>
-                <div className="summary-icon orange">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
-                    <polyline points="16 7 22 7 22 13"></polyline>
-                  </svg>
-                </div>
-              </div>
-
-              <div className="summary-card green">
-                <div className="summary-content">
-                  <p className="summary-label">Total Cost</p>
-                  <p className="summary-value">$3,340</p>
-                  <p className="summary-trend">Current inventory</p>
-                </div>
-                <div className="summary-icon green">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="12" y1="1" x2="12" y2="23"></line>
-                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                  </svg>
-                </div>
-              </div>
-
-              <div className="summary-card red">
-                <div className="summary-content">
-                  <p className="summary-label">Low Stock Items</p>
-                  <p className="summary-value">2</p>
-                  <p className="summary-trend negative">Needs reorder</p>
-                </div>
-                <div className="summary-icon red">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            {/* Inventory Details */}
-            <section className="card">
-              <div className="card-header">
-                <h2 className="card-title">Inventory Details</h2>
-              </div>
-
-              <div className="table-wrapper">
-                <table className="records-table">
-                  <thead>
-                    <tr>
-                      <th>Item Name</th>
-                      <th>Current Stock</th>
-                      <th>Consumed</th>
-                      <th>Cost</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {inventoryData.map((item) => (
-                      <tr key={item.id}>
-                        <td>{item.item}</td>
-                        <td>{item.stock}</td>
-                        <td>{item.consumed}</td>
-                        <td className="link-like">${item.cost}</td>
-                        <td>
-                          <span className={`status-pill ${item.status === 'good' ? 'completed' : 'proposed'}`}>
-                            {item.status === 'good' ? 'In Stock' : item.status === 'low' ? 'Low Stock' : 'Critical'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          </div>
-        )}
-      </main>
-    </div>
+        <table className="staff-table">
+          <thead>
+            <tr>
+              <th>Item Name</th>
+              <th>Current Stock</th>
+              <th>Consumed</th>
+              <th>Cost</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(report.items || []).map((item) => (
+              <tr key={item.id}>
+                <td>{item.item}</td>
+                <td>{item.stock}</td>
+                <td>{item.consumed}</td>
+                <td>{formatCurrency(item.cost)}</td>
+                <td>{item.status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

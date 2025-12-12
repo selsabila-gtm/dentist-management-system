@@ -3,7 +3,7 @@
 from flask import Flask
 from flask_cors import CORS
 
-from models import (
+from backend.models import (
     db,
     SQLALCHEMY_DATABASE_URI,
     UPLOAD_FOLDER,
@@ -30,7 +30,7 @@ def create_app():
     db.init_app(app)
 
     # register routes via blueprint
-    from routes import register_routes
+    from backend.routes import register_routes
     register_routes(app)
 
     # create tables + seed data (no dropping)

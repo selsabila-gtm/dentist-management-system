@@ -1,251 +1,170 @@
 /* src/pages/reports/reports.css */
 
-.reports-controls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  gap: 1rem;
-}
-
-.date-range-select {
-  padding: 0.625rem 1rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  color: #374151;
-  background-color: white;
-  cursor: pointer;
-  transition: border-color 0.2s;
-}
-
-.date-range-select:hover {
-  border-color: #9ca3af;
-}
-
-.date-range-select:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.reports-content {
+.reports-main {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 16px;
 }
 
-/* Summary Cards Grid */
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+.reports-header {
+  margin-bottom: 12px;
 }
 
-.summary-card {
-  background: white;
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-  border: 1px solid #e5e7eb;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  transition: box-shadow 0.2s;
-}
-
-.summary-card:hover {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
-
-.summary-content {
-  flex: 1;
-}
-
-.summary-label {
-  font-size: 0.875rem;
+.reports-subtitle {
+  font-size: 13px;
   color: #6b7280;
-  margin-bottom: 0.5rem;
+  margin-top: 4px;
 }
 
-.summary-value {
-  font-size: 1.875rem;
-  font-weight: 600;
-  color: #111827;
-  margin-bottom: 0.25rem;
-  line-height: 1.2;
-}
-
-.summary-trend {
-  font-size: 0.875rem;
-  color: #6b7280;
-}
-
-.summary-trend.positive {
-  color: #10b981;
-}
-
-.summary-trend.negative {
-  color: #ef4444;
-}
-
-.summary-icon {
-  width: 3rem;
-  height: 3rem;
-  border-radius: 0.75rem;
+.reports-header-right {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  gap: 12px;
 }
 
-.summary-icon.blue {
-  background-color: #dbeafe;
-  color: #3b82f6;
+.reports-range-select {
+  min-width: 140px;
 }
 
-.summary-icon.green {
-  background-color: #d1fae5;
-  color: #10b981;
+/* doctor select next to range */
+.reports-doctor-select {
+  min-width: 160px;
 }
 
-.summary-icon.orange {
-  background-color: #fed7aa;
-  color: #f97316;
-}
+/* Tabs */
 
-.summary-icon.purple {
-  background-color: #e9d5ff;
-  color: #a855f7;
-}
-
-.summary-icon.red {
-  background-color: #fee2e2;
-  color: #ef4444;
-}
-
-/* Payment Status Cards */
-.payment-status-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.payment-status-card {
-  background: white;
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-  border: 1px solid #e5e7eb;
-}
-
-.payment-status-card.paid {
-  background-color: #f0fdf4;
-  border-color: #bbf7d0;
-}
-
-.payment-status-card.unpaid {
-  background-color: #fef2f2;
-  border-color: #fecaca;
-}
-
-.payment-status-card.partial {
-  background-color: #fffbeb;
-  border-color: #fed7aa;
-}
-
-.payment-status-content {
+.reports-tabs {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  gap: 24px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 16px;
 }
 
-.payment-status-label {
-  font-size: 0.875rem;
-  color: #6b7280;
-  margin-bottom: 0.25rem;
-}
-
-.payment-status-count {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #111827;
-}
-
-.payment-status-amount {
-  text-align: right;
-}
-
-.payment-amount-label {
-  font-size: 0.875rem;
-  color: #6b7280;
-  margin-bottom: 0.25rem;
-}
-
-.payment-amount-value {
-  font-size: 1.5rem;
-  font-weight: 600;
-}
-
-.payment-status-card.paid .payment-amount-value {
-  color: #10b981;
-}
-
-.payment-status-card.unpaid .payment-amount-value {
-  color: #ef4444;
-}
-
-.payment-status-card.partial .payment-amount-value {
-  color: #f97316;
-}
-
-/* View All Link */
-.view-all-link {
-  background: none;
+.reports-tab-button {
+  background: transparent;
   border: none;
-  color: #3b82f6;
-  font-size: 0.875rem;
+  padding: 10px 0;
+  font-size: 14px;
+  color: #6b7280;
   cursor: pointer;
-  transition: color 0.2s;
+  position: relative;
 }
 
-.view-all-link:hover {
-  color: #2563eb;
-  text-decoration: underline;
+.reports-tab-button.active {
+  color: #111827;
+  font-weight: 500;
 }
 
-/* Status Pills - extending existing styles */
-.status-pill.paid {
-  background-color: #d1fae5;
-  color: #065f46;
+.reports-tab-button.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 100%;
+  height: 2px;
+  border-radius: 999px;
+  background-color: #2563eb;
 }
 
-.status-pill.unpaid {
-  background-color: #fee2e2;
-  color: #991b1b;
+/* Summary cards */
+
+.reports-card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 18px;
 }
 
-.status-pill.partial {
-  background-color: #fed7aa;
-  color: #92400e;
+.reports-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 16px 18px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.04);
+  border: 1px solid #e5e7eb;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .summary-grid {
-    grid-template-columns: 1fr;
+.reports-card-label {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+.reports-card-value {
+  font-size: 24px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.reports-card-sub {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+/* Table card */
+
+.reports-table-card {
+  margin-top: 4px;
+}
+
+.reports-table-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 12px;
+}
+
+.reports-table-header h2 {
+  font-size: 18px;
+  color: #111827;
+}
+
+.reports-table-sub {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* PRINT STYLES FOR REPORT EXPORT */
+@media print {
+  /* Hide sidebar */
+  .app-shell > :first-child {
+    display: none !important;
   }
 
-  .payment-status-grid {
-    grid-template-columns: 1fr;
+  /* Make main content full width */
+  .app-shell > :last-child {
+    width: 100% !important;
   }
 
-  .reports-controls {
-    flex-direction: column;
-    align-items: stretch;
+  /* Clean background, reduce padding */
+  .staff-main.reports-main {
+    padding: 24px 32px !important;
+    background: #ffffff !important;
   }
 
-  .date-range-select {
-    width: 100%;
+  /* Hide export button (and any header buttons) */
+  .reports-header-right button,
+  .staff-page-header button {
+    display: none !important;
+  }
+
+  /* Keep cards and tables clear with slightly bigger text */
+  .reports-card,
+  .reports-card * {
+    font-size: 14px !important;
+  }
+
+  .reports-card-value {
+    font-size: 22px !important;
+  }
+
+  /* Optional: hide the tabs border underline when printing */
+  .reports-tabs {
+    border-bottom: none !important;
+    margin-bottom: 8px !important;
+  }
+
+  @page {
+    margin: 12mm;
   }
 }
