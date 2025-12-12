@@ -3,202 +3,218 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
 
-// ----- LAYOUT -----
-import Sidebar from "./components/sidebar/sidebar.jsx";
-import StaffLayout from "./components/staffLayout.jsx";
+// Auth pages
+import LoginPage from "./pages/auth/login";
 
-// ----- STAFF PAGES -----
-import StaffListPage from "./pages/staff/list.jsx";
+// Inventory pages
+import InventoryListPage from "./pages/inventory/list";
+import InventoryAddPage from "./pages/inventory/add";
+import InventoryDetailsPage from "./pages/inventory/details";
+
+// Calendar / Appointments pages
+import Calendar from "./pages/appointments/calendar";
+import AppointmentAddPage from "./pages/appointments/add";
+import AppointmentPostSummaryPage from "./pages/appointments/post_summary";
+
+// Staff pages
+import Staff from "./pages/staff/list";
 import StaffAddPage from "./pages/staff/add.jsx";
-import LoginPage from "./pages/staff/login";
+import StaffProfilePage from "./pages/staff/profile.jsx";
 import ResetPasswordPage from "./pages/staff/resetPassword";
 import ChangePasswordPage from "./pages/staff/changePassword.jsx";
-import StaffProfilePage from "./pages/staff/profile.jsx";
 
-// ----- PATIENT PAGES -----
+// Patient pages
 import MedicalRecordsPage from "./pages/patients/MedicalRecords.jsx";
 import PrescriptionsPage from "./pages/patients/Prescriptions.jsx";
 import TreatmentPlansPage from "./pages/patients/TreatmentPlans.jsx";
 
-import ReportsPage from "./pages/reports/reports.jsx";
+// Protected Route Component
+function ProtectedRoute({ children }) {
+  const staffId = localStorage.getItem("staff_id");
 
-// src/App.jsx
-// ...
-import BillingPage from "./pages/billing/billing.jsx";
-import AddInvoicePage from "./pages/billing/AddInvoice.jsx";
-import InvoicePrintPage from "./pages/billing/InvoicePrint.jsx"; // 👈 NEW
-// ...
+  if (!staffId) {
+    return <Navigate to="/login" replace />;
+  }
 
-
-
-
-// ----- SIMPLE PLACEHOLDER PAGES FOR OTHER SECTIONS -----
-// (Replace these later with your team’s real pages if they exist)
-const DashboardPage = () => <h1 style={{ padding: "2rem" }}>Dashboard</h1>;
-const CalendarPage = () => <h1 style={{ padding: "2rem" }}>Calendar</h1>;
-//const BillingPage = () => <h1 style={{ padding: "2rem" }}>Billing</h1>;
-const InventoryPage = () => <h1 style={{ padding: "2rem" }}>Inventory</h1>;
-const SettingsPage = () => <h1 style={{ padding: "2rem" }}>Settings</h1>;
-
-// ----- WRAPPER LAYOUT WITH SIDEBAR -----
-function LayoutWithSidebar({ children }) {
-  return (
-    <div className="app-shell" style={{ display: "flex", minHeight: "100vh" }}>
-      <Sidebar />
-      <div style={{ flex: 1 }}>
-        {/* This keeps your staff styles / container */}
-        <StaffLayout>{children}</StaffLayout>
-      </div>
-    </div>
-  );
+  return children;
 }
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Home redirects to staff list */}
-        <Route path="/" element={<Navigate to="/staff" replace />} />
-
-        {/* AUTH PAGES (NO SIDEBAR) */}
+        {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+        {/* Root redirects to dashboard */}
         <Route
-          path="/staff/:id/password"
-          element={<ChangePasswordPage />}
+          path="/"
+          element={
+            <ProtectedRoute>
+              <div>dashboard Page (Coming Soon)</div>
+            </ProtectedRoute>
+          }
         />
 
-        {/* DASHBOARD / CALENDAR WITH SIDEBAR */}
+        {/* Dashboard */}
         <Route
           path="/dashboard"
           element={
-            <LayoutWithSidebar>
-              <DashboardPage />
-            </LayoutWithSidebar>
-          }
-        />
-        <Route
-          path="/calendar"
-          element={
-            <LayoutWithSidebar>
-              <CalendarPage />
-            </LayoutWithSidebar>
+            <ProtectedRoute>
+              <div>dashboard Page (Coming Soon)</div>
+            </ProtectedRoute>
           }
         />
 
-        {/* STAFF PAGES WITH SIDEBAR */}
+        {/* Inventory routes */}
+        <Route
+          path="/inventory"
+          element={
+            <ProtectedRoute>
+              <InventoryListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/add"
+          element={
+            <ProtectedRoute>
+              <InventoryAddPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/:id"
+          element={
+            <ProtectedRoute>
+              <InventoryDetailsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Calendar / Appointments routes */}
+        <Route
+          path="/calendar"
+          element={
+            <ProtectedRoute>
+              <Calendar />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/calendar/add"
+          element={
+            <ProtectedRoute>
+              <AppointmentAddPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/calendar/post-summary/:id"
+          element={
+            <ProtectedRoute>
+              <AppointmentPostSummaryPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Staff management */}
         <Route
           path="/staff"
           element={
-            <LayoutWithSidebar>
-              <StaffListPage />
-            </LayoutWithSidebar>
+            <ProtectedRoute>
+              <Staff />
+            </ProtectedRoute>
           }
         />
         <Route
           path="/staff/add"
           element={
-            <LayoutWithSidebar>
+            <ProtectedRoute>
               <StaffAddPage />
-            </LayoutWithSidebar>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/staff/:id"
           element={
-            <LayoutWithSidebar>
+            <ProtectedRoute>
               <StaffProfilePage />
-            </LayoutWithSidebar>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/:id/password"
+          element={
+            <ProtectedRoute>
+              <ChangePasswordPage />
+            </ProtectedRoute>
           }
         />
 
-        {/* PATIENT PAGES WITH SIDEBAR */}
-        {/* Main Patients link from sidebar -> show Medical Records by default */}
-        <Route
-          path="/patients"
-          element={
-            <LayoutWithSidebar>
-              <MedicalRecordsPage />
-            </LayoutWithSidebar>
-          }
-        />
+        {/* Patient pages (protected) */}
         <Route
           path="/patients/medical-records"
           element={
-            <LayoutWithSidebar>
+            <ProtectedRoute>
               <MedicalRecordsPage />
-            </LayoutWithSidebar>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/patients/prescriptions"
           element={
-            <LayoutWithSidebar>
+            <ProtectedRoute>
               <PrescriptionsPage />
-            </LayoutWithSidebar>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/patients/treatment-plans"
           element={
-            <LayoutWithSidebar>
+            <ProtectedRoute>
               <TreatmentPlansPage />
-            </LayoutWithSidebar>
+            </ProtectedRoute>
           }
         />
 
-        {/* BILLING / INVENTORY / REPORTS / SETTINGS WITH SIDEBAR */}
+        {/* Placeholder / other sections (protected) */}
+        <Route
+          path="/patients"
+          element={
+            <ProtectedRoute>
+              <div>Patients Page (Coming Soon)</div>
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/billing"
           element={
-            <LayoutWithSidebar>
-              <BillingPage />
-            </LayoutWithSidebar>
-          }
-        />
-        <Route
-          path="/billing/new"
-          element={
-            <LayoutWithSidebar>
-              <AddInvoicePage  />
-            </LayoutWithSidebar>
-          }
-        />
-        <Route
-          path="/billing/invoice/:id"
-          element={
-            <LayoutWithSidebar>
-              <InvoicePrintPage />
-            </LayoutWithSidebar>
-          }
-        />
-        <Route
-          path="/inventory"
-          element={
-            <LayoutWithSidebar>
-              <InventoryPage />
-            </LayoutWithSidebar>
+            <ProtectedRoute>
+              <div>Billing Page (Coming Soon)</div>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/reports"
           element={
-            <LayoutWithSidebar>
-              <ReportsPage />
-            </LayoutWithSidebar>
+            <ProtectedRoute>
+              <div>Reports Page (Coming Soon)</div>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/settings"
           element={
-            <LayoutWithSidebar>
-              <SettingsPage />
-            </LayoutWithSidebar>
+            <ProtectedRoute>
+              <div>Settings Page (Coming Soon)</div>
+            </ProtectedRoute>
           }
         />
 
-        {/* FALLBACK: unknown routes -> staff */}
-        <Route path="*" element={<Navigate to="/staff" replace />} />
+        {/* Fallback route -> dashboard */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
   );

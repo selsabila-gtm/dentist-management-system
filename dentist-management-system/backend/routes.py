@@ -801,15 +801,38 @@ def create_inventory_item():
         return jsonify({"error": "Item name is required"}), 400
 
     try:
+        # parse numeric fields
+        quantity = int(data.get("quantity") or 0)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid quantity"}), 400
+
+    try:
+        minimum_stock = int(data.get("minimum_stock") or 0)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid minimum_stock"}), 400
+
+    # parse price_per_unit (optional)
+    price_raw = data.get("price_per_unit")
+    price_value = None
+    if price_raw is not None and price_raw != "":
+        try:
+            price_value = float(price_raw)
+            if price_value < 0:
+                raise ValueError("negative")
+        except Exception:
+            return jsonify({"error": "Invalid price_per_unit"}), 400
+
+    try:
         item = InventoryItem(
             item_name=item_name,
             category_id=data.get("category_id"),
-            quantity=int(data.get("quantity") or 0),
-            minimum_stock=int(data.get("minimum_stock") or 0),
+            quantity=quantity,
+            minimum_stock=minimum_stock,
             supplier=data.get("supplier"),
             expiration_date=data.get("expiration_date") or "N/A",
             notes=data.get("notes"),
             last_updated=datetime.utcnow().strftime("%Y-%m-%d"),
+            price_per_unit=price_value,
         )
         db.session.add(item)
         db.session.commit()
@@ -829,17 +852,42 @@ def get_inventory_item(item_id):
 def update_inventory_item(item_id):
     item = InventoryItem.query.get_or_404(item_id)
     data = request.get_json() or {}
+
     # Update allowed fields
-    for field in ("item_name", "category_id", "quantity", "minimum_stock", "supplier", "expiration_date", "notes"):
+    for field in ("item_name", "category_id", "supplier", "expiration_date", "notes"):
         if field in data:
-            val = data[field]
-            # ensure numeric fields are ints
-            if field in ("quantity", "minimum_stock"):
-                try:
-                    val = int(val)
-                except Exception:
-                    continue
-            setattr(item, field, val)
+            setattr(item, field, data[field])
+
+    # numeric fields with validation
+    if "quantity" in data:
+        try:
+            item.quantity = int(data["quantity"])
+        except (TypeError, ValueError):
+            pass
+
+    if "minimum_stock" in data:
+        try:
+            item.minimum_stock = int(data["minimum_stock"])
+        except (TypeError, ValueError):
+            pass
+
+    # price_per_unit (optional, allow null)
+    if "price_per_unit" in data:
+        pp = data["price_per_unit"]
+        if pp in (None, ""):
+            item.price_per_unit = None
+        else:
+            try:
+                ppv = float(pp)
+                if ppv < 0:
+                    # ignore invalid negative price
+                    pass
+                else:
+                    item.price_per_unit = ppv
+            except Exception:
+                # ignore invalid parse
+                pass
+
     item.last_updated = datetime.utcnow().strftime("%Y-%m-%d")
     try:
         db.session.commit()

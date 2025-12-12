@@ -164,7 +164,7 @@ class Appointment(db.Model):
     procedure = db.Column(db.String(200))
     status = db.Column(db.String(20), default="scheduled")
 
-    # cost of this appointment / visit
+    # NEW: cost of this appointment / visit
     cost = db.Column(db.Float, default=0.0)
 
     summary_id = db.Column(db.Integer, db.ForeignKey("summaries.id"), nullable=True)
@@ -366,6 +366,9 @@ class InventoryItem(db.Model):
     notes = db.Column(db.Text)
     last_updated = db.Column(db.String(20))
 
+    # NEW: price per unit (nullable, numeric stored as float)
+    price_per_unit = db.Column(db.Float, nullable=True)
+
     category = db.relationship("InventoryCategory", backref="items")
 
     def to_dict(self):
@@ -380,13 +383,14 @@ class InventoryItem(db.Model):
             "expiration_date": self.expiration_date,
             "notes": self.notes,
             "last_updated": self.last_updated,
+            "price_per_unit": float(self.price_per_unit) if self.price_per_unit is not None else None,
         }
 
 
-# ---------- DB SEED (friend's + your additions merged) ----------
+
+# ---------- DB SEED ----------
 def seed_initial_data():
     # Called with app context
-
     # Roles
     if Role.query.count() == 0:
         roles = [
@@ -435,7 +439,7 @@ def seed_initial_data():
         db.session.add_all(staff_items)
         db.session.commit()
 
-    # Patients (friend's 3 + your extra Olivia)
+    # Patients
     if Patient.query.count() == 0:
         p = Patient(
             full_name="John Doe",
@@ -459,30 +463,13 @@ def seed_initial_data():
             phone="555-0102",
             email="ethan.harper@example.com",
         )
-        # your additional demo patient
-        p4 = Patient(
-            full_name="Olivia Johnson",
-            first_name="Olivia",
-            last_name="Johnson",
-            phone="555-0103",
-            email="olivia.johnson@example.com",
-        )
-        db.session.add_all([p, p2, p3, p4])
+        db.session.add_all([p, p2, p3])
         db.session.commit()
 
-    # Appointments (your improved version with correct dentist_id)
+    # Appointments
     if Appointment.query.count() == 0:
         sophia = Patient.query.filter_by(first_name="Sophia").first()
         ethan = Patient.query.filter_by(first_name="Ethan").first()
-
-        # find dentists so we can set dentist_id correctly
-        sarah = Staff.query.filter_by(full_name="Dr. Sarah Miller").first()
-        if not sarah:
-            sarah = Staff.query.filter_by(first_name="Sarah", last_name="Miller").first()
-
-        david = Staff.query.filter_by(full_name="Dr. David Lee").first()
-        if not david:
-            david = Staff.query.filter_by(first_name="David", last_name="Lee").first()
 
         appts = [
             Appointment(
@@ -490,8 +477,7 @@ def seed_initial_data():
                 time="09:00 AM",
                 patient="Sophia Clark",
                 patient_id=sophia.id if sophia else None,
-                dentist=sarah.full_name if sarah else "Dr. Sarah Miller",
-                dentist_id=sarah.id if sarah else None,
+                dentist="Dr. Sarah Miller",
                 procedure="Routine Checkup",
                 status="scheduled",
                 cost=150.0,
@@ -501,8 +487,7 @@ def seed_initial_data():
                 time="10:30 AM",
                 patient="Ethan Harper",
                 patient_id=ethan.id if ethan else None,
-                dentist=david.full_name if david else "Dr. David Lee",
-                dentist_id=david.id if david else None,
+                dentist="Dr. David Lee",
                 procedure="Teeth Cleaning",
                 status="scheduled",
                 cost=200.0,
@@ -544,7 +529,7 @@ def seed_initial_data():
         )
         db.session.add(t)
 
-    # Inventory categories (from your friend)
+    # Inventory categories
     if InventoryCategory.query.count() == 0:
         categories = [
             InventoryCategory(name="Consumables", description="Single-use items"),
@@ -556,7 +541,7 @@ def seed_initial_data():
         db.session.add_all(categories)
         db.session.commit()
 
-    # Inventory items (from your friend)
+    # Inventory items
     if InventoryItem.query.count() == 0:
         consumables = InventoryCategory.query.filter_by(name="Consumables").first()
         medications = InventoryCategory.query.filter_by(name="Medications").first()
