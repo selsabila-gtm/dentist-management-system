@@ -14,6 +14,7 @@ import ResetPasswordPage from "./pages/staff/resetPassword";
 import InventoryListPage from "./pages/inventory/list";
 import InventoryAddPage from "./pages/inventory/add";
 import InventoryDetailsPage from "./pages/inventory/details";
+import Dashboard from "./pages/dashboard/dashboard.jsx";
 
 // Calendar / Appointments pages
 import Calendar from "./pages/appointments/calendar";
@@ -35,6 +36,9 @@ import TreatmentPlansPage from "./pages/patients/TreatmentPlans.jsx";
 import ReportsPage from "./pages/reports/reports.jsx";
 
 import BillingPage from "./pages/billing/billing.jsx";
+import AddInvoicePage from "./pages/billing/AddInvoice.jsx";
+import InvoicePrintPage from "./pages/billing/InvoicePrint.jsx";
+
 
 // ✅ Protected Route Component – only checks if user is logged in
 function ProtectedRoute({ children }) {
@@ -60,7 +64,7 @@ function App() {
           path="/"
           element={
             <ProtectedRoute>
-              <Staff />
+              <Dashboard />
             </ProtectedRoute>
           }
         />
@@ -70,7 +74,7 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <Staff />
+              <Dashboard />
             </ProtectedRoute>
           }
         />
@@ -212,6 +216,22 @@ function App() {
           element={
             <ProtectedRoute>
               <div><BillingPage /></div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/billing/new"
+          element={
+            <ProtectedRoute>
+              <div><AddInvoicePage /></div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/billing/invoice/:id"
+          element={
+            <ProtectedRoute>
+              <InvoicePrintPage />
             </ProtectedRoute>
           }
         />

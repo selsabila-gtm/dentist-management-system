@@ -51,41 +51,50 @@ export default function LoginPage() {
       });
 
       const data = await res.json();
-      console.log("LOGIN RESPONSE:", data); // <-- for debugging
+      console.log("LOGIN RESPONSE:", data);
 
       if (!res.ok || !data.success) {
         showToast(data.message || "Invalid username or password.", "error");
         return;
       }
 
-      // 🔐 Try to find a user object from the backend
-      let userPayload =
-        data.user ||
-        data.staff ||
-        data.employee ||
-        data.current_user ||
-        null;
+      // ✅ Find the "real" user object (backend may return it in different keys)
+      const rawUser =
+        data.user || data.staff || data.employee || data.current_user || null;
 
-      // 🔁 Fallback: if backend didn't send user details, create one
-      if (!userPayload) {
-        // TEMP: treat "emma" as admin (from your seed data)
-        const isAdminSeed = username.toLowerCase() === "emma";
+      // ✅ Build a normalized user object that auth.js can understand
+      const normalizedUser = {
+        ...(rawUser || {}),
+        // fallbacks if backend returns flat fields
+        id: (rawUser && rawUser.id) ?? data.id,
+        username: (rawUser && rawUser.username) ?? data.username ?? username,
 
-        userPayload = {
-          username,
-          is_admin: isAdminSeed,
-          // you can add more fields later if you return them from backend
-        };
-      }
+        // IMPORTANT: normalize role into role_name and role.name
+        role_name:
+          (rawUser && rawUser.role_name) ??
+          (typeof (rawUser && rawUser.role) === "string" ? rawUser.role : null) ??
+          data.role_name ??
+          (typeof data.role === "string" ? data.role : null) ??
+          (data.role && data.role.name ? data.role.name : null),
 
-      // ✅ Save logged-in user so StaffLayout can read it
-      try {
-        localStorage.setItem("currentUser", JSON.stringify(userPayload));
-      } catch (storageErr) {
-        console.error("Failed to store currentUser", storageErr);
-      }
+        role:
+          (rawUser && rawUser.role && typeof rawUser.role === "object"
+            ? rawUser.role
+            : null) ||
+          (data.role && typeof data.role === "object" ? data.role : null) ||
+          null,
 
-      // success → go to staff dashboard
+        // keep permissions if backend returns them
+        permissions: (rawUser && rawUser.permissions) ?? data.permissions ?? null,
+      };
+
+      // ✅ Save logged-in user (used for admin checks in auth.js)
+      localStorage.setItem("currentUser", JSON.stringify(normalizedUser));
+
+      // ✅ (optional) if your ProtectedRoute still relies on staff_id
+      // keep this so you don’t get stuck on login
+      localStorage.setItem("staff_id", String(normalizedUser.id || ""));
+
       navigate("/staff");
     } catch (err) {
       console.error(err);
@@ -97,7 +106,6 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
-      {/* Toast */}
       {toast.visible && (
         <div className="toast-container">
           <div
@@ -109,9 +117,7 @@ export default function LoginPage() {
             <button
               type="button"
               className="toast-close"
-              onClick={() =>
-                setToast((prev) => ({ ...prev, visible: false }))
-              }
+              onClick={() => setToast((prev) => ({ ...prev, visible: false }))}
             >
               ×
             </button>

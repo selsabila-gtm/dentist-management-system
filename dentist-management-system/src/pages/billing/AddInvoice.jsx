@@ -1,6 +1,7 @@
 // src/pages/billing/AddInvoice.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Sidebar from "../../components/Sidebar/Sidebar";
 import "../../styles/staff.css";
 import "./billing.css";
 import {
@@ -168,6 +169,8 @@ export default function AddInvoicePage() {
   const outstanding = summary ? Number(summary.outstanding || 0) : 0;
 
   return (
+    <div className="app-layout">
+      <Sidebar />
     <div className="staff-main">
       <div className="staff-page-header">
         <h1 className="staff-page-title">New Invoice</h1>
@@ -295,5 +298,6 @@ export default function AddInvoicePage() {
         onClose={() => setToast(null)}
       />
     </div>
+  </div>
   );
 }

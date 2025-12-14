@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "../../styles/staff.css";
 import "./billing.css";
+import Sidebar from "../../components/Sidebar/Sidebar";
 import {
   fetchInvoiceById,
   fetchPatientBillingSummary,
@@ -51,24 +52,32 @@ export default function InvoicePrintPage() {
 
   if (loading) {
     return (
+      <div className="app-layout">
+        <Sidebar />
       <div className="staff-main">
         <p>Loading invoice…</p>
+      </div>
       </div>
     );
   }
 
   if (error || !invoice) {
     return (
+      <div className="app-layout">
+        <Sidebar />
       <div className="staff-main">
         <p className="staff-error-text">{error || "Invoice not found."}</p>
         <button className="btn-secondary" onClick={() => navigate("/billing")}>
           Back to Billing
         </button>
       </div>
+      </div>
     );
   }
 
   return (
+    <div className="app-layout">
+      <Sidebar />
     <div className="staff-main">
       <div className="staff-page-header">
         <h1 className="staff-page-title">Invoice {invoice.invoice_number}</h1>
@@ -160,6 +169,7 @@ export default function InvoicePrintPage() {
           shows the remaining balance for the patient at the time of issue.
         </p>
       </div>
+    </div>
     </div>
   );
 }

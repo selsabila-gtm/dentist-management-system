@@ -120,12 +120,12 @@
 /* ===== PRINT STYLES FOR INVOICE PAGE ===== */
 @media print {
   /* 1. Hide the sidebar (it's the first child of .app-shell) */
-  .app-shell > :first-child {
+  .app-layout > :first-child {
     display: none !important;
   }
 
   /* 2. Let the main content take full width */
-  .app-shell > :last-child {
+  .app-layout > :last-child {
     width: 100% !important;
   }
 

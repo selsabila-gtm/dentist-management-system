@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import StaffAdminLayout from "../../components/StaffAdminLayout";
 import { createStaff, fetchRoles } from "../../services/staffApi";
+import Sidebar from "../../components/Sidebar/Sidebar";
 import "../../styles/staff.css";
 
 const defaultPermissions = {
@@ -192,17 +193,22 @@ export default function StaffAddPage() {
   // ⏳ While checking auth
   if (!authChecked) {
     return (
+      <div className="app-layout">
+        <Sidebar/>
       <StaffAdminLayout>
         <div className="staff-main">
           <p>Loading...</p>
         </div>
       </StaffAdminLayout>
+      </div>
     );
   }
 
   // 🚫 Not admin
   if (!isAdmin) {
     return (
+      <div className="app-layout">
+      <Sidebar />
       <StaffAdminLayout>
         {toast.visible && (
           <div className="toast-container">
@@ -244,11 +250,14 @@ export default function StaffAddPage() {
           </div>
         </div>
       </StaffAdminLayout>
+      </div>
     );
   }
 
   // ✅ Admin UI (original)
   return (
+    <div className="app-layout">
+      <Sidebar />
     <StaffAdminLayout>
       {/* Toast */}
       {toast.visible && (
@@ -507,5 +516,6 @@ export default function StaffAddPage() {
         </div>
       </form>
     </StaffAdminLayout>
+    </div>
   );
 }
