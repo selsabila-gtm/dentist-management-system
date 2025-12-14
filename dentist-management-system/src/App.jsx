@@ -3,8 +3,12 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
 
+// Auth utils
+import { getCurrentUser } from "./utils/auth";
+
 // Auth pages
-import LoginPage from "./pages/auth/login";
+import LoginPage from "./pages/auth/login.jsx"; // ⬅️ matches your file path
+import ResetPasswordPage from "./pages/staff/resetPassword";
 
 // Inventory pages
 import InventoryListPage from "./pages/inventory/list";
@@ -20,7 +24,6 @@ import AppointmentPostSummaryPage from "./pages/appointments/post_summary";
 import Staff from "./pages/staff/list";
 import StaffAddPage from "./pages/staff/add.jsx";
 import StaffProfilePage from "./pages/staff/profile.jsx";
-import ResetPasswordPage from "./pages/staff/resetPassword";
 import ChangePasswordPage from "./pages/staff/changePassword.jsx";
 
 // Patient pages
@@ -28,11 +31,16 @@ import MedicalRecordsPage from "./pages/patients/MedicalRecords.jsx";
 import PrescriptionsPage from "./pages/patients/Prescriptions.jsx";
 import TreatmentPlansPage from "./pages/patients/TreatmentPlans.jsx";
 
-// Protected Route Component
-function ProtectedRoute({ children }) {
-  const staffId = localStorage.getItem("staff_id");
+// Reports page (real one, not placeholder)
+import ReportsPage from "./pages/reports/reports.jsx";
 
-  if (!staffId) {
+import BillingPage from "./pages/billing/billing.jsx";
+
+// ✅ Protected Route Component – only checks if user is logged in
+function ProtectedRoute({ children }) {
+  const user = getCurrentUser();
+
+  if (!user) {
     return <Navigate to="/login" replace />;
   }
 
@@ -47,22 +55,22 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-        {/* Root redirects to dashboard */}
+        {/* Root redirects to dashboard (staff list for now) */}
         <Route
           path="/"
           element={
             <ProtectedRoute>
-              <InventoryListPage />
+              <Staff />
             </ProtectedRoute>
           }
         />
 
-        {/* Dashboard */}
+        {/* Dashboard -> same as staff list for now */}
         <Route
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <InventoryListPage />
+              <Staff />
             </ProtectedRoute>
           }
         />
@@ -119,7 +127,7 @@ function App() {
           }
         />
 
-        {/* Staff management */}
+        {/* Staff management (admin-only logic is inside the pages/layout) */}
         <Route
           path="/staff"
           element={
@@ -188,19 +196,22 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/billing"
-          element={
-            <ProtectedRoute>
-              <div>Billing Page (Coming Soon)</div>
-            </ProtectedRoute>
-          }
-        />
+
+        {/* ✅ Real reports page, admin-only logic is inside ReportsPage */}
         <Route
           path="/reports"
           element={
             <ProtectedRoute>
-              <div>Reports Page (Coming Soon)</div>
+              <ReportsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/billing"
+          element={
+            <ProtectedRoute>
+              <div><BillingPage /></div>
             </ProtectedRoute>
           }
         />

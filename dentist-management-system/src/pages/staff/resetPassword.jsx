@@ -14,6 +14,19 @@ export default function ResetPasswordPage() {
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
 
+  const [toast, setToast] = useState({
+    visible: false,
+    type: "success",
+    message: "",
+  });
+
+  const showToast = (message, type = "error") => {
+    setToast({ visible: true, type, message });
+    setTimeout(() => {
+      setToast((prev) => ({ ...prev, visible: false }));
+    }, 3000);
+  };
+
   const validate = () => {
     const newErrors = {};
 
@@ -48,15 +61,17 @@ export default function ResetPasswordPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error || "Failed to reset password.");
+        showToast(data.error || "Failed to reset password.", "error");
         return;
       }
 
-      alert(data.message || "Password updated.");
-      navigate("/login");
+      showToast(data.message || "Password updated.");
+      setTimeout(() => {
+        navigate("/login");
+      }, 500);
     } catch (err) {
       console.error(err);
-      alert("Could not connect to server.");
+      showToast("Could not connect to server.", "error");
     } finally {
       setSaving(false);
     }
@@ -64,6 +79,28 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="login-page">
+      {/* Toast */}
+      {toast.visible && (
+        <div className="toast-container">
+          <div
+            className={`toast ${
+              toast.type === "error" ? "toast-error" : "toast-success"
+            }`}
+          >
+            <span className="toast-message">{toast.message}</span>
+            <button
+              type="button"
+              className="toast-close"
+              onClick={() =>
+                setToast((prev) => ({ ...prev, visible: false }))
+              }
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
       <form className="login-panel" onSubmit={handleReset}>
         <h1 className="login-title">Reset Password</h1>
 

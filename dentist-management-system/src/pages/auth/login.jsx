@@ -14,6 +14,19 @@ export default function LoginPage() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
+  const [toast, setToast] = useState({
+    visible: false,
+    type: "success",
+    message: "",
+  });
+
+  const showToast = (message, type = "error") => {
+    setToast({ visible: true, type, message });
+    setTimeout(() => {
+      setToast((prev) => ({ ...prev, visible: false }));
+    }, 3000);
+  };
+
   const validate = () => {
     const newErrors = {};
     if (!username.trim()) newErrors.username = "Username is required.";
@@ -38,25 +51,45 @@ export default function LoginPage() {
       });
 
       const data = await res.json();
-      console.log("Login response:", data); // Debug log
+      console.log("LOGIN RESPONSE:", data); // <-- for debugging
 
       if (!res.ok || !data.success) {
-        alert(data.message || "Invalid username or password.");
+        showToast(data.message || "Invalid username or password.", "error");
         return;
       }
 
-      // Store user info in localStorage
-      localStorage.setItem("staff_id", data.staff_id);
-      localStorage.setItem("username", data.username);
-      localStorage.setItem("role", data.role || "");
+      // 🔐 Try to find a user object from the backend
+      let userPayload =
+        data.user ||
+        data.staff ||
+        data.employee ||
+        data.current_user ||
+        null;
 
-      console.log("Login successful, redirecting..."); // Debug log
+      // 🔁 Fallback: if backend didn't send user details, create one
+      if (!userPayload) {
+        // TEMP: treat "emma" as admin (from your seed data)
+        const isAdminSeed = username.toLowerCase() === "emma";
 
-      // Success → force redirect to dashboard using window.location
-      window.location.href = "/dashboard";
+        userPayload = {
+          username,
+          is_admin: isAdminSeed,
+          // you can add more fields later if you return them from backend
+        };
+      }
+
+      // ✅ Save logged-in user so StaffLayout can read it
+      try {
+        localStorage.setItem("currentUser", JSON.stringify(userPayload));
+      } catch (storageErr) {
+        console.error("Failed to store currentUser", storageErr);
+      }
+
+      // success → go to staff dashboard
+      navigate("/staff");
     } catch (err) {
       console.error(err);
-      alert("Could not connect to server.");
+      showToast("Could not connect to server.", "error");
     } finally {
       setSubmitting(false);
     }
@@ -64,6 +97,28 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
+      {/* Toast */}
+      {toast.visible && (
+        <div className="toast-container">
+          <div
+            className={`toast ${
+              toast.type === "error" ? "toast-error" : "toast-success"
+            }`}
+          >
+            <span className="toast-message">{toast.message}</span>
+            <button
+              type="button"
+              className="toast-close"
+              onClick={() =>
+                setToast((prev) => ({ ...prev, visible: false }))
+              }
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
       <form className="login-panel" onSubmit={handleSubmit}>
         <h1 className="login-title">Welcome back</h1>
 

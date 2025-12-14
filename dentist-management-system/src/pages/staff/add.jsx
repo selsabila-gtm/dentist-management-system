@@ -1,6 +1,7 @@
 // src/pages/staff/add.jsx
 import { useEffect, useState } from "react";
-import StaffLayout from "../../components/StaffLayout";
+import { useNavigate } from "react-router-dom";
+import StaffAdminLayout from "../../components/StaffAdminLayout";
 import { createStaff, fetchRoles } from "../../services/staffApi";
 import "../../styles/staff.css";
 
@@ -12,10 +13,38 @@ const defaultPermissions = {
   is_admin: false,
 };
 
+const getCurrentUser = () => {
+  try {
+    const raw = localStorage.getItem("currentUser");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
 export default function StaffAddPage() {
+  const navigate = useNavigate();
+
   const [roles, setRoles] = useState([]);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
+
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // toast state
+  const [toast, setToast] = useState({
+    visible: false,
+    type: "success",
+    message: "",
+  });
+
+  const showToast = (message, type = "success") => {
+    setToast({ visible: true, type, message });
+    setTimeout(() => {
+      setToast((prev) => ({ ...prev, visible: false }));
+    }, 3000);
+  };
 
   const [form, setForm] = useState({
     first_name: "",
@@ -36,7 +65,7 @@ export default function StaffAddPage() {
   const [customDays, setCustomDays] = useState("");
   const [customHours, setCustomHours] = useState("");
 
-  // load roles on mount
+  // auth check + load roles
   useEffect(() => {
     const loadRoles = async () => {
       try {
@@ -44,10 +73,24 @@ export default function StaffAddPage() {
         setRoles(data);
       } catch (err) {
         console.error(err);
-        alert("Failed to load roles");
+        showToast("Failed to load roles", "error");
       }
     };
-    loadRoles();
+
+    const checkAndLoad = async () => {
+      const user = getCurrentUser();
+      if (!user || !user.is_admin) {
+        setIsAdmin(false);
+        setAuthChecked(true);
+        showToast("You don't have permission to manage staff.", "error");
+        return;
+      }
+      setIsAdmin(true);
+      setAuthChecked(true);
+      await loadRoles();
+    };
+
+    checkAndLoad();
   }, []);
 
   // generic field change
@@ -133,18 +176,102 @@ export default function StaffAddPage() {
       };
 
       await createStaff(payload);
-      alert("Employee created");
-      window.location.href = "/staff";
+      showToast("Employee created", "success");
+      // navigate after short delay so the toast is visible for a moment
+      setTimeout(() => {
+        window.location.href = "/staff";
+      }, 400);
     } catch (err) {
       console.error(err);
-      alert("Failed to save employee");
+      showToast("Failed to save employee", "error");
     } finally {
       setSaving(false);
     }
   };
 
+  // ⏳ While checking auth
+  if (!authChecked) {
+    return (
+      <StaffAdminLayout>
+        <div className="staff-main">
+          <p>Loading...</p>
+        </div>
+      </StaffAdminLayout>
+    );
+  }
+
+  // 🚫 Not admin
+  if (!isAdmin) {
+    return (
+      <StaffAdminLayout>
+        {toast.visible && (
+          <div className="toast-container">
+            <div
+              className={`toast ${
+                toast.type === "error" ? "toast-error" : "toast-success"
+              }`}
+            >
+              <span className="toast-message">{toast.message}</span>
+              <button
+                type="button"
+                className="toast-close"
+                onClick={() =>
+                  setToast((prev) => ({ ...prev, visible: false }))
+                }
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="staff-main">
+          <div className="staff-card">
+            <h1 className="staff-page-title" style={{ fontSize: 22 }}>
+              Access denied
+            </h1>
+            <p style={{ marginTop: 8, color: "#6b7280", fontSize: 14 }}>
+              You do not have permission to create staff accounts.
+            </p>
+            <button
+              type="button"
+              className="btn-secondary"
+              style={{ marginTop: 16 }}
+              onClick={() => navigate("/")}
+            >
+              Go back
+            </button>
+          </div>
+        </div>
+      </StaffAdminLayout>
+    );
+  }
+
+  // ✅ Admin UI (original)
   return (
-    <StaffLayout>
+    <StaffAdminLayout>
+      {/* Toast */}
+      {toast.visible && (
+        <div className="toast-container">
+          <div
+            className={`toast ${
+              toast.type === "error" ? "toast-error" : "toast-success"
+            }`}
+          >
+            <span className="toast-message">{toast.message}</span>
+            <button
+              type="button"
+              className="toast-close"
+              onClick={() =>
+                setToast((prev) => ({ ...prev, visible: false }))
+              }
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="staff-page-header">
         <h1 className="staff-page-title">Add New Employee</h1>
       </div>
@@ -259,10 +386,8 @@ export default function StaffAddPage() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Permissions, Login Credentials, Work Schedule */}
+        {/* RIGHT COLUMN: Login Credentials, Work Schedule */}
         <div className="staff-form-section">
-          
-
           <h2>Login Credentials</h2>
           <div className="staff-field">
             <label>Username</label>
@@ -295,9 +420,6 @@ export default function StaffAddPage() {
               }
               required
             />
-            {errors.password && (
-              <p className="staff-error-text">{errors.password}</p>
-            )}
           </div>
 
           <h2>Work Schedule</h2>
@@ -384,6 +506,6 @@ export default function StaffAddPage() {
           </div>
         </div>
       </form>
-    </StaffLayout>
+    </StaffAdminLayout>
   );
 }
