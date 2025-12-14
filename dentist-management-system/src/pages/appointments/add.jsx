@@ -12,6 +12,11 @@ export default function AddAppointment() {
   const query = new URLSearchParams(location.search);
   const preselectedDate = query.get("date") || "";
 
+  // ✅ GET CURRENT USER INFO
+  const staffId = localStorage.getItem("staff_id");
+  const userRole = localStorage.getItem("role");
+
+
   // State declarations
   const [patients, setPatients] = useState([]);
   const [dentists, setDentists] = useState([]);
@@ -44,7 +49,7 @@ export default function AddAppointment() {
     "Orthodontics",
   ];
 
-  // Helper function - defined before useEffect
+  // Helper function
   function convertTo24Hour(time, period) {
     if (!time) return "08:30";
     
@@ -79,6 +84,19 @@ export default function AddAppointment() {
       .then((res) => res.json())
       .then((data) => setAllStaff(data));
   }, []);
+
+  // ✅ AUTO-ASSIGN DENTIST IF USER IS DENTIST
+  useEffect(() => {
+    if (userRole === "Dentist" && staffId && allStaff.length > 0) {
+      const currentDentist = allStaff.find(s => s.id === parseInt(staffId));
+      if (currentDentist) {
+        const fullName = currentDentist.full_name || 
+                        `${currentDentist.first_name || ''} ${currentDentist.last_name || ''}`.trim();
+        setDentist(fullName);
+        setDentistId(staffId);
+      }
+    }
+  }, [userRole, staffId, allStaff]);
 
   // Update available days when dentist changes
   useEffect(() => {
@@ -170,23 +188,23 @@ export default function AddAppointment() {
       const [hours, minutes] = time.split(':').map(Number);
       const timeInMinutes = hours * 60 + minutes;
       
-      // Always enforce 8:30 AM to 5:00 PM (08:30 to 17:00)
-      const minTime = 8 * 60 + 30; // 8:30 AM = 510 minutes
-      const maxTime = 17 * 60; // 5:00 PM = 1020 minutes
+      const [startHours, startMinutes] = availableTimeRange.start.split(':').map(Number);
+      const startInMinutes = startHours * 60 + startMinutes;
+      
+      const [endHours, endMinutes] = availableTimeRange.end.split(':').map(Number);
+      const endInMinutes = endHours * 60 + endMinutes;
 
-      if (timeInMinutes < minTime || timeInMinutes > maxTime) {
-        newErrors.time = "Time must be between 8:30 AM and 5:00 PM";
-      } else if (dentistId) {
-        // Additionally check dentist's specific hours if more restrictive
-        const [startHours, startMinutes] = availableTimeRange.start.split(':').map(Number);
-        const startInMinutes = startHours * 60 + startMinutes;
+      if (timeInMinutes < startInMinutes || timeInMinutes > endInMinutes) {
+        const formatTime = (h, m) => {
+          const period = h >= 12 ? 'PM' : 'AM';
+          const displayHour = h % 12 || 12;
+          return `${displayHour}:${String(m).padStart(2, '0')} ${period}`;
+        };
         
-        const [endHours, endMinutes] = availableTimeRange.end.split(':').map(Number);
-        const endInMinutes = endHours * 60 + endMinutes;
-
-        if (timeInMinutes < startInMinutes || timeInMinutes > endInMinutes) {
-          newErrors.time = `Dentist available ${availableTimeRange.start} - ${availableTimeRange.end}`;
-        }
+        const startDisplay = formatTime(startHours, startMinutes);
+        const endDisplay = formatTime(endHours, endMinutes);
+        
+        newErrors.time = `Time must be between ${startDisplay} and ${endDisplay}`;
       }
     }
 
@@ -260,135 +278,161 @@ export default function AddAppointment() {
       });
   }
 
+  // ✅ CHECK IF DENTIST ROLE (for hiding dentist selector)
+  const isDentistRole = userRole === "Dentist";
+
   return (
     <div className="app-layout">
       <Sidebar />
-    <div className="page add-page">
-      <h1 className="page-header">Add New Appointment</h1>
+      <div className="page add-page">
+        <div className="add-card">
+          <h1 className="add-title">Add New Appointment</h1>
 
-      <form className="add-form" onSubmit={handleSubmit}>
-        {/* PATIENT */}
-        <label className="add-label">Patient *</label>
-        <select
-          className={`add-select ${errors.patient ? 'error' : ''}`}
-          value={patient}
-          onChange={(e) => {
-            if (e.target.value === "new") navigate("/patients/add");
-            else {
-              setPatient(e.target.value);
-              setErrors(prev => ({ ...prev, patient: undefined }));
-            }
-          }}
-        >
-          <option value="">Select Patient</option>
-          {patients.map((p) => (
-            <option key={p.id} value={p.name}>
-              {p.name}
-            </option>
-          ))}
-          <option value="new">âž• Add New Patient</option>
-        </select>
-        {errors.patient && <div className="error-message">{errors.patient}</div>}
+          <form className="add-form" onSubmit={handleSubmit}>
 
-        {/* DENTIST */}
-        <label className="add-label">Dentist/Staff *</label>
-        <select
-          className={`add-select ${errors.dentist ? 'error' : ''}`}
-          value={dentist}
-          onChange={handleDentistChange}
-        >
-          <option value="">Select Dentist/Staff</option>
-          {dentists.map((d) => (
-            <option key={d.id} value={d.name}>
-              {d.name}
-            </option>
-          ))}
-        </select>
-        {errors.dentist && <div className="error-message">{errors.dentist}</div>}
+            {/* PATIENT */}
+            <label className="add-label">Patient *</label>
+            <select
+              className={`add-select ${errors.patient ? 'error' : ''}`}
+              value={patient}
+              onChange={(e) => {
+                if (e.target.value === "new") navigate("/patients/add");
+                else {
+                  setPatient(e.target.value);
+                  setErrors(prev => ({ ...prev, patient: undefined }));
+                }
+              }}
+            >
+              <option value="">Select Patient</option>
+              {patients.map((p) => (
+                <option key={p.id} value={p.name}>
+                  {p.name}
+                </option>
+              ))}
+              <option value="new">➕ Add New Patient</option>
+            </select>
+            {errors.patient && <div className="error-message">{errors.patient}</div>}
 
-        {dentistId && availableDays.length > 0 && (
-          <div className="availability-info">
-            Available: {availableDays.join(", ")} â€¢ {availableTimeRange.start} - {availableTimeRange.end}
-          </div>
-        )}
+            {/* ✅ DENTIST - HIDDEN IF USER IS DENTIST */}
+            {!isDentistRole && (
+              <>
+                <label className="add-label">Dentist/Staff *</label>
+                <select
+                  className={`add-select ${errors.dentist ? 'error' : ''}`}
+                  value={dentist}
+                  onChange={handleDentistChange}
+                >
+                  <option value="">Select Dentist/Staff</option>
+                  {dentists.map((d) => (
+                    <option key={d.id} value={d.name}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+                {errors.dentist && <div className="error-message">{errors.dentist}</div>}
+              </>
+            )}
 
-        {/* DATE */}
-        <label className="add-label">Date *</label>
-        <input
-          type="date"
-          className={`add-input ${errors.date ? 'error' : ''}`}
-          value={date}
-          onChange={(e) => {
-            setDate(e.target.value);
-            setErrors(prev => ({ ...prev, date: undefined }));
-          }}
-          disabled={!dentistId}
-          min={new Date().toISOString().split('T')[0]}
-        />
-        {errors.date && <div className="error-message">{errors.date}</div>}
+            {/* ✅ SHOW ASSIGNED DENTIST INFO IF DENTIST ROLE */}
+            {isDentistRole && dentist && (
+              <>
+                <label className="add-label">Dentist *</label>
+                <div style={{ 
+                  padding: '12px 16px', 
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  marginBottom: '16px',
+                  color: '#334155',
+                  fontSize: '15px'
+                }}>
+                  Dr. {dentist.replace(/^Dr\.\s*/i, '')}
+                </div>
+              </>
+            )}
 
-        {/* TIME */}
-        <label className="add-label">Time *</label>
-        <input
-          type="time"
-          className={`add-input ${errors.time ? 'error' : ''}`}
-          value={time}
-          onChange={(e) => {
-            setTime(e.target.value);
-            setErrors(prev => ({ ...prev, time: undefined }));
-          }}
-          disabled={!dentistId}
-          min="08:30"
-          max="17:00"
-        />
-        {errors.time && <div className="error-message">{errors.time}</div>}
+            {dentistId && availableDays.length > 0 && (
+              <div className="availability-info">
+                Available: {availableDays.join(", ")} • {availableTimeRange.start} - {availableTimeRange.end}
+              </div>
+            )}
 
-        {/* PROCEDURE TYPE */}
-        <label className="add-label">Procedure Type *</label>
-        <select
-          className={`add-select ${errors.procedure ? 'error' : ''}`}
-          value={procedure}
-          onChange={(e) => {
-            setProcedure(e.target.value);
-            setErrors(prev => ({ ...prev, procedure: undefined }));
-          }}
-        >
-          <option value="">Select Procedure Type</option>
-          {procedureOptions.map((proc) => (
-            <option key={proc} value={proc}>
-              {proc}
-            </option>
-          ))}
-        </select>
-        {errors.procedure && <div className="error-message">{errors.procedure}</div>}
+            {/* DATE */}
+            <label className="add-label">Date *</label>
+            <input
+              type="date"
+              className={`add-input ${errors.date ? 'error' : ''}`}
+              value={date}
+              onChange={(e) => {
+                setDate(e.target.value);
+                setErrors(prev => ({ ...prev, date: undefined }));
+              }}
+              disabled={!dentistId}
+              min={new Date().toISOString().split('T')[0]}
+            />
+            {errors.date && <div className="error-message">{errors.date}</div>}
 
-        {/* NOTES */}
-        <label className="add-label">Notes (Optional)</label>
-        <textarea
-          className="add-notes"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Add any additional notes..."
-        />
+            {/* TIME */}
+            <label className="add-label">Time *</label>
+            <input
+              type="time"
+              className={`add-input ${errors.time ? 'error' : ''}`}
+              value={time}
+              onChange={(e) => {
+                setTime(e.target.value);
+                setErrors(prev => ({ ...prev, time: undefined }));
+              }}
+              disabled={!dentistId}
+            />
+            {errors.time && <div className="error-message">{errors.time}</div>}
 
-        {errors.submit && <div className="error-message submit-error">{errors.submit}</div>}
+            {/* PROCEDURE TYPE */}
+            <label className="add-label">Procedure Type *</label>
+            <select
+              className={`add-select ${errors.procedure ? 'error' : ''}`}
+              value={procedure}
+              onChange={(e) => {
+                setProcedure(e.target.value);
+                setErrors(prev => ({ ...prev, procedure: undefined }));
+              }}
+            >
+              <option value="">Select Procedure Type</option>
+              {procedureOptions.map((proc) => (
+                <option key={proc} value={proc}>
+                  {proc}
+                </option>
+              ))}
+            </select>
+            {errors.procedure && <div className="error-message">{errors.procedure}</div>}
 
-        {/* BUTTONS */}
-        <div className="add-actions">
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={() => navigate("/calendar")}
-          >
-            Cancel
-          </button>
+            {/* NOTES */}
+            <label className="add-label">Notes (Optional)</label>
+            <textarea
+              className="add-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add any additional notes..."
+            />
 
-          <button type="submit" className="primary-button">
-            Add Appointment
-          </button>
+            {errors.submit && <div className="error-message submit-error">{errors.submit}</div>}
+
+            {/* BUTTONS */}
+            <div className="add-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => navigate("/calendar")}
+              >
+                Cancel
+              </button>
+
+              <button type="submit" className="primary-button">
+                Add Appointment
+              </button>
+            </div>
+          </form>
         </div>
-      </form>
-    </div>
+      </div>
     </div>
   );
 }

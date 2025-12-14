@@ -169,8 +169,8 @@ class Appointment(db.Model):
     procedure = db.Column(db.String(200))
     status = db.Column(db.String(20), default="scheduled")
 
-    # NEW: cost of this appointment / visit
-    cost = db.Column(db.Float, default=0.0)
+    # NEW: cost of this appointment / visit - CHANGED: added nullable=False
+    cost = db.Column(db.Float, default=0.0, nullable=False)
 
     summary_id = db.Column(db.Integer, db.ForeignKey("summaries.id"), nullable=True)
 
@@ -205,7 +205,7 @@ class Summary(db.Model):
     notes = db.Column(db.Text)
     prescriptions = db.Column(db.Text)  # JSON list
     documents = db.Column(db.Text)  # JSON list of docs
-    inventory = db.Column(db.Text)  # JSON list
+    inventory = db.Column(db.Text, nullable=False)  # JSON list - CHANGED: added nullable=False
 
     appointment = db.relationship(
         "Appointment",
@@ -478,7 +478,7 @@ def seed_initial_data():
 
         appts = [
             Appointment(
-                date="2025-11-26",
+                date="2025-12-15",
                 time="09:00 AM",
                 patient="Sophia Clark",
                 patient_id=sophia.id if sophia else None,
@@ -488,14 +488,14 @@ def seed_initial_data():
                 cost=150.0,
             ),
             Appointment(
-                date="2025-11-26",
+                date="2025-12-15",
                 time="10:30 AM",
                 patient="Ethan Harper",
                 patient_id=ethan.id if ethan else None,
                 dentist="Dr. David Lee",
                 procedure="Teeth Cleaning",
                 status="scheduled",
-                cost=200.0,
+                cost=100.0,
             ),
         ]
         db.session.add_all(appts)
@@ -584,7 +584,6 @@ def seed_initial_data():
     # final commit if any leftover
     db.session.commit()
 
-
 # ---------- DB SEED (same as old app.py) ----------
 
 def seed_initial_data():
@@ -665,6 +664,10 @@ def seed_initial_data():
         sophia = Patient.query.filter_by(first_name="Sophia").first()
         ethan = Patient.query.filter_by(first_name="Ethan").first()
 
+        # ✅ GET DENTIST IDs
+        sarah = Staff.query.filter_by(first_name="Sarah").first()
+        david = Staff.query.filter_by(first_name="David").first()
+
         appts = [
             Appointment(
                 date="2025-12-15",
@@ -672,9 +675,10 @@ def seed_initial_data():
                 patient="Sophia Clark",
                 patient_id=sophia.id if sophia else None,
                 dentist="Dr. Sarah Miller",
+                dentist_id=sarah.id if sarah else None,  # ✅ ADDED
                 procedure="Routine Checkup",
                 status="scheduled",
-                cost=150.0,  # NEW
+                cost=150.0,
             ),
             Appointment(
                 date="2025-12-15",
@@ -682,9 +686,10 @@ def seed_initial_data():
                 patient="Ethan Harper",
                 patient_id=ethan.id if ethan else None,
                 dentist="Dr. David Lee",
+                dentist_id=david.id if david else None,  # ✅ ADDED
                 procedure="Teeth Cleaning",
                 status="scheduled",
-                cost=100.0,  # NEW
+                cost=100.0,
             ),
         ]
         db.session.add_all(appts)
@@ -700,6 +705,7 @@ def seed_initial_data():
             medications="Ibuprofen",
         )
         db.session.add(record)
+
     if john and Prescription.query.filter_by(patient_id=john.id).count() == 0:
         presc = Prescription(
             patient_id=john.id,
@@ -710,6 +716,7 @@ def seed_initial_data():
             prescribing_dentist="Dr. Sarah Miller",
         )
         db.session.add(presc)
+
     if john and TreatmentPlan.query.filter_by(patient_id=john.id).count() == 0:
         t = TreatmentPlan(
             patient_id=john.id,
@@ -720,5 +727,5 @@ def seed_initial_data():
             status="Completed",
         )
         db.session.add(t)
-        
+
     db.session.commit()

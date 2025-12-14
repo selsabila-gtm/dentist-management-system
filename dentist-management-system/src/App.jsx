@@ -52,7 +52,7 @@ function App() {
           path="/"
           element={
             <ProtectedRoute>
-              <div>dashboard Page (Coming Soon)</div>
+              <InventoryListPage />
             </ProtectedRoute>
           }
         />
@@ -62,7 +62,7 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <div>dashboard Page (Coming Soon)</div>
+              <InventoryListPage />
             </ProtectedRoute>
           }
         />

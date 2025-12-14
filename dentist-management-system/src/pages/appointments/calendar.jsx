@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import "./calendar.css";
 import Sidebar from "../../components/Sidebar/Sidebar";
-
 
 const API_BASE = "http://127.0.0.1:5000";
 const CALENDAR_YEAR = 2025;
@@ -38,7 +37,6 @@ function MonthView({
     { month: "long", year: "numeric" }
   );
 
-  // Get today's date key for comparison
   const today = new Date();
   const todayKey = formatDateKey(
     today.getFullYear(),
@@ -46,14 +44,11 @@ function MonthView({
     today.getDate()
   );
 
-  // Helper function to determine day status
   function getDayStatus(dateKey) {
-    const dayAppointments = appointments.filter(
-      (appt) => appt.date === dateKey
-    );
+    const dayAppointments = appointments.filter((appt) => appt.date === dateKey);
 
     if (dayAppointments.length === 0) {
-      return null; // No appointments
+      return null;
     }
 
     const allCompleted = dayAppointments.every(
@@ -64,9 +59,9 @@ function MonthView({
     );
 
     if (allCompleted) {
-      return "all-completed"; // Green
+      return "all-completed";
     } else if (hasScheduled) {
-      return "has-scheduled"; // Blue
+      return "has-scheduled";
     }
     return null;
   }
@@ -121,45 +116,81 @@ function MonthView({
 
 export default function Calendar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [appointments, setAppointments] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
+
+  // ✅ GET CURRENT USER INFO
+  const staffId = localStorage.getItem("staff_id");
+  const userRole = localStorage.getItem("role");
 
   const today = new Date();
   const initialMonth =
     today.getFullYear() === CALENDAR_YEAR ? today.getMonth() : 10;
 
-  const [monthIndex, setMonthIndex] = useState(
-    CALENDAR_YEAR * 12 + initialMonth
-  );
+  const returnDate = location.state?.returnDate;
+  
+  const getInitialMonthIndex = () => {
+    if (returnDate) {
+      try {
+        const [year, month] = returnDate.split("-").map(Number);
+        if (year && month && month >= 1 && month <= 12) {
+          return (year * 12) + (month - 1);
+        }
+      } catch (error) {
+        console.error("Error parsing return date:", error);
+      }
+    }
+    return CALENDAR_YEAR * 12 + initialMonth;
+  };
 
-  const initialSelectedDateKey =
-    today.getFullYear() === CALENDAR_YEAR
+  const [monthIndex, setMonthIndex] = useState(getInitialMonthIndex());
+  
+  const initialSelectedDateKey = returnDate || 
+    (today.getFullYear() === CALENDAR_YEAR
       ? formatDateKey(CALENDAR_YEAR, initialMonth, today.getDate())
-      : "2025-11-01";
+      : "2025-11-01");
 
-  const [selectedDateKey, setSelectedDateKey] = useState(
-    initialSelectedDateKey
-  );
+  const [selectedDateKey, setSelectedDateKey] = useState(initialSelectedDateKey);
 
-  // Define loadAppointments before useEffect
   function loadAppointments() {
-    fetch(`${API_BASE}/api/appointments`)
-      .then((res) => res.json())
-      .then((data) => setAppointments(data))
+    // ✅ BUILD API URL WITH DENTIST FILTER IF USER IS DENTIST
+    let apiUrl = `${API_BASE}/api/appointments`;
+    
+    if (userRole === "Dentist" && staffId) {
+      apiUrl += `?dentist_id=${staffId}`;
+    }
+
+    console.log("Loading appointments from:", apiUrl);
+    console.log("User Role:", userRole, "Staff ID:", staffId);
+
+    fetch(apiUrl)
+      .then((res) => {
+        console.log("Response status:", res.status);
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        console.log("Appointments loaded:", data);
+        setAppointments(data);
+        setErrorMessage(""); // Clear any previous errors
+      })
       .catch((err) => {
-        console.error("Error loading appointments", err);
+        console.error("Error loading appointments:", err);
         setErrorMessage("Failed to load appointments.");
       });
   }
 
-  // NEW: wrapper to clear error when changing day
   function handleSelectDate(dateKey) {
     setSelectedDateKey(dateKey);
-    setErrorMessage(""); // clear the red banner when the user picks another day
+    setErrorMessage("");
   }
 
   useEffect(() => {
     loadAppointments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredAppointments = useMemo(() => {
@@ -182,7 +213,6 @@ export default function Calendar() {
   }
 
   function handleAddAppointmentClick() {
-    // Check if selected date is in the past
     if (selectedDateKey) {
       const selectedDate = new Date(selectedDateKey);
       const today = new Date();
@@ -200,20 +230,18 @@ export default function Calendar() {
   function handleStatusChange(appt, newStatus) {
     setErrorMessage("");
 
-    // If appointment is already completed or cancelled, it's locked
     if (appt.status !== "scheduled") {
       setErrorMessage("This appointment status is locked.");
       return;
     }
 
-    // If user selects "completed", navigate to post-summary page
-    // Do NOT update status in database yet
     if (newStatus === "completed") {
-      navigate(`/calendar/post-summary/${appt.id}`);
+      navigate(`/calendar/post-summary/${appt.id}`, {
+        state: { returnDate: selectedDateKey }
+      });
       return;
     }
 
-    // If user selects "cancelled", update directly
     if (newStatus === "cancelled") {
       fetch(`${API_BASE}/api/appointments/${appt.id}/status`, {
         method: "PUT",
@@ -225,7 +253,6 @@ export default function Calendar() {
           if (!res.ok) {
             throw new Error(data.error || "Error updating status");
           }
-          // Reload appointments to reflect the change
           loadAppointments();
         })
         .catch((err) => {
@@ -249,7 +276,6 @@ export default function Calendar() {
           </button>
         </header>
 
-        {/* CALENDAR */}
         <section className="calendar-section">
           <button type="button" className="month-arrow" onClick={goPrev}>
             &lt;
@@ -260,14 +286,14 @@ export default function Calendar() {
               year={currentYear}
               monthIndex={currentMonth}
               selectedDateKey={selectedDateKey}
-              onSelectDate={handleSelectDate} // changed here
+              onSelectDate={handleSelectDate}
               appointments={appointments}
             />
             <MonthView
               year={secondYear}
               monthIndex={secondMonth}
               selectedDateKey={selectedDateKey}
-              onSelectDate={handleSelectDate} // and here
+              onSelectDate={handleSelectDate}
               appointments={appointments}
             />
           </div>
@@ -277,7 +303,6 @@ export default function Calendar() {
           </button>
         </section>
 
-        {/* APPOINTMENTS TABLE */}
         <section className="appointments-section">
           <div className="appointments-header">
             <h2>Appointments</h2>
@@ -289,10 +314,7 @@ export default function Calendar() {
             </div>
 
             <div>
-              <button
-                className="primary-button"
-                onClick={handleAddAppointmentClick}
-              >
+              <button className="primary-button" onClick={handleAddAppointmentClick}>
                 Add Appointment
               </button>
             </div>
@@ -300,7 +322,7 @@ export default function Calendar() {
 
           {errorMessage && <div className="error-banner">{errorMessage}</div>}
 
-         <div className="card">
+          <div className="card">
             <table className="appointments-table">
               <thead>
                 <tr>
@@ -319,21 +341,32 @@ export default function Calendar() {
                     <td>{appt.patient}</td>
                     <td>{appt.dentist}</td>
                     <td className="link-text">{appt.procedure}</td>
-                    <td>
-                      <span
-                        className={`status-badge status-${appt.status}`}
-                      >
+
+                    <td className="status-cell">
+                      <span className={`status-badge status-${appt.status}`}>
                         {appt.status}
                       </span>
+
+                      <button
+                        className={`link-button view-btn ${
+                          appt.status === "completed" ? "" : "disabled"
+                        }`}
+                        disabled={appt.status !== "completed"}
+                        onClick={() => 
+                          navigate(`/calendar/post-summary/${appt.id}`, {
+                            state: { returnDate: selectedDateKey }
+                          })
+                        }
+                      >
+                        View
+                      </button>
                     </td>
+
                     <td>
                       <select
                         className="status-select"
                         value={appt.status}
-                        disabled={appt.status !== "scheduled"}
-                        onChange={(e) =>
-                          handleStatusChange(appt, e.target.value)
-                        }
+                        onChange={(e) => handleStatusChange(appt, e.target.value)}
                       >
                         <option value="scheduled">scheduled</option>
                         <option value="completed">completed</option>
@@ -344,10 +377,7 @@ export default function Calendar() {
                 ))}
                 {filteredAppointments.length === 0 && (
                   <tr>
-                    <td
-                      colSpan={6}
-                      style={{ textAlign: "center", padding: 16 }}
-                    >
+                    <td colSpan={6} style={{ textAlign: "center", padding: 16 }}>
                       No appointments on this date.
                     </td>
                   </tr>

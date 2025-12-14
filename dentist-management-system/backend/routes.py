@@ -264,7 +264,20 @@ def get_patient(patient_id):
 # ---- APPOINTMENTS ----
 @bp.route("/api/appointments", methods=["GET"])
 def list_appointments():
-    appts = Appointment.query.order_by(Appointment.date, Appointment.time).all()
+    # Get optional dentist_id filter from query params
+    dentist_id = request.args.get("dentist_id")
+    
+    query = Appointment.query
+    
+    # Filter by dentist_id if provided
+    if dentist_id:
+        try:
+            dentist_id_int = int(dentist_id)
+            query = query.filter_by(dentist_id=dentist_id_int)
+        except (TypeError, ValueError):
+            pass  # Invalid dentist_id, ignore filter
+    
+    appts = query.order_by(Appointment.date, Appointment.time).all()
     return jsonify([a.to_dict() for a in appts])
 
 
@@ -323,16 +336,17 @@ def get_summary(appt_id):
         return jsonify({"error": "Appointment not found"}), 404
     
     if not a.summary:
+        # CHANGED: Return 0.0 instead of a.cost for new summaries
         return jsonify({
             "notes": "",
             "prescriptions": [],
             "documents": [],
             "inventory": [],
-            "cost": a.cost or 0.0  # Include appointment cost
+            "cost": 0.0
         })
     
     summary_dict = a.summary.to_dict()
-    summary_dict["cost"] = a.cost or 0.0  # Include appointment cost
+    summary_dict["cost"] = a.cost or 0.0
     return jsonify(summary_dict)
 
 
@@ -362,40 +376,94 @@ def save_summary(appt_id):
 
 
 # ---- DOCUMENT UPLOAD & SERVE ----
+# Add this to routes.py - FIXED DOCUMENT UPLOAD
+
 @bp.route("/api/appointments/<int:appt_id>/documents", methods=["POST"])
 def upload_document(appt_id):
-    doc_name = request.form.get("name")
-    doc_type = request.form.get("type")
-    file = request.files.get("file")
+    """Upload a document (PDF or image) for an appointment"""
+    try:
+        # Get form data
+        doc_name = request.form.get("name")
+        doc_type = request.form.get("type")
+        file = request.files.get("file")
 
-    if not doc_name or not doc_type or not file:
-        return jsonify({"error": "missing_fields"}), 400
-    if doc_type not in ("pdf", "img"):
-        return jsonify({"error": "invalid_type"}), 400
-    if not allowed_file(file.filename, doc_type):
-        return jsonify({"error": "invalid_extension"}), 400
+        # Validation
+        if not doc_name or not doc_name.strip():
+            return jsonify({"error": "Document name is required"}), 400
+        
+        if not doc_type:
+            return jsonify({"error": "Document type is required"}), 400
+            
+        if doc_type not in ("pdf", "img"):
+            return jsonify({"error": "Document type must be 'pdf' or 'img'"}), 400
+        
+        if not file:
+            return jsonify({"error": "No file uploaded"}), 400
+        
+        if file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
 
-    filename = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{secure_filename(file.filename)}"
-    save_path = os.path.join(current_app.config["UPLOAD_FOLDER"], filename)
-    file.save(save_path)
-    file_url = f"/uploads/{filename}"
+        # Check file extension
+        if not allowed_file(file.filename, doc_type):
+            allowed_exts = "PDF" if doc_type == "pdf" else "PNG, JPG, JPEG, GIF"
+            return jsonify({"error": f"Invalid file type. Allowed: {allowed_exts}"}), 400
 
-    a = Appointment.query.get(appt_id)
-    if not a:
-        return jsonify({"error": "not_found"}), 404
-    if not a.summary:
-        a.summary = Summary()
+        # Get appointment
+        a = Appointment.query.get(appt_id)
+        if not a:
+            return jsonify({"error": "Appointment not found"}), 404
 
-    docs = load_json_field(a.summary.documents)
-    docs.append({"name": doc_name, "type": doc_type, "url": file_url})
-    a.summary.documents = json.dumps(docs)
-    db.session.commit()
-    return jsonify({"documents": docs})
+        # Create summary if doesn't exist
+        if not a.summary:
+            a.summary = Summary(
+                appointment_id=appt_id,
+                notes="",
+                prescriptions="[]",
+                documents="[]",
+                inventory="[]"
+            )
+            db.session.add(a.summary)
+            db.session.flush()
 
+        # Generate secure filename with timestamp
+        timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+        original_filename = secure_filename(file.filename)
+        filename = f"{timestamp}_{original_filename}"
+        
+        # Save file
+        upload_folder = current_app.config["UPLOAD_FOLDER"]
+        os.makedirs(upload_folder, exist_ok=True)
+        save_path = os.path.join(upload_folder, filename)
+        
+        file.save(save_path)
+        
+        # Create URL
+        file_url = f"/uploads/{filename}"
 
-@bp.route("/uploads/<path:filename>")
-def serve_upload(filename):
-    return send_from_directory(current_app.config["UPLOAD_FOLDER"], filename)
+        # Load existing documents
+        docs = load_json_field(a.summary.documents)
+        
+        # Add new document
+        docs.append({
+            "name": doc_name.strip(),
+            "type": doc_type,
+            "url": file_url
+        })
+        
+        # Save to database
+        a.summary.documents = json.dumps(docs)
+        db.session.commit()
+
+        return jsonify({
+            "message": "Document uploaded successfully",
+            "documents": docs
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error uploading document: {str(e)}")
+        return jsonify({"error": f"Failed to upload document: {str(e)}"}), 500
+
 
 
 # ---- MEDICAL RECORDS, DOCUMENTS, PRESCRIPTIONS, TREATMENTS ----
