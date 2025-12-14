@@ -1,128 +1,148 @@
-import React, { useState } from 'react';
-import Sidebar from '../../components/sidebar/sidebar'; // adjust path if needed
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import Sidebar from "../../components/sidebar/sidebar";
+import "./patientProfile.css";
 
 export default function ViewPatient() {
-  const [activeTab, setActiveTab] = useState('General Info');
+  const navigate = useNavigate();
+  const { id } = useParams(); // Get patient ID from URL
 
+  const [patientData, setPatientData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // Tabs with labels and corresponding paths
   const tabs = [
-    'General Info',
-    'Appointments',
-    'Treatment Plans',
-    'Medical Records',
-    'Prescriptions',
-    'Invoices/Payments'
+    { label: "General Info", path: "/patients/general-info" },
+    { label: "Appointments", path: "/patients/appointments" },
+    { label: "Treatment Plans", path: "/patients/treatment-plans" },
+    { label: "Medical Records", path: "/patients/medical-records" },
+    { label: "Prescriptions", path: "/patients/prescriptions" },
+    { label: "Invoices/Payments", path: "/patients/invoices" },
   ];
 
-  // Hardcoded patient data
-  const patientData = {
-    firstName: 'John',
-    lastName: 'Doe',
-    dateOfBirth: '1985-07-20',
-    gender: 'Male',
-    phoneNumber: '+1 234 567 890',
-    email: 'john.doe@example.com',
-    address: '123 Main St, Springfield',
-    insuranceProvider: 'HealthCare Inc.',
-    policyNumber: 'POL1234567',
-    groupNumber: 'GRP987654'
-  };
+  // Fetch patient info from backend
+  useEffect(() => {
+    const fetchPatient = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`http://127.0.0.1:5000/api/patients/${id}`);
+        if (!res.ok) throw new Error("Failed to fetch patient data");
+
+        const data = await res.json();
+        setPatientData({
+          firstName: data.first_name,
+          lastName: data.last_name,
+          dateOfBirth: data.date_of_birth,
+          gender: data.gender,
+          phoneNumber: data.phone,
+          email: data.email,
+          address: data.address,
+          insuranceProvider: data.insurance_provider,
+          policyNumber: data.insurance_policy_number,
+          groupNumber: data.group_number,
+        });
+        setError("");
+      } catch (err) {
+        console.error(err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPatient();
+  }, [id]);
+
+  if (loading) return <div className="p-8">Loading patient...</div>;
+  if (error) return <div className="p-8 text-red-600">Error: {error}</div>;
+  if (!patientData) return <div className="p-8">No patient data found.</div>;
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar Component */}
+    <div className="app-layout">
       <Sidebar />
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        <div className="p-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Patient Profile</h1>
-            <p className="text-gray-500">View patient information and history</p>
-          </div>
+      <main className="main-content">
+        {/* Header */}
+        <header className="page-header">
+          <h1 className="page-title">Patient Profile</h1>
+          <p className="page-subtitle">View patient information and history</p>
+        </header>
 
-          {/* Tabs */}
-          <div className="border-b border-gray-200 mb-8">
-            <div className="flex gap-8">
-              {tabs.map(tab => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`pb-4 px-1 bg-white font-medium transition-colors ${
-                    activeTab === tab
-                      ? 'text-blue-600 border-b-2 border-blue-600'
-                      : 'text-gray-500 hover:text-gray-600'
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Patient Details */}
-          <div className="bg-white rounded-lg shadow-sm p-8 mb-8">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Patient Details</h2>
-
-            <div className="grid grid-cols-2 gap-6 mb-6">
-              <div>
-                <p className="text-sm text-gray-500">First Name</p>
-                <p className="text-gray-800 font-medium">{patientData.firstName}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Last Name</p>
-                <p className="text-gray-800 font-medium">{patientData.lastName}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-6 mb-6">
-              <div>
-                <p className="text-sm text-gray-500">Date of Birth</p>
-                <p className="text-gray-800 font-medium">{patientData.dateOfBirth}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Gender</p>
-                <p className="text-gray-800 font-medium">{patientData.gender}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-6 mb-6">
-              <div>
-                <p className="text-sm text-gray-500">Phone Number</p>
-                <p className="text-gray-800 font-medium">{patientData.phoneNumber}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Email</p>
-                <p className="text-gray-800 font-medium">{patientData.email}</p>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <p className="text-sm text-gray-500">Address</p>
-              <p className="text-gray-800 font-medium">{patientData.address}</p>
-            </div>
-          </div>
-
-          {/* Insurance Information */}
-          <div className="bg-white rounded-lg shadow-sm p-8">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Insurance Information</h2>
-
-            <div className="grid grid-cols-2 gap-6 mb-6">
-              <div>
-                <p className="text-sm text-gray-500">Insurance Provider</p>
-                <p className="text-gray-800 font-medium">{patientData.insuranceProvider}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Policy Number</p>
-                <p className="text-gray-800 font-medium">{patientData.policyNumber}</p>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <p className="text-sm text-gray-500">Group Number</p>
-              <p className="text-gray-800 font-medium">{patientData.groupNumber}</p>
-            </div>
-          </div>
+        {/* Tabs */}
+        <div className="tabs-row">
+          {tabs.map((tab) => (
+            <button
+              key={tab.label}
+              onClick={() => navigate(tab.path)}
+              className={`tab-btn ${
+                window.location.pathname === tab.path ? "active" : ""
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
+
+        {/* Patient Details */}
+        <section className="card">
+          <div className="card-header">
+            <h2 className="card-title">Patient Details</h2>
+          </div>
+
+          <div className="card-body">
+            <div className="history-row">
+              <div className="history-label">First Name</div>
+              <div className="history-value">{patientData.firstName}</div>
+            </div>
+            <div className="history-row">
+              <div className="history-label">Last Name</div>
+              <div className="history-value">{patientData.lastName}</div>
+            </div>
+            <div className="history-row">
+              <div className="history-label">Date of Birth</div>
+              <div className="history-value">{patientData.dateOfBirth}</div>
+            </div>
+            <div className="history-row">
+              <div className="history-label">Gender</div>
+              <div className="history-value">{patientData.gender}</div>
+            </div>
+            <div className="history-row">
+              <div className="history-label">Phone Number</div>
+              <div className="history-value">{patientData.phoneNumber}</div>
+            </div>
+            <div className="history-row">
+              <div className="history-label">Email</div>
+              <div className="history-value">{patientData.email}</div>
+            </div>
+            <div className="history-row">
+              <div className="history-label">Address</div>
+              <div className="history-value">{patientData.address}</div>
+            </div>
+          </div>
+        </section>
+
+        {/* Insurance Information */}
+        <section className="card">
+          <div className="card-header">
+            <h2 className="card-title">Insurance Information</h2>
+          </div>
+
+          <div className="card-body">
+            <div className="history-row">
+              <div className="history-label">Insurance Provider</div>
+              <div className="history-value">{patientData.insuranceProvider}</div>
+            </div>
+            <div className="history-row">
+              <div className="history-label">Policy Number</div>
+              <div className="history-value">{patientData.policyNumber}</div>
+            </div>
+            <div className="history-row">
+              <div className="history-label">Group Number</div>
+              <div className="history-value">{patientData.groupNumber}</div>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   );

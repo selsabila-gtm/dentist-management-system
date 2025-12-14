@@ -34,7 +34,7 @@ function App() {
         <Route path="/b" element={<Appointment />} /> 
         <Route path="/c" element={<PatientInvoices />} /> 
         <Route path="/patients" element={<SearchPatient />} /> 
-        <Route path="/d" element={<ViewPatient />} /> 
+        <Route path="/patient/:id" element={<ViewPatient />} /> 
 
         {/* Redirect root */}
         <Route path="/a" element={<Navigate to="/staff" />} />
