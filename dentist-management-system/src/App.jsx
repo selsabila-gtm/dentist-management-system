@@ -25,6 +25,8 @@ import Staff from "./pages/staff/list";
 import StaffAddPage from "./pages/staff/add.jsx";
 import StaffProfilePage from "./pages/staff/profile.jsx";
 import ChangePasswordPage from "./pages/staff/changePassword.jsx";
+import PatientPage from "./pages/patients/SearchPatient.jsx";
+import SettingsPage from "./pages/settings/settings.jsx";
 
 // Patient pages
 import MedicalRecordsPage from "./pages/patients/MedicalRecords.jsx";
@@ -188,7 +190,7 @@ function App() {
         />
 
         {/* Placeholder / other sections (protected) */}
-        <Route
+       <Route
           path="/patients"
           element={
             <ProtectedRoute>
@@ -219,7 +221,7 @@ function App() {
           path="/settings"
           element={
             <ProtectedRoute>
-              <div>Settings Page (Coming Soon)</div>
+              <SettingsPage />
             </ProtectedRoute>
           }
         />

@@ -66,6 +66,7 @@ class Role(db.Model):
 class Staff(db.Model):
     __tablename__ = "staff"
     id = db.Column(db.Integer, primary_key=True)
+    profile_photo = db.Column(db.String(300), nullable=True)
 
     # basic identity
     first_name = db.Column(db.String(100))
@@ -90,7 +91,8 @@ class Staff(db.Model):
     availability = db.Column(db.String(50))
     days_available = db.Column(db.String(100))
     hours = db.Column(db.String(100))
-
+    profile_photo = db.Column(db.String(300), nullable=True)
+    notification_preferences = db.Column(db.Text, nullable=True)  # JSON string
     def to_dict(self):
         full_name = (
             self.full_name
@@ -113,6 +115,8 @@ class Staff(db.Model):
             "role": self.role.to_dict() if self.role else None,
             "role_name": self.role.name if self.role else None,
             "role_id": self.role_id,
+            "profile_photo": self.profile_photo,
+            "notification_preferences": load_json_field(self.notification_preferences),
         }
 
 

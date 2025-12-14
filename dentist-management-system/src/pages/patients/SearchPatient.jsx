@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Search, ChevronDown } from 'lucide-react';
+import Sidebar from "../../components/Sidebar/Sidebar";
 
 export default function PatientsList() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,6 +36,8 @@ export default function PatientsList() {
   );
 
   return (
+    <div className="app-layout">
+      <Sidebar />
     <div className="flex h-screen bg-gray-50">
 
       {/* Main Content */}
@@ -117,6 +120,7 @@ export default function PatientsList() {
           </div>
         </div>
       </main>
+    </div>
     </div>
   );
 }

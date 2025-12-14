@@ -31,7 +31,9 @@ from backend.models import (
     InventoryCategory,
     InventoryItem,
 )
-
+from werkzeug.utils import secure_filename
+from datetime import datetime
+import os
 bp = Blueprint("api", __name__)
 
 
@@ -99,16 +101,42 @@ def get_staff(staff_id):
     s = Staff.query.get_or_404(staff_id)
     return jsonify(s.to_dict())
 
-
+# Replace the update_staff route in routes.py with this version
 @bp.route("/api/staff/<int:staff_id>", methods=["PUT"])
 def update_staff(staff_id):
     s = Staff.query.get_or_404(staff_id)
     data = request.get_json() or {}
 
+    # Special handling for password updates
     new_password = data.get("password")
+    current_password = data.get("current_password")
+    
     if new_password:
+        # If trying to update password, MUST provide and verify current password
+        if not current_password:
+            return jsonify({"error": "Current password is required to change password"}), 400
+        
+        # Verify current password is correct
+        if not check_password_hash(s.password_hash, current_password):
+            return jsonify({"error": "Current password is incorrect"}), 400
+        
+        # Validate new password
+        if len(new_password) < 8:
+            return jsonify({"error": "New password must be at least 8 characters"}), 400
+        
+        # Update password
         s.password_hash = generate_password_hash(new_password)
+        
+        # Don't update any other fields when changing password
+        try:
+            db.session.commit()
+            return jsonify({"message": "Password updated successfully"})
+        except Exception as e:
+            db.session.rollback()
+            print("Error updating password:", e)
+            return jsonify({"error": "Failed to update password", "detail": str(e)}), 500
 
+    # Update other fields (only if not a password change request)
     for field in (
         "full_name",
         "first_name",
@@ -121,12 +149,21 @@ def update_staff(staff_id):
         "availability",
         "days_available",
         "hours",
+        "profile_photo",
     ):
         if field in data:
             setattr(s, field, data[field])
 
     if "permissions" in data:
         s.permissions = dumps_field(data.get("permissions"))
+    
+    if "notification_preferences" in data:
+        # Handle notification_preferences - it might come as a string or dict
+        notif_prefs = data.get("notification_preferences")
+        if isinstance(notif_prefs, str):
+            s.notification_preferences = notif_prefs
+        else:
+            s.notification_preferences = dumps_field(notif_prefs)
 
     try:
         db.session.commit()
@@ -135,8 +172,6 @@ def update_staff(staff_id):
         db.session.rollback()
         print("Error updating staff:", e)
         return jsonify({"error": "Failed to update staff", "detail": str(e)}), 500
-
-
 @bp.route("/api/staff/<int:staff_id>", methods=["DELETE"])
 def delete_staff(staff_id):
     s = Staff.query.get_or_404(staff_id)
@@ -191,6 +226,12 @@ def login():
                 "staff_id": staff.id,
                 "username": staff.username,
                 "role": staff.role.name if staff.role else None,
+                "role_id": staff.role.id ,
+                "full_name": staff.full_name,
+                "email": staff.email,
+                "profile_photo": staff.profile_photo,
+                # Include the complete user object for easy storage
+                "user": staff.to_dict()
             }
         ),
         200,
@@ -215,8 +256,12 @@ def reset_password():
 
 
 # ---- PATIENTS ----
+# Updated patient routes for routes.py
+# Replace the existing patient routes with these updated versions
+
 @bp.route("/api/patients", methods=["GET"])
 def get_patients():
+    """Get all patients with basic info"""
     rows = Patient.query.all()
     result = [
         {
@@ -1099,3 +1144,45 @@ def get_inventory_report():
         "low_stock_count": low_stock_count,
         "items": report_items,
     }), 200
+@bp.route("/api/staff/<int:staff_id>/photo", methods=["POST"])
+def upload_staff_photo(staff_id):
+    """Upload profile photo for staff member"""
+    staff = Staff.query.get_or_404(staff_id)
+    
+    if "photo" not in request.files:
+        return jsonify({"error": "No photo file provided"}), 400
+    
+    file = request.files["photo"]
+    
+    if file.filename == "":
+        return jsonify({"error": "No file selected"}), 400
+    
+    # Validate file type
+    if not allowed_file(file.filename, "img"):
+        return jsonify({"error": "Invalid file type. Only images are allowed"}), 400
+    
+    try:
+        # Create a unique filename
+        timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        filename = f"staff_{staff_id}_{timestamp}_{secure_filename(file.filename)}"
+        
+        # Save the file
+        save_path = os.path.join(current_app.config["UPLOAD_FOLDER"], filename)
+        file.save(save_path)
+        
+        # Generate URL
+        photo_url = f"/uploads/{filename}"
+        
+        # Update staff record
+        staff.profile_photo = photo_url
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Photo uploaded successfully",
+            "photo_url": photo_url
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error uploading photo: {e}")
+        return jsonify({"error": "Failed to upload photo", "detail": str(e)}), 500
