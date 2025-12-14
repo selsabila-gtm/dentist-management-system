@@ -385,25 +385,16 @@ export default function PostSummary() {
       <div className="page summary-page">
         <h1 className="page-header">Post-Appointment Summary</h1>
 
-        {/* NOTES */}
-        <section className="card summary-section">
-          <h2>Notes</h2>
-          <textarea
-            className="notes-textarea"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Enter appointment notes..."
-          />
-        </section>
+      
 
         {/* COST */}
         <section className="card summary-section">
-          <h2>Appointment Cost *</h2>
+          <h2>Appointment Cost </h2>
           <div className="cost-input-wrapper">
-            <span className="cost-currency">$</span>
+           
             <input
               type="number"
-              step="0.01"
+              step="500"
               min="0"
               className={`cost-input ${errors.cost ? 'error' : ''}`}
               value={cost}
@@ -413,6 +404,7 @@ export default function PostSummary() {
               }}
               placeholder="0.00"
             />
+            <span className="cost-currency">DA</span>
           </div>
           {errors.cost && <div className="error-message">{errors.cost}</div>}
         </section>
@@ -564,7 +556,7 @@ export default function PostSummary() {
 
 
 
-       // Replace the DOCUMENTS section in your component with this:
+       
 
 {/* DOCUMENTS */}
 <section className="card summary-section">
@@ -676,7 +668,7 @@ export default function PostSummary() {
 
         {/* INVENTORY */}
         <section className="card summary-section">
-          <h2>Inventory Used *</h2>
+          <h2>Inventory Used </h2>
           {errors.inventory && <div className="error-message">{errors.inventory}</div>}
 
           <table className="appointments-table">
@@ -814,6 +806,16 @@ export default function PostSummary() {
         </section>
 
         {errors.submit && <div className="error-message submit-error">{errors.submit}</div>}
+
+         <section className="card summary-section">
+          <h2>Notes</h2>
+          <textarea
+            className="notes-textarea"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Enter appointment notes..."
+          />
+        </section>
 
         {/* SAVE SUMMARY */}
         <div className="summary-actions">
