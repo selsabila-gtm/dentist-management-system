@@ -11,7 +11,6 @@ export default function PostSummary() {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // ✅ GET THE RETURN DATE FROM NAVIGATION STATE
   const returnDate = location.state?.returnDate;
   
   const isViewMode = new URLSearchParams(location.search).get("mode") === "view";
@@ -34,14 +33,13 @@ export default function PostSummary() {
   const [docName, setDocName] = useState("");
   const [docType, setDocType] = useState("pdf");
   const [docFile, setDocFile] = useState(null);
-  const [docError, setDocError] = useState(""); // SEPARATE STATE FOR DOC ERRORS
+  const [docError, setDocError] = useState("");
 
   const [hasExistingSummary, setHasExistingSummary] = useState(false);
   const userSavedRef = useRef(false);
   
   const [errors, setErrors] = useState({});
 
-  // ✅ HELPER FUNCTION TO NAVIGATE BACK WITH DATE
   function navigateBackToCalendar() {
     if (returnDate) {
       navigate("/calendar", { state: { returnDate } });
@@ -227,84 +225,140 @@ export default function PostSummary() {
     setInventory((prev) => prev.filter((_, i) => i !== index));
   }
 
-  /* DOCUMENTS */
+
+
+
+
   function handleUploadDocument() {
-    console.log("Upload clicked - docName:", docName, "docFile:", docFile);
-    
-    // Clear previous errors
-    setDocError("");
-    
-    // Validation
-    if (!docName.trim()) {
-      console.log("Setting error: Document name required");
-      setDocError("Document name is required.");
-      return;
-    }
-    
-    if (!docFile) {
-      console.log("Setting error: File required");
-      setDocError("Please choose a file to upload.");
-      return;
-    }
-
-    // Validate file type
-    const fileName = docFile.name.toLowerCase();
-    if (docType === "pdf") {
-      if (!fileName.endsWith(".pdf")) {
-        console.log("Setting error: Invalid PDF");
-        setDocError("Please select a PDF file.");
-        return;
-      }
-    } else if (docType === "img") {
-      const validImageExts = [".png", ".jpg", ".jpeg", ".gif"];
-      const isValidImage = validImageExts.some(ext => fileName.endsWith(ext));
-      if (!isValidImage) {
-        console.log("Setting error: Invalid image");
-        setDocError("Please select a valid image file (PNG, JPG, JPEG, or GIF).");
-        return;
-      }
-    }
-
-    console.log("Clearing errors, starting upload");
-
-    // Create FormData
-    const formData = new FormData();
-    formData.append("name", docName.trim());
-    formData.append("type", docType);
-    formData.append("file", docFile);
-
-    // Upload
-    fetch(`${API_BASE}/api/appointments/${id}/documents`, {
-      method: "POST",
-      body: formData,
-    })
-      .then(async (res) => {
-        const data = await res.json();
-        
-        if (!res.ok) {
-          throw new Error(data.error || "Upload failed");
-        }
-        
-        return data;
-      })
-      .then((data) => {
-        // Success
-        console.log("Upload successful:", data);
-        setDocuments(data.documents);
-        setDocName("");
-        setDocFile(null);
-        setDocError("");
-        setShowDocRow(false);
-
-        // Clear file input
-        const input = document.getElementById("doc-file-input");
-        if (input) input.value = "";
-      })
-      .catch((error) => {
-        console.error("Upload error:", error);
-        setDocError(`Failed to upload: ${error.message}`);
-      });
+  console.log("=== UPLOAD DEBUG START ===");
+  console.log("Document name:", docName);
+  console.log("Document type:", docType);
+  console.log("File:", docFile);
+  console.log("Appointment ID:", id);
+  
+  // Clear previous errors
+  setDocError("");
+  
+  // Validation
+  if (!docName.trim()) {
+    console.log("ERROR: Document name required");
+    setDocError("Document name is required.");
+    return;
   }
+  
+  if (!docFile) {
+    console.log("ERROR: File required");
+    setDocError("Please choose a file to upload.");
+    return;
+  }
+
+  // File type validation
+  const fileName = docFile.name.toLowerCase();
+  const fileExtension = fileName.substring(fileName.lastIndexOf('.') + 1);
+  
+  console.log("File name:", fileName);
+  console.log("File extension:", fileExtension);
+  
+  if (docType === "pdf") {
+    if (fileExtension !== "pdf") {
+      console.log("ERROR: Invalid PDF");
+      setDocError("Please select a PDF file.");
+      return;
+    }
+  } else if (docType === "img") {
+    const validImageExts = ["png", "jpg", "jpeg", "gif"];
+    if (!validImageExts.includes(fileExtension)) {
+      console.log("ERROR: Invalid image");
+      setDocError("Please select a valid image file (PNG, JPG, JPEG, or GIF).");
+      return;
+    }
+  }
+
+  // File size validation (16MB limit)
+  const maxSize = 16 * 1024 * 1024;
+  if (docFile.size > maxSize) {
+    console.log("ERROR: File too large");
+    setDocError("File is too large. Maximum size is 16MB.");
+    return;
+  }
+
+  console.log("✓ Validation passed");
+
+  // Create FormData
+  const formData = new FormData();
+  formData.append("name", docName.trim());
+  formData.append("type", docType);
+  formData.append("file", docFile);
+
+  // Debug FormData
+  console.log("FormData entries:");
+  for (let pair of formData.entries()) {
+    console.log(`  ${pair[0]}:`, pair[1]);
+  }
+
+  // Upload
+  const uploadUrl = `${API_BASE}/api/appointments/${id}/documents`;
+  console.log("Uploading to:", uploadUrl);
+
+  fetch(uploadUrl, {
+    method: "POST",
+    body: formData,
+    // IMPORTANT: Don't set Content-Type - browser will set it with boundary
+  })
+    .then(async (res) => {
+      console.log("Response status:", res.status);
+      console.log("Response OK:", res.ok);
+      
+      const text = await res.text();
+      console.log("Response text:", text);
+      
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error("Failed to parse JSON:", e);
+        throw new Error(`Server returned invalid JSON. Status: ${res.status}. Response: ${text.substring(0, 200)}`);
+      }
+      
+      if (!res.ok) {
+        throw new Error(data.error || `Upload failed with status ${res.status}`);
+      }
+      
+      return data;
+    })
+    .then((data) => {
+      // Success
+      console.log("✓ Upload successful");
+      console.log("Response data:", data);
+      setDocuments(data.documents);
+      setDocName("");
+      setDocFile(null);
+      setDocError("");
+      setShowDocRow(false);
+
+      // Clear file input
+      const input = document.getElementById("doc-file-input");
+      if (input) input.value = "";
+      
+      console.log("=== UPLOAD DEBUG END ===");
+    })
+    .catch((error) => {
+      console.error("❌ Upload error:", error);
+      console.error("Error message:", error.message);
+      setDocError(`Failed to upload: ${error.message}`);
+      
+      // Clear file input on error
+      const input = document.getElementById("doc-file-input");
+      if (input) input.value = "";
+      setDocFile(null);
+      
+      console.log("=== UPLOAD DEBUG END (ERROR) ===");
+    });
+}
+
+
+
+
 
   function viewDoc(d) {
     window.open(`${API_BASE}${d.url}`, "_blank");
@@ -351,7 +405,6 @@ export default function PostSummary() {
     })
       .then(() => {
         userSavedRef.current = true;
-        // ✅ NAVIGATE BACK WITH DATE
         navigateBackToCalendar();
       })
       .catch(() => {
@@ -370,11 +423,9 @@ export default function PostSummary() {
         body: JSON.stringify({ status: "scheduled" }),
       })
         .finally(() => {
-          // ✅ NAVIGATE BACK WITH DATE
           navigateBackToCalendar();
         });
     } else {
-      // ✅ NAVIGATE BACK WITH DATE
       navigateBackToCalendar();
     }
   }
@@ -385,13 +436,10 @@ export default function PostSummary() {
       <div className="page summary-page">
         <h1 className="page-header">Post-Appointment Summary</h1>
 
-      
-
         {/* COST */}
         <section className="card summary-section">
-          <h2>Appointment Cost </h2>
+          <h2>Appointment Cost</h2>
           <div className="cost-input-wrapper">
-           
             <input
               type="number"
               step="500"
@@ -550,125 +598,114 @@ export default function PostSummary() {
           </button>
         </section>
 
+        {/* DOCUMENTS */}
+        <section className="card summary-section">
+          <h2>Documents</h2>
 
+          <table className="appointments-table">
+            <thead>
+              <tr>
+                <th>Document Name</th>
+                <th>Document Type</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
 
+            <tbody>
+              {documents.map((d, idx) => (
+                <tr key={idx}>
+                  <td>{d.name}</td>
+                  <td>{d.type === "pdf" ? "PDF" : "Image"}</td>
+                  <td>
+                    <button className="link-button" onClick={() => viewDoc(d)}>
+                      View
+                    </button>
+                    {" | "}
+                    <button className="link-button" onClick={() => deleteDoc(idx)}>
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
 
+              {documents.length === 0 && (
+                <tr>
+                  <td colSpan={3} style={{ textAlign: "center", color: "#94a3b8" }}>
+                    No documents added yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
 
-
-
-       
-
-{/* DOCUMENTS */}
-<section className="card summary-section">
-  <h2>Documents</h2>
-
-  <table className="appointments-table">
-    <thead>
-      <tr>
-        <th>Document Name</th>
-        <th>Document Type</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-
-    <tbody>
-      {documents.map((d, idx) => (
-        <tr key={idx}>
-          <td>{d.name}</td>
-          <td>{d.type === "pdf" ? "PDF" : "Image"}</td>
-          <td>
-            <button className="link-button" onClick={() => viewDoc(d)}>
-              View
+          {!showDocRow && (
+            <button className="secondary-button" onClick={() => setShowDocRow(true)}>
+              Add Document
             </button>
-            {" | "}
-            <button className="link-button" onClick={() => deleteDoc(idx)}>
-              Delete
-            </button>
-          </td>
-        </tr>
-      ))}
+          )}
 
-      {documents.length === 0 && (
-        <tr>
-          <td colSpan={3} style={{ textAlign: "center", color: "#94a3b8" }}>
-            No documents added yet.
-          </td>
-        </tr>
-      )}
-    </tbody>
-  </table>
+          {showDocRow && (
+            <div className="doc-inline-row">
+              <input
+                className="doc-inline-input"
+                placeholder="Document name"
+                value={docName}
+                onChange={(e) => {
+                  setDocName(e.target.value);
+                  setDocError("");
+                }}
+              />
 
-  {!showDocRow && (
-    <button className="secondary-button" onClick={() => setShowDocRow(true)}>
-      Add Document
-    </button>
-  )}
+              <select
+                className="doc-inline-select"
+                value={docType}
+                onChange={(e) => {
+                  setDocType(e.target.value);
+                  setDocError("");
+                }}
+              >
+                <option value="pdf">PDF</option>
+                <option value="img">Image</option>
+              </select>
 
-  {showDocRow && (
-    <div className="doc-inline-row">
-      <input
-        className="doc-inline-input"
-        placeholder="Document name"
-        value={docName}
-        onChange={(e) => {
-          setDocName(e.target.value);
-          setDocError(""); // Clear error on change
-        }}
-      />
+              <input
+                id="doc-file-input"
+                type="file"
+                className="doc-inline-file"
+                accept={docType === "pdf" ? ".pdf" : "image/*"}
+                onChange={(e) => {
+                  setDocFile(e.target.files[0] || null);
+                  setDocError("");
+                }}
+              />
 
-      <select
-        className="doc-inline-select"
-        value={docType}
-        onChange={(e) => {
-          setDocType(e.target.value);
-          setDocError(""); // Clear error on change
-        }}
-      >
-        <option value="pdf">PDF</option>
-        <option value="img">Image</option>
-      </select>
+              <button className="primary-button" onClick={handleUploadDocument}>
+                Upload
+              </button>
 
-      <input
-        id="doc-file-input"
-        type="file"
-        className="doc-inline-file"
-        accept={docType === "pdf" ? ".pdf" : "image/*"}
-        onChange={(e) => {
-          setDocFile(e.target.files[0] || null);
-          setDocError(""); // Clear error on change
-        }}
-      />
+              <button
+                className="secondary-button"
+                onClick={() => {
+                  setShowDocRow(false);
+                  setDocError("");
+                  setDocName("");
+                  setDocFile(null);
+                  // 🔧 ADDED: Clear file input on cancel
+                  const input = document.getElementById("doc-file-input");
+                  if (input) input.value = "";
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
 
-      <button className="primary-button" onClick={handleUploadDocument}>
-        Upload
-      </button>
-
-      <button
-        className="secondary-button"
-        onClick={() => {
-          setShowDocRow(false);
-          setDocError(""); // Clear error on cancel
-          setDocName("");
-          setDocFile(null);
-        }}
-      >
-        Cancel
-      </button>
-    </div>
-  )}
-
-  {/* DISPLAY DOCUMENT ERROR MESSAGE */}
-  {docError && <div className="error-message" style={{ marginTop: "10px" }}>{docError}</div>}
-</section>
-
-
-
-
-
+          {docError && <div className="error-message" style={{ marginTop: "10px" }}>{docError}</div>}
+        </section>
 
         {/* INVENTORY */}
         <section className="card summary-section">
-          <h2>Inventory Used </h2>
+          <h2>Inventory Used</h2>
           {errors.inventory && <div className="error-message">{errors.inventory}</div>}
 
           <table className="appointments-table">
@@ -807,7 +844,7 @@ export default function PostSummary() {
 
         {errors.submit && <div className="error-message submit-error">{errors.submit}</div>}
 
-         <section className="card summary-section">
+        <section className="card summary-section">
           <h2>Notes</h2>
           <textarea
             className="notes-textarea"

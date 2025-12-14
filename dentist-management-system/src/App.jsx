@@ -14,6 +14,7 @@ import ResetPasswordPage from "./pages/staff/resetPassword";
 import InventoryListPage from "./pages/inventory/list";
 import InventoryAddPage from "./pages/inventory/add";
 import InventoryDetailsPage from "./pages/inventory/details";
+import Dashboard from "./pages/dashboard/dashboard.jsx";
 
 // Calendar / Appointments pages
 import Calendar from "./pages/appointments/calendar";
@@ -60,7 +61,7 @@ function App() {
           path="/"
           element={
             <ProtectedRoute>
-              <Staff />
+              <Dashboard />
             </ProtectedRoute>
           }
         />
@@ -70,7 +71,7 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <Staff />
+              <Dashboard />
             </ProtectedRoute>
           }
         />

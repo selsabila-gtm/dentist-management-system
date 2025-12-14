@@ -51,14 +51,22 @@ export default function LoginPage() {
       });
 
       const data = await res.json();
-      console.log("LOGIN RESPONSE:", data); // <-- for debugging
+      console.log("LOGIN RESPONSE:", data);
 
       if (!res.ok || !data.success) {
         showToast(data.message || "Invalid username or password.", "error");
         return;
       }
 
-      // 🔐 Try to find a user object from the backend
+      // ✅ Clear old localStorage data first
+      localStorage.clear();
+
+      // ✅ Save the data that calendar.jsx needs
+      localStorage.setItem("staff_id", data.staff_id);
+      localStorage.setItem("role", data.role);
+      localStorage.setItem("username", data.username);
+
+      // 🔹 Try to find a user object from the backend
       let userPayload =
         data.user ||
         data.staff ||
@@ -66,7 +74,7 @@ export default function LoginPage() {
         data.current_user ||
         null;
 
-      // 🔁 Fallback: if backend didn't send user details, create one
+      // 🔹 Fallback: if backend didn't send user details, create one
       if (!userPayload) {
         // TEMP: treat "emma" as admin (from your seed data)
         const isAdminSeed = username.toLowerCase() === "emma";
@@ -74,7 +82,6 @@ export default function LoginPage() {
         userPayload = {
           username,
           is_admin: isAdminSeed,
-          // you can add more fields later if you return them from backend
         };
       }
 

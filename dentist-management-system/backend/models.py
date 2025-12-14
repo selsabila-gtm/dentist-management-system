@@ -12,7 +12,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 INSTANCE_DIR = os.path.join(BASE_DIR, "instance")
 os.makedirs(INSTANCE_DIR, exist_ok=True)
 
-UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
+# 🔧 ONLY CHANGE: Fixed to work with app.py "uploads" path
+UPLOAD_FOLDER = os.path.join(os.path.dirname(BASE_DIR), "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 DB_PATH = os.path.join(INSTANCE_DIR, "dentist.db")

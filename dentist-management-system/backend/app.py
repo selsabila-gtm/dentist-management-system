@@ -1,47 +1,38 @@
-# backend/app.py
-
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_cors import CORS
+import os
 
-from backend.models import (
-    db,
-    SQLALCHEMY_DATABASE_URI,
-    UPLOAD_FOLDER,
-    MAX_CONTENT_LENGTH,
-    seed_initial_data,
-)
+from backend.models import *
+from backend.routes import bp
+
 
 def create_app():
-    app = Flask(__name__, instance_relative_config=True)
+    app = Flask(__name__)
 
-    # config from models
-    app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
+    # BASIC CONFIG (temporary if you don't have config.py)
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///dentist.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-    app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
+    app.config["UPLOAD_FOLDER"] = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "uploads")
 
-    CORS(
-        app,
-        resources={r"/api/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173"]}},
-        supports_credentials=True,
-    )
+    # ENABLE CORS
+    CORS(app, supports_credentials=True)
 
-    # bind db to this app
     db.init_app(app)
 
-    # register routes via blueprint
-    from backend.routes import register_routes
-    register_routes(app)
-
-    # create tables + seed data (no dropping)
     with app.app_context():
         db.create_all()
         seed_initial_data()
 
+    app.register_blueprint(bp)
+
     return app
 
-# global app used by "python -m app"
+
+# Create the app instance
 app = create_app()
 
+
+
+
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=True)

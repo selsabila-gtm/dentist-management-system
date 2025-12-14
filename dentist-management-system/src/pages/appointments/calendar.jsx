@@ -154,15 +154,33 @@ export default function Calendar() {
   const [selectedDateKey, setSelectedDateKey] = useState(initialSelectedDateKey);
 
   function loadAppointments() {
-    // ✅ BUILD API URL WITH DENTIST FILTER IF USER IS DENTIST
+    // ✅ Build API URL - only filter for Dentists
     let apiUrl = `${API_BASE}/api/appointments`;
     
+    // 🔍 DETAILED DEBUG LOGGING
+    console.log("=== CALENDAR DEBUG ===");
+    console.log("User Role from localStorage:", userRole);
+    console.log("Staff ID from localStorage:", staffId);
+    console.log("Role type:", typeof userRole);
+    console.log("Staff ID type:", typeof staffId);
+    console.log("Role === 'Dentist'?", userRole === "Dentist");
+    console.log("All localStorage:", {
+      role: localStorage.getItem("role"),
+      staff_id: localStorage.getItem("staff_id"),
+      username: localStorage.getItem("username")
+    });
+    
+    // ✅ ONLY Dentists see filtered appointments
+    // Admins and Receptionists see ALL appointments
     if (userRole === "Dentist" && staffId) {
       apiUrl += `?dentist_id=${staffId}`;
+      console.log("🔒 Dentist view - Filtering appointments for dentist ID:", staffId);
+    } else {
+      console.log("👁️ Admin/Receptionist view - Loading ALL appointments");
     }
 
-    console.log("Loading appointments from:", apiUrl);
-    console.log("User Role:", userRole, "Staff ID:", staffId);
+    console.log("Final API URL:", apiUrl);
+    console.log("======================");
 
     fetch(apiUrl)
       .then((res) => {
@@ -173,9 +191,10 @@ export default function Calendar() {
         return res.json();
       })
       .then((data) => {
-        console.log("Appointments loaded:", data);
+        console.log("Appointments received:", data.length, "appointments");
+        console.log("First appointment (if any):", data[0]);
         setAppointments(data);
-        setErrorMessage(""); // Clear any previous errors
+        setErrorMessage("");
       })
       .catch((err) => {
         console.error("Error loading appointments:", err);
