@@ -104,8 +104,7 @@ def get_dentist_availability(dentist_id):
         "id": staff.id,
         "name": staff.full_name or f"{staff.first_name or ''} {staff.last_name or ''}".strip(),
         "days_available": staff.days_available,  # From Staff.days_available column
-        "hours": staff.hours,  # From Staff.hours column
-        "availability": staff.availability  # From Staff.availability column
+        "hours": staff.hours  # From Staff.hours column
     }), 200
 
 

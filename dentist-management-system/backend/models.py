@@ -64,6 +64,7 @@ class Role(db.Model):
         return {"id": self.id, "name": self.name}
 
 
+
 class Staff(db.Model):
     __tablename__ = "staff"
     id = db.Column(db.Integer, primary_key=True)
@@ -86,9 +87,8 @@ class Staff(db.Model):
     role_id = db.Column(db.Integer, db.ForeignKey("roles.id"), nullable=True)
     role = db.relationship("Role", backref="staff_members")
 
-    # permissions & schedule
+    # permissions & schedule (REMOVED availability field)
     permissions = db.Column(db.Text)  # JSON string
-    availability = db.Column(db.String(50))
     days_available = db.Column(db.String(100))
     hours = db.Column(db.String(100))
 
@@ -110,8 +110,7 @@ class Staff(db.Model):
             "address": self.address,
             # auth
             "username": self.username,
-            # schedule
-            "availability": self.availability,
+            # schedule (REMOVED availability)
             "days_available": self.days_available,
             "hours": self.hours,
             "permissions": load_json_field(self.permissions),
