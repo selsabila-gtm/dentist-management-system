@@ -1,127 +1,211 @@
-import React, { useState } from 'react';
-import Sidebar from '../../components/sidebar/sidebar'; // adjust the path if needed
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import Sidebar from '../../components/sidebar/sidebar';
+import "./patientProfile.css";
 
 export default function InvoicesPayments() {
-  const [activeTab, setActiveTab] = useState('Invoices/Payments');
+  const navigate = useNavigate();
+  const { id } = useParams(); // Get patient ID from URL
   
-  const invoices = [
-    { id: 'INV-2024-001', date: '2024-07-20', amount: 250.0, outstanding: 0.0, status: 'paid' },
-    { id: 'INV-2024-002', date: '2024-07-25', amount: 150.0, outstanding: 150.0, status: 'unpaid' },
-    { id: 'INV-2024-003', date: '2024-08-05', amount: 300.0, outstanding: 100.0, status: 'partially paid' },
-    { id: 'INV-2024-004', date: '2024-08-15', amount: 100.0, outstanding: 0.0, status: 'paid' },
-    { id: 'INV-2024-005', date: '2024-08-20', amount: 200.0, outstanding: 200.0, status: 'unpaid' }
-  ];
+  const [invoices, setInvoices] = useState([]);
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
+  // Tabs with labels and corresponding paths
   const tabs = [
-    'General Info',
-    'Appointments',
-    'Treatment Plans',
-    'Medical Records',
-    'Prescriptions',
-    'Invoices/Payments'
+    { label: "General Info", path: `/patients/${id}` },
+    { label: "Appointments", path: `/patients/${id}/appointments` },
+    { label: "Treatment Plans", path: `/patients/${id}/treatment-plans` },
+    { label: "Medical Records", path: `/patients/${id}/medical-records` },
+    { label: "Prescriptions", path: `/patients/${id}/prescriptions` },
+    { label: "Invoices/Payments", path: `/patients/${id}/invoices` },
   ];
 
-  const total = invoices.reduce((sum, inv) => sum + inv.amount, 0);
-  const totalPaid = invoices.reduce((sum, inv) => sum + (inv.amount - inv.outstanding), 0);
-  const totalOutstanding = invoices.reduce((sum, inv) => sum + inv.outstanding, 0);
+  // Fetch invoices and appointments from backend for this specific patient
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError("");
+        
+        // Fetch both invoices and appointments in parallel
+        const [invoicesRes, appointmentsRes] = await Promise.all([
+          fetch(`http://127.0.0.1:5000/api/invoices?patient_id=${id}`),
+          fetch(`http://127.0.0.1:5000/api/appointments`)
+        ]);
+        
+        if (!invoicesRes.ok || !appointmentsRes.ok) {
+          throw new Error('Failed to fetch data');
+        }
 
-  const getStatusColor = (status) => 'bg-gray-100 text-gray-700';
+        const invoicesData = await invoicesRes.json();
+        const appointmentsData = await appointmentsRes.json();
+        
+        // Filter invoices for this patient
+        const patientInvoices = Array.isArray(invoicesData) 
+          ? invoicesData.filter(invoice => invoice.patient_id === parseInt(id))
+          : [];
+        
+        // Filter appointments for this patient
+        const patientAppointments = Array.isArray(appointmentsData)
+          ? appointmentsData.filter(apt => apt.patient_id === parseInt(id))
+          : [];
+        
+        setInvoices(patientInvoices);
+        setAppointments(patientAppointments);
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        setError('Failed to load invoices and appointments. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchData();
+    }
+  }, [id]);
+
+  // Calculate totals
+  const totalCost = appointments.reduce((sum, apt) => sum + (apt.cost || 0), 0);
+  const totalPaid = invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+  const totalOutstanding = totalCost - totalPaid;
 
   const handleAddDocument = () => {
-    console.log('Add document');
-    alert('Add Document dialog would open here');
+    console.log('Add invoice for patient:', id);
+    alert('Add Invoice dialog would open here');
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
+    <div className="app-layout">
       <Sidebar />
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        <div className="p-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Patient Profile</h1>
-            <p className="text-gray-500">View and manage patient information</p>
-          </div>
+      <main className="main-content">
+        {/* Header */}
+        <header className="page-header">
+          <h1 className="page-title">Patient Profile</h1>
+          <p className="page-subtitle">View patient information and history</p>
+        </header>
 
-          {/* Tabs */}
-          <div className="border-b border-gray-200 mb-8">
-            <div className="flex gap-8">
-              {tabs.map(tab => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`bg-white pb-4 px-1 font-medium transition-colors ${
-                    activeTab === tab
-                      ? 'text-gray-900 border-b-2 border-gray-900'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Summary Cards */}
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-semibold text-gray-900">Invoices & Payments</h2>
+        {/* Tabs */}
+        <div className="tabs-row">
+          {tabs.map((tab) => (
             <button
-              onClick={handleAddDocument}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              key={tab.label}
+              onClick={() => navigate(tab.path)}
+              className={`tab-btn ${
+                window.location.pathname === tab.path ? "active" : ""
+              }`}
             >
-              Add Document
+              {tab.label}
             </button>
-          </div>
+          ))}
+        </div>
 
-          <div className="grid grid-cols-3 gap-6 mb-8">
-            <div className="bg-white rounded-lg p-6 border border-gray-200">
-              <div className="text-sm text-gray-600 mb-2">Total</div>
-              <div className="text-3xl font-bold text-gray-900">${total.toFixed(2)}</div>
-            </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200">
-              <div className="text-sm text-gray-600 mb-2">Total Paid</div>
-              <div className="text-3xl font-bold text-gray-900">${totalPaid.toFixed(2)}</div>
-            </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200">
-              <div className="text-sm text-gray-600 mb-2">Total Outstanding</div>
-              <div className="text-3xl font-bold text-gray-900">${totalOutstanding.toFixed(2)}</div>
+        {/* Page Title and Add Button */}
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-semibold text-gray-900">Invoices & Payments</h2>
+          <button
+            onClick={handleAddDocument}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Add Invoice
+          </button>
+        </div>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-lg p-6 border border-gray-200">
+            <div className="text-sm text-gray-600 mb-2">Total Cost</div>
+            <div className="text-3xl font-bold text-gray-900">${totalCost.toFixed(2)}</div>
+            <div className="text-sm text-gray-500 mt-2">
+              From {appointments.length} {appointments.length === 1 ? 'appointment' : 'appointments'}
             </div>
           </div>
+          
+          <div className="bg-white rounded-lg p-6 border border-gray-200">
+            <div className="text-sm text-gray-600 mb-2">Total Paid</div>
+            <div className="text-3xl font-bold text-green-600">${totalPaid.toFixed(2)}</div>
+            <div className="text-sm text-gray-500 mt-2">
+              {invoices.length} {invoices.length === 1 ? 'payment' : 'payments'}
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg p-6 border border-gray-200">
+            <div className="text-sm text-gray-600 mb-2">Outstanding Balance</div>
+            <div className={`text-3xl font-bold ${totalOutstanding > 0 ? 'text-red-600' : 'text-gray-900'}`}>
+              ${totalOutstanding.toFixed(2)}
+            </div>
+            <div className="text-sm text-gray-500 mt-2">
+              {totalOutstanding > 0 ? 'Amount due' : 'Fully paid'}
+            </div>
+          </div>
+        </div>
 
-          {/* Invoices Table */}
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+            {error}
+          </div>
+        )}
+
+        {/* Invoices Table */}
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <span className="text-gray-600">Loading invoices...</span>
+            </div>
+          ) : invoices.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">No invoices found for this patient.</p>
+              <p className="text-gray-400 text-sm mt-2">Click "Add Invoice" to create one.</p>
+            </div>
+          ) : (
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-200 bg-white">
+                <tr className="border-b border-gray-200 bg-gray-50">
                   <th className="text-left py-4 px-6 text-sm font-medium text-gray-700">Invoice #</th>
                   <th className="text-left py-4 px-6 text-sm font-medium text-gray-700">Date</th>
+                  <th className="text-left py-4 px-6 text-sm font-medium text-gray-700">Due Date</th>
                   <th className="text-left py-4 px-6 text-sm font-medium text-gray-700">Amount</th>
-                  <th className="text-left py-4 px-6 text-sm font-medium text-gray-700">Outstanding Balance</th>
-                  <th className="text-left py-4 px-6 text-sm font-medium text-gray-700">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {invoices.map((invoice, index) => (
                   <tr 
                     key={invoice.id}
-                    className={`hover:bg-gray-50 transition-colors ${index !== invoices.length - 1 ? 'border-b border-gray-100' : ''}`}
+                    className={`hover:bg-gray-50 transition-colors ${
+                      index !== invoices.length - 1 ? 'border-b border-gray-100' : ''
+                    }`}
                   >
-                    <td className="py-4 px-6 text-sm text-gray-900">{invoice.id}</td>
-                    <td className="py-4 px-6 text-sm text-gray-600">{invoice.date}</td>
-                    <td className="py-4 px-6 text-sm text-gray-600">${invoice.amount.toFixed(2)}</td>
-                    <td className="py-4 px-6 text-sm text-gray-600">${invoice.outstanding.toFixed(2)}</td>
-                    <td className="py-4 px-6">
-                      <span className="inline-block px-3 py-1 text-xs font-medium rounded-md bg-gray-100 text-gray-700">
-                        {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
-                      </span>
+                    <td className="py-4 px-6 text-sm text-gray-900 font-medium">
+                      {invoice.invoice_number || `INV-${invoice.id}`}
+                    </td>
+                    <td className="py-4 px-6 text-sm text-gray-600">
+                      {invoice.date || 'N/A'}
+                    </td>
+                    <td className="py-4 px-6 text-sm text-gray-600">
+                      {invoice.due_date || 'N/A'}
+                    </td>
+                    <td className="py-4 px-6 text-sm text-gray-900 font-semibold">
+                      ${(invoice.amount || 0).toFixed(2)}
                     </td>
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-gray-300 bg-gray-50">
+                  <td colSpan="3" className="py-4 px-6 text-sm font-semibold text-gray-900 text-right">
+                    Total Paid:
+                  </td>
+                  <td className="py-4 px-6 text-sm font-bold text-green-600">
+                    ${totalPaid.toFixed(2)}
+                  </td>
+                </tr>
+              </tfoot>
             </table>
-          </div>
+          )}
         </div>
       </main>
     </div>
