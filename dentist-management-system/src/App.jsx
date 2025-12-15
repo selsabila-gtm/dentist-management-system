@@ -10,6 +10,7 @@ import LoginPage from "./pages/auth/login";
 import InventoryListPage from "./pages/inventory/list";
 import InventoryAddPage from "./pages/inventory/add";
 import InventoryDetailsPage from "./pages/inventory/details";
+import DashboardPage from "./pages/dashboard/dashboard.jsx";
 
 // Calendar / Appointments pages
 import Calendar from "./pages/appointments/calendar";
@@ -52,7 +53,7 @@ function App() {
           path="/"
           element={
             <ProtectedRoute>
-              <div>dashboard Page (Coming Soon)</div>
+              <DashboardPage />
             </ProtectedRoute>
           }
         />
@@ -62,7 +63,7 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <div>dashboard Page (Coming Soon)</div>
+              <DashboardPage />
             </ProtectedRoute>
           }
         />
