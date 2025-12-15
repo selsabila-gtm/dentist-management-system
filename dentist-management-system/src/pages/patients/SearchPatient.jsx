@@ -1,51 +1,58 @@
-//this is SearchPatient.jsx
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Sidebar from '../../components/sidebar/sidebar';
-import { Search, ChevronDown, Loader2 } from 'lucide-react';
+// src/pages/patients/SearchPatient.jsx
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import Sidebar from "../../components/sidebar/sidebar";
+import { Search, ChevronDown, Loader2 } from "lucide-react";
+
+const API_BASE = "http://127.0.0.1:5000/api";
 
 export default function PatientsList() {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
-  // Fetch patients from backend
   useEffect(() => {
     fetchPatients();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchPatients = async () => {
     try {
       setLoading(true);
-      const res = await fetch('http://127.0.0.1:5000/api/patients');
-      
-      if (!res.ok) {
-        throw new Error('Failed to fetch patients');
-      }
 
+      // 1) fetch patients list
+      const res = await fetch(`${API_BASE}/patients`);
+      if (!res.ok) throw new Error("Failed to fetch patients");
       const data = await res.json();
-      
-      // Transform data to include full details
+
+      // 2) fetch appointments once (instead of inside map)
+      const apptsRes = await fetch(`${API_BASE}/appointments`);
+      const apptsData = apptsRes.ok ? await apptsRes.json() : [];
+
+      // 3) build patients with details
       const patientsWithDetails = await Promise.all(
         data.map(async (patient) => {
           try {
-            // Fetch billing summary for outstanding balance
-            const billingRes = await fetch(
-              `http://127.0.0.1:5000/api/patients/${patient.id}/billing-summary`
-            );
-            const billingData = billingRes.ok ? await billingRes.json() : null;
+            // billing summary (optional)
+            let billingData = null;
+            try {
+              const billingRes = await fetch(
+                `${API_BASE}/patients/${patient.id}/billing-summary`
+              );
+              billingData = billingRes.ok ? await billingRes.json() : null;
+            } catch (e) {
+              billingData = null;
+            }
 
-            // Fetch appointments to find next appointment
-            const apptsRes = await fetch('http://127.0.0.1:5000/api/appointments');
-            const apptsData = apptsRes.ok ? await apptsRes.json() : [];
-            
             const patientAppts = apptsData
-              .filter(a => a.patient_id === patient.id && a.status === 'scheduled')
+              .filter(
+                (a) => a.patient_id === patient.id && a.status === "scheduled"
+              )
               .sort((a, b) => {
-                const dateA = new Date(a.date + ' ' + a.time);
-                const dateB = new Date(b.date + ' ' + b.time);
+                const dateA = new Date(a.date + " " + a.time);
+                const dateB = new Date(b.date + " " + b.time);
                 return dateA - dateB;
               });
 
@@ -54,69 +61,73 @@ export default function PatientsList() {
             return {
               id: patient.id,
               name: patient.name,
-              firstName: patient.firstName,
-              lastName: patient.lastName,
-              phone: patient.phone || 'N/A',
-              email: patient.email || 'N/A',
-              nextAppointment: nextAppt ? nextAppt.date : 'None scheduled',
-              outstandingBalance: billingData?.outstanding || 0
+              phone: patient.phone || "N/A",
+              email: patient.email || "N/A",
+              nextAppointment: nextAppt ? nextAppt.date : "None scheduled",
+              outstandingBalance: billingData?.outstanding || 0,
             };
           } catch (err) {
             console.error(`Error fetching details for patient ${patient.id}:`, err);
             return {
               id: patient.id,
               name: patient.name,
-              phone: 'N/A',
-              nextAppointment: 'N/A',
-              outstandingBalance: 0
+              phone: "N/A",
+              email: "N/A",
+              nextAppointment: "N/A",
+              outstandingBalance: 0,
             };
           }
         })
       );
 
       setPatients(patientsWithDetails);
-      setError('');
+      setError("");
     } catch (err) {
-      console.error('Error fetching patients:', err);
-      setError('Failed to load patients. Make sure the backend is running.');
+      console.error("Error fetching patients:", err);
+      setError("Failed to load patients. Make sure the backend is running.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleAddPatient = () => {
-    navigate('/add-patient');
+    navigate("/add-patient");
   };
 
-  const handleView = (patientId) => {
-    navigate(`/patient/${patientId}`);
+  // ✅ IMPORTANT: View opens medical records page for THIS patient
+  const handleViewMedicalRecords = (patientId) => {
+    navigate(`/patients/${patientId}/medical-records`);
   };
 
   const handleDelete = async (patientId) => {
-    if (window.confirm('Are you sure you want to delete this patient? This action cannot be undone.')) {
+    if (
+      window.confirm(
+        "Are you sure you want to delete this patient? This action cannot be undone."
+      )
+    ) {
       try {
-        const res = await fetch(`http://127.0.0.1:5000/api/patients/${patientId}`, {
-          method: 'DELETE'
+        const res = await fetch(`${API_BASE}/patients/${patientId}`, {
+          method: "DELETE",
         });
 
-        if (!res.ok) {
-          throw new Error('Failed to delete patient');
-        }
+        if (!res.ok) throw new Error("Failed to delete patient");
 
-        // Refresh the list
         fetchPatients();
-        alert('Patient deleted successfully');
+        alert("Patient deleted successfully");
       } catch (err) {
-        console.error('Error deleting patient:', err);
-        alert('Failed to delete patient');
+        console.error("Error deleting patient:", err);
+        alert("Failed to delete patient");
       }
     }
   };
 
-  const filteredPatients = patients.filter(patient =>
-    patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (patient.phone && patient.phone.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (patient.email && patient.email.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredPatients = patients.filter(
+    (patient) =>
+      patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (patient.phone &&
+        patient.phone.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (patient.email &&
+        patient.email.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
@@ -130,7 +141,7 @@ export default function PatientsList() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Patients</h1>
               <p className="text-gray-500 mt-1">
-                {patients.length} total patient{patients.length !== 1 ? 's' : ''}
+                {patients.length} total patient{patients.length !== 1 ? "s" : ""}
               </p>
             </div>
             <button
@@ -152,7 +163,10 @@ export default function PatientsList() {
           <div className="bg-white rounded-lg shadow-sm mb-6">
             <div className="p-6">
               <div className="relative mb-4">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <Search
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  size={20}
+                />
                 <input
                   type="text"
                   placeholder="Search patients by name, phone, or email"
@@ -178,7 +192,9 @@ export default function PatientsList() {
             ) : filteredPatients.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-gray-500">
-                  {searchQuery ? 'No patients found matching your search.' : 'No patients yet. Add your first patient!'}
+                  {searchQuery
+                    ? "No patients found matching your search."
+                    : "No patients yet. Add your first patient!"}
                 </p>
               </div>
             ) : (
@@ -186,30 +202,57 @@ export default function PatientsList() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-t border-b border-gray-200 bg-gray-50">
-                      <th className="text-left py-3 px-6 text-xs font-medium text-gray-600 uppercase tracking-wider">Patient Name</th>
-                      <th className="text-left py-3 px-6 text-xs font-medium text-gray-600 uppercase tracking-wider">Phone</th>
-                      <th className="text-left py-3 px-6 text-xs font-medium text-gray-600 uppercase tracking-wider">Next Appointment</th>
-                      <th className="text-left py-3 px-6 text-xs font-medium text-gray-600 uppercase tracking-wider">Outstanding Balance</th>
-                      <th className="text-left py-3 px-6 text-xs font-medium text-gray-600 uppercase tracking-wider">Actions</th>
+                      <th className="text-left py-3 px-6 text-xs font-medium text-gray-600 uppercase tracking-wider">
+                        Patient Name
+                      </th>
+                      <th className="text-left py-3 px-6 text-xs font-medium text-gray-600 uppercase tracking-wider">
+                        Phone
+                      </th>
+                      <th className="text-left py-3 px-6 text-xs font-medium text-gray-600 uppercase tracking-wider">
+                        Next Appointment
+                      </th>
+                      <th className="text-left py-3 px-6 text-xs font-medium text-gray-600 uppercase tracking-wider">
+                        Outstanding Balance
+                      </th>
+                      <th className="text-left py-3 px-6 text-xs font-medium text-gray-600 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
+
                   <tbody className="bg-white">
                     {filteredPatients.map((patient, index) => (
-                      <tr 
+                      <tr
                         key={patient.id}
-                        className={`hover:bg-gray-50 transition-colors ${index !== filteredPatients.length - 1 ? 'border-b border-gray-100' : ''}`}
+                        className={`hover:bg-gray-50 transition-colors ${
+                          index !== filteredPatients.length - 1
+                            ? "border-b border-gray-100"
+                            : ""
+                        }`}
                       >
-                        <td className="py-4 px-6 text-sm text-gray-900 font-medium">{patient.name}</td>
-                        <td className="py-4 px-6 text-sm text-gray-600">{patient.phone}</td>
-                        <td className="py-4 px-6 text-sm text-gray-600">{patient.nextAppointment}</td>
+                        <td className="py-4 px-6 text-sm text-gray-900 font-medium">
+                          {patient.name}
+                        </td>
+                        <td className="py-4 px-6 text-sm text-gray-600">
+                          {patient.phone}
+                        </td>
+                        <td className="py-4 px-6 text-sm text-gray-600">
+                          {patient.nextAppointment}
+                        </td>
                         <td className="py-4 px-6 text-sm">
-                          <span className={`font-medium ${patient.outstandingBalance > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                            ${patient.outstandingBalance.toFixed(2)}
+                          <span
+                            className={`font-medium ${
+                              patient.outstandingBalance > 0
+                                ? "text-red-600"
+                                : "text-green-600"
+                            }`}
+                          >
+                            ${Number(patient.outstandingBalance).toFixed(2)}
                           </span>
                         </td>
                         <td className="py-4 px-6 text-sm">
                           <button
-                            onClick={() => handleView(patient.id)}
+                            onClick={() => handleViewMedicalRecords(patient.id)}
                             className="text-blue-600 hover:text-blue-800 font-medium mr-3"
                           >
                             View

@@ -1,43 +1,48 @@
 // src/App.jsx
 
 import React from "react";
-
-
-// Patient pages
-import AddPatient from './pages/patients/AddPatient.jsx';
-import Appointment from './pages/patients/PatientAppointment.jsx'; 
-import PatientInvoices from './pages/patients/PatientInvoices.jsx';
-import SearchPatient from './pages/patients/SearchPatient.jsx';
-import ViewPatient from './pages/patients/ViewPatient.jsx';
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
 
 // Auth pages
 import LoginPage from "./pages/auth/login";
 
+// Dashboard
+import DashboardPage from "./pages/dashboard/dashboard.jsx";
+
 // Inventory pages
 import InventoryListPage from "./pages/inventory/list";
 import InventoryAddPage from "./pages/inventory/add";
 import InventoryDetailsPage from "./pages/inventory/details";
-import DashboardPage from "./pages/dashboard/dashboard.jsx";
 
 // Calendar / Appointments pages
 import Calendar from "./pages/appointments/calendar";
 import AppointmentAddPage from "./pages/appointments/add";
 import AppointmentPostSummaryPage from "./pages/appointments/post_summary";
+
+// Settings
 import SettingsPage from "./pages/settings/settings.jsx";
+
 // Staff pages
 import Staff from "./pages/staff/list";
 import StaffAddPage from "./pages/staff/add.jsx";
 import StaffProfilePage from "./pages/staff/profile.jsx";
-import ResetPasswordPage from "./pages/staff/resetPassword";
 import ChangePasswordPage from "./pages/staff/changePassword.jsx";
 
 // Patient pages
+import AddPatient from "./pages/patients/AddPatient.jsx";
+import Appointment from "./pages/patients/PatientAppointment.jsx";
+import PatientInvoices from "./pages/patients/PatientInvoices.jsx";
+import SearchPatient from "./pages/patients/SearchPatient.jsx";
+import ViewPatient from "./pages/patients/ViewPatient.jsx";
+
 import MedicalRecordsPage from "./pages/patients/MedicalRecords.jsx";
 import PrescriptionsPage from "./pages/patients/Prescriptions.jsx";
 import TreatmentPlansPage from "./pages/patients/TreatmentPlans.jsx";
+
+// Billing
 import BillingPage from "./pages/billing/billing.jsx";
+
 // Protected Route Component
 function ProtectedRoute({ children }) {
   const staffId = localStorage.getItem("staff_id");
@@ -49,25 +54,24 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
-
-import "./App.css";
-
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* ---------------- PUBLIC ---------------- */}
+        <Route path="/login" element={<LoginPage />} />
 
-        {/* Patient Pages */}
+        {/* ---------------- PATIENT (UNPROTECTED in your current setup) ---------------- */}
         <Route path="/add-patient" element={<AddPatient />} />
-        <Route path="/b" element={<Appointment />} /> 
-        <Route path="/c" element={<PatientInvoices />} /> 
-        <Route path="/patients" element={<SearchPatient />} /> 
-        <Route path="/patient/:id" element={<ViewPatient />} /> 
+        <Route path="/b" element={<Appointment />} />
+        <Route path="/c" element={<PatientInvoices />} />
+        <Route path="/patients" element={<SearchPatient />} />
+        <Route path="/patient/:id" element={<ViewPatient />} />
 
         {/* Redirect root */}
         <Route path="/a" element={<Navigate to="/staff" />} />
 
-
+        {/* ---------------- PROTECTED ---------------- */}
         {/* Default redirect */}
         <Route
           path="/"
@@ -173,9 +177,10 @@ function App() {
             </ProtectedRoute>
           }
         />
-{/* Patient pages (protected) */}
+
+        {/* ✅ Patient pages (protected) now PER PATIENT */}
         <Route
-          path="/patients/medical-records"
+          path="/patients/:patientId/medical-records"
           element={
             <ProtectedRoute>
               <MedicalRecordsPage />
@@ -183,7 +188,7 @@ function App() {
           }
         />
         <Route
-          path="/patients/prescriptions"
+          path="/patients/:patientId/prescriptions"
           element={
             <ProtectedRoute>
               <PrescriptionsPage />
@@ -191,7 +196,7 @@ function App() {
           }
         />
         <Route
-          path="/patients/treatment-plans"
+          path="/patients/:patientId/treatment-plans"
           element={
             <ProtectedRoute>
               <TreatmentPlansPage />
@@ -199,15 +204,7 @@ function App() {
           }
         />
 
-        {/* Placeholder / other sections (protected) */}
-        <Route
-          path="/patients"
-          element={
-            <ProtectedRoute>
-              <div>Patients Page (Coming Soon)</div>
-            </ProtectedRoute>
-          }
-        />
+        {/* Billing */}
         <Route
           path="/billing"
           element={
@@ -216,6 +213,8 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Reports placeholder */}
         <Route
           path="/reports"
           element={
@@ -224,6 +223,8 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Settings */}
         <Route
           path="/settings"
           element={

@@ -277,6 +277,17 @@ def update_prescription(prescription_id):
     }), 200
 
 
+@bp.route("/api/prescriptions/<int:prescription_id>", methods=["DELETE"])
+def delete_prescription(prescription_id):
+    presc = Prescription.query.get(prescription_id)
+    if not presc:
+        return jsonify({"error": "Prescription not found."}), 404
+
+    db.session.delete(presc)
+    db.session.commit()
+    return jsonify({"message": "deleted"}), 200
+
+
 @bp.route("/api/patients/<int:patient_id>/treatments", methods=["GET", "POST"])
 def treatments_for_patient(patient_id):
     patient = Patient.query.get(patient_id)
@@ -341,3 +352,12 @@ def update_treatment(treatment_id):
         "message": "Treatment updated.",
         "treatment": t.to_dict()
     }), 200
+
+@bp.route("/api/treatments/<int:treatment_id>", methods=["DELETE"])
+def delete_treatment(treatment_id):
+    t = TreatmentPlan.query.get(treatment_id)
+    if not t:
+        return jsonify({"error": "Treatment not found"}), 404
+    db.session.delete(t)
+    db.session.commit()
+    return jsonify({"message": "deleted"}), 200
