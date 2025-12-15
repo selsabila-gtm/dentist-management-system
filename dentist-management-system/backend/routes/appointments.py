@@ -1,7 +1,7 @@
 import os
 import json
 from datetime import datetime
-from flask import request, jsonify, current_app, send_from_directory
+from flask import request, jsonify, current_app
 from werkzeug.utils import secure_filename
 
 from backend.routes import bp
@@ -97,7 +97,7 @@ def save_summary(appt_id):
     return jsonify({"message": "saved"})
 
 
-# ---- DOCUMENT UPLOAD & SERVE ----
+# ---- DOCUMENT UPLOAD ----
 @bp.route("/api/appointments/<int:appt_id>/documents", methods=["POST"])
 def upload_document(appt_id):
     doc_name = request.form.get("name")
@@ -128,9 +128,5 @@ def upload_document(appt_id):
     db.session.commit()
     return jsonify({"documents": docs})
 
-
-@bp.route("/uploads/<path:filename>")
-def serve_upload(filename):
-    return send_from_directory(current_app.config["UPLOAD_FOLDER"], filename)
-
-
+# ✅ REMOVED: @bp.route("/uploads/<path:filename>") 
+# This route is now in backend/routes/__init__.py to avoid duplication

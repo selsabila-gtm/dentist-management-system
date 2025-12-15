@@ -1,3 +1,5 @@
 # backend/__init__.py
-# leave empty or just a comment so importing `backend`
-# does NOT execute app.py implicitly.
+# This file should be mostly empty or just have minimal imports
+# Don't import routes here - they're imported in app.py
+
+__version__ = "1.0.0"

@@ -1,31 +1,34 @@
-// src/pages/patients/MedicalRecords.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import Sidebar from "../../components/sidebar/sidebar.jsx";
 import "./patientProfile.css";
+
 const API_BASE = "http://localhost:5000/api";
-const PATIENT_ID = 1; // demo patient created in backend seed
+const PATIENT_ID = 1; // demo patient
 
 export default function MedicalRecordsPage() {
   const navigate = useNavigate();
 
+  // ---------------- STATE ----------------
   const [medicalHistory, setMedicalHistory] = useState({
     pastDiagnoses: "",
     allergies: "",
     medications: "",
   });
-  const [isEditingHistory, setIsEditingHistory] = useState(false);
 
+  const [isEditingHistory, setIsEditingHistory] = useState(false);
   const [documents, setDocuments] = useState([]);
   const [showAddDoc, setShowAddDoc] = useState(false);
+
   const [newDoc, setNewDoc] = useState({
     name: "",
-    date: "",
-    type: "",
+    type: "pdf",
   });
 
+  const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ---------- LOAD DATA FROM BACKEND ONCE ----------
+  // ---------------- LOAD DATA ----------------
   useEffect(() => {
     async function loadData() {
       try {
@@ -34,23 +37,16 @@ export default function MedicalRecordsPage() {
         );
         const data = await res.json();
 
-        if (!res.ok) {
-          console.error("Failed to load medical record", data);
-          alert(data.error || "Could not load medical record from server.");
-          return;
-        }
-
-        const history = data.medical_history || {};
         setMedicalHistory({
-          pastDiagnoses: history.past_diagnoses || "",
-          allergies: history.allergies || "",
-          medications: history.medications || "",
+          pastDiagnoses: data.medical_history?.past_diagnoses || "",
+          allergies: data.medical_history?.allergies || "",
+          medications: data.medical_history?.medications || "",
         });
 
         setDocuments(data.documents || []);
       } catch (err) {
-        console.error("Failed to load medical record", err);
-        alert("Could not connect to backend server.");
+        console.error(err);
+        alert("Failed to load medical record");
       } finally {
         setLoading(false);
       }
@@ -59,92 +55,84 @@ export default function MedicalRecordsPage() {
     loadData();
   }, []);
 
-  // ---------- HANDLERS ----------
-
+  // ---------------- HANDLERS ----------------
   const handleHistoryChange = (field, value) => {
-    setMedicalHistory((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setMedicalHistory((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSaveHistory = async (e) => {
     e.preventDefault();
 
-    try {
-      const res = await fetch(
-        `${API_BASE}/patients/${PATIENT_ID}/medical-history`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            past_diagnoses: medicalHistory.pastDiagnoses,
-            allergies: medicalHistory.allergies,
-            medications: medicalHistory.medications,
-          }),
-        }
-      );
-
-      const data = await res.json();
-      if (!res.ok) {
-        console.error("Failed to save medical history", data);
-        alert(data.error || "Failed to save medical history.");
-        return;
+    const res = await fetch(
+      `${API_BASE}/patients/${PATIENT_ID}/medical-history`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          past_diagnoses: medicalHistory.pastDiagnoses,
+          allergies: medicalHistory.allergies,
+          medications: medicalHistory.medications,
+        }),
       }
+    );
 
-      alert("Medical history saved.");
+    if (res.ok) {
       setIsEditingHistory(false);
-    } catch (err) {
-      console.error(err);
-      alert("Could not connect to backend while saving.");
+      alert("Medical history saved");
+    } else {
+      alert("Failed to save medical history");
     }
   };
 
   const handleAddDocument = async (e) => {
     e.preventDefault();
-    if (!newDoc.name || !newDoc.date || !newDoc.type) {
-      alert("Please fill in all document fields.");
+
+    if (!newDoc.name || !file) {
+      alert("Please provide document name and file");
       return;
     }
 
-    try {
-      const res = await fetch(
-        `${API_BASE}/patients/${PATIENT_ID}/documents`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(newDoc),
-        }
-      );
+    const formData = new FormData();
+    formData.append("name", newDoc.name);
+    formData.append("type", newDoc.type);
+    formData.append("file", file);
 
-      const data = await res.json();
-      if (!res.ok) {
-        console.error("Failed to add document", data);
-        alert(data.error || "Failed to add document.");
-        return;
+    const res = await fetch(
+      `${API_BASE}/patients/${PATIENT_ID}/documents`,
+      {
+        method: "POST",
+        body: formData,
       }
+    );
 
-      // Add the new document returned by the backend
-      setDocuments((prev) => [...prev, data.document]);
-
-      // reset form
-      setNewDoc({ name: "", date: "", type: "" });
-      setShowAddDoc(false);
-    } catch (err) {
-      console.error(err);
-      alert("Could not connect to backend while adding document.");
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Upload failed");
+      return;
     }
+
+    setDocuments((prev) => [...prev, data]);
+    setShowAddDoc(false);
+    setNewDoc({ name: "", type: "pdf" });
+    setFile(null);
   };
 
-  // ---------- UI ----------
+  const handleDeleteDocument = async (docId) => {
+    if (!window.confirm("Delete this document?")) return;
 
+    await fetch(
+      `${API_BASE}/patients/${PATIENT_ID}/documents/${docId}`,
+      { method: "DELETE" }
+    );
+
+    setDocuments((prev) => prev.filter((d) => d.id !== docId));
+  };
+
+  // ---------------- UI ----------------
   if (loading) {
     return (
       <div className="app-layout">
+        <Sidebar />
         <main className="main-content">
           <p>Loading medical record...</p>
         </main>
@@ -154,8 +142,8 @@ export default function MedicalRecordsPage() {
 
   return (
     <div className="app-layout">
+      <Sidebar />
 
-      {/* ───── Main Content ───── */}
       <main className="main-content">
         {/* Header */}
         <header className="page-header">
@@ -185,14 +173,13 @@ export default function MedicalRecordsPage() {
           <button className="tab-btn">Invoices/Payments</button>
         </div>
 
-        {/* Medical History Card */}
+        {/* Medical History */}
         <section className="card">
           <div className="card-header">
             <h2 className="card-title">Medical History</h2>
             {!isEditingHistory && (
               <button
                 className="pill-button"
-                type="button"
                 onClick={() => setIsEditingHistory(true)}
               >
                 Edit
@@ -201,38 +188,39 @@ export default function MedicalRecordsPage() {
           </div>
 
           {isEditingHistory ? (
-            <form className="history-form" onSubmit={handleSaveHistory}>
-              <div className="history-row">
-                <div className="history-label">Past Diagnoses</div>
+            <form onSubmit={handleSaveHistory} className="history-form">
+              <div className="form-group">
+                <label>Past Diagnoses</label>
                 <textarea
-                  className="history-input"
                   value={medicalHistory.pastDiagnoses}
                   onChange={(e) =>
                     handleHistoryChange("pastDiagnoses", e.target.value)
                   }
+                  placeholder="Past diagnoses"
+                  rows="3"
                 />
               </div>
 
-              <div className="history-row">
-                <div className="history-label">Allergies</div>
+              <div className="form-group">
+                <label>Allergies</label>
                 <input
-                  className="history-input"
-                  type="text"
                   value={medicalHistory.allergies}
                   onChange={(e) =>
                     handleHistoryChange("allergies", e.target.value)
                   }
+                  placeholder="Allergies"
                 />
               </div>
 
-              <div className="history-row">
-                <div className="history-label">Medications</div>
+              <div className="form-group">
+                <label>Medications</label>
                 <textarea
-                  className="history-input"
                   value={medicalHistory.medications}
                   onChange={(e) =>
                     handleHistoryChange("medications", e.target.value)
                   }
+                  placeholder="Medications"
+                  rows="3"
                 />
               </div>
 
@@ -251,71 +239,70 @@ export default function MedicalRecordsPage() {
             </form>
           ) : (
             <div className="history-view">
-              <div className="history-row">
-                <div className="history-label">Past Diagnoses</div>
-                <div className="history-value">
-                  {medicalHistory.pastDiagnoses || "—"}
-                </div>
-              </div>
-
-              <div className="history-row">
-                <div className="history-label">Allergies</div>
-                <div className="history-value">
-                  {medicalHistory.allergies || "—"}
-                </div>
-              </div>
-
-              <div className="history-row">
-                <div className="history-label">Medications</div>
-                <div className="history-value">
-                  {medicalHistory.medications || "—"}
-                </div>
-              </div>
+              <p>
+                <strong>Past Diagnoses:</strong>{" "}
+                {medicalHistory.pastDiagnoses || "—"}
+              </p>
+              <p>
+                <strong>Allergies:</strong> {medicalHistory.allergies || "—"}
+              </p>
+              <p>
+                <strong>Medications:</strong>{" "}
+                {medicalHistory.medications || "—"}
+              </p>
             </div>
           )}
         </section>
 
-        {/* Relevant Documents Card */}
+        {/* Documents */}
         <section className="card">
           <div className="card-header">
             <h2 className="card-title">Relevant Documents</h2>
             <button
               className="pill-button"
-              type="button"
-              onClick={() => setShowAddDoc(true)}
+              onClick={() => setShowAddDoc(!showAddDoc)}
             >
-              Add Document
+              {showAddDoc ? "Cancel" : "Add Document"}
             </button>
           </div>
 
           {showAddDoc && (
             <form className="add-doc-form" onSubmit={handleAddDocument}>
-              <input
-                type="text"
-                placeholder="Document name"
-                className="add-doc-input"
-                value={newDoc.name}
-                onChange={(e) =>
-                  setNewDoc((prev) => ({ ...prev, name: e.target.value }))
-                }
-              />
-              <input
-                type="date"
-                className="add-doc-input"
-                value={newDoc.date}
-                onChange={(e) =>
-                  setNewDoc((prev) => ({ ...prev, date: e.target.value }))
-                }
-              />
-              <input
-                type="text"
-                placeholder="Type (e.g. Radiology)"
-                className="add-doc-input"
-                value={newDoc.type}
-                onChange={(e) =>
-                  setNewDoc((prev) => ({ ...prev, type: e.target.value }))
-                }
-              />
+              <div className="form-group">
+                <label>Document Name</label>
+                <input
+                  type="text"
+                  placeholder="Document name"
+                  value={newDoc.name}
+                  onChange={(e) =>
+                    setNewDoc({ ...newDoc, name: e.target.value })
+                  }
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Document Type</label>
+                <select
+                  value={newDoc.type}
+                  onChange={(e) =>
+                    setNewDoc({ ...newDoc, type: e.target.value })
+                  }
+                >
+                  <option value="pdf">PDF</option>
+                  <option value="img">Image</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>File</label>
+                <input
+                  type="file"
+                  onChange={(e) => setFile(e.target.files[0])}
+                  accept={newDoc.type === "pdf" ? ".pdf" : "image/*"}
+                  required
+                />
+              </div>
 
               <div className="add-doc-actions">
                 <button
@@ -323,46 +310,71 @@ export default function MedicalRecordsPage() {
                   className="secondary-button"
                   onClick={() => {
                     setShowAddDoc(false);
-                    setNewDoc({ name: "", date: "", type: "" });
+                    setNewDoc({ name: "", type: "pdf" });
+                    setFile(null);
                   }}
                 >
                   Cancel
                 </button>
                 <button type="submit" className="primary-button">
-                  Add
+                  Upload
                 </button>
               </div>
             </form>
           )}
 
-          <div className="table-wrapper">
-            <table className="records-table">
-              <thead>
-                <tr>
-                  <th>Document Name</th>
-                  <th>Date</th>
-                  <th>Type</th>
+          <table className="records-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {documents.map((doc) => (
+                <tr key={doc.id}>
+                  <td>{doc.name}</td>
+                  <td className="actions-cell">
+                    <button
+                      className="action-link"
+                      onClick={() => window.open(`http://localhost:5000${doc.url}`, '_blank')}
+                    >
+                      View
+                    </button>
+                    <span className="separator">|</span>
+                    <button
+                      className="action-link"
+                      onClick={() => {
+                        const link = document.createElement('a');
+                        link.href = `http://localhost:5000${doc.url}`;
+                        link.download = doc.name;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      }}
+                    >
+                      Download
+                    </button>
+                    <span className="separator">|</span>
+                    <button
+                      className="action-link delete-link"
+                      onClick={() => handleDeleteDocument(doc.id)}
+                    >
+                      Delete
+                    </button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {documents.map((doc) => (
-                  <tr key={doc.id}>
-                    <td>{doc.name}</td>
-                    <td className="link-like">{doc.date}</td>
-                    <td>{doc.type}</td>
-                  </tr>
-                ))}
+              ))}
 
-                {documents.length === 0 && (
-                  <tr>
-                    <td colSpan="3" style={{ color: "#6b7280" }}>
-                      No documents yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+              {documents.length === 0 && (
+                <tr>
+                  <td colSpan="2" className="no-data">
+                    No documents available
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </section>
       </main>
     </div>

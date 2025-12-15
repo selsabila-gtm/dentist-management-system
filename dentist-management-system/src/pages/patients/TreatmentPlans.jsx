@@ -2,6 +2,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./patientProfile.css";
+import Sidebar from "../../components/sidebar/sidebar.jsx";
+
 
 const API_BASE = "http://localhost:5000/api";
 const PATIENT_ID = 1;
@@ -160,6 +162,7 @@ export default function TreatmentPlansPage() {
 
   return (
     <div className="app-layout">
+      <Sidebar />
 
       {/* Main content */}
       <main className="main-content">

@@ -233,6 +233,9 @@ class MedicalRecord(db.Model):
     allergies = db.Column(db.Text)
     medications = db.Column(db.Text)
 
+    # ✅ SHARED DOCUMENTS (JSON)
+    documents = db.Column(db.Text)  # JSON list
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -240,26 +243,7 @@ class MedicalRecord(db.Model):
             "past_diagnoses": self.past_diagnoses,
             "allergies": self.allergies,
             "medications": self.medications,
-        }
-
-
-class MedicalDocument(db.Model):
-    __tablename__ = "medical_documents"
-    id = db.Column(db.Integer, primary_key=True)
-    patient_id = db.Column(db.Integer, db.ForeignKey("patients.id"))
-    name = db.Column(db.String(200))
-    date = db.Column(db.String(20))
-    doc_type = db.Column(db.String(100))
-    file_path = db.Column(db.String(300), nullable=True)  # optional path
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "patient_id": self.patient_id,
-            "name": self.name,
-            "date": self.date,
-            "doc_type": self.doc_type,
-            "file_path": self.file_path,
+            "documents": load_json_field(self.documents),
         }
 
 

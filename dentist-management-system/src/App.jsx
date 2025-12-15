@@ -1,7 +1,7 @@
 // src/App.jsx
 
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+
 
 // Patient pages
 import AddPatient from './pages/patients/AddPatient.jsx';
@@ -9,9 +9,6 @@ import Appointment from './pages/patients/PatientAppointment.jsx';
 import PatientInvoices from './pages/patients/PatientInvoices.jsx';
 import SearchPatient from './pages/patients/SearchPatient.jsx';
 import ViewPatient from './pages/patients/ViewPatient.jsx';
-
-// src/App.jsx
-import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
 
@@ -51,7 +48,7 @@ function ProtectedRoute({ children }) {
 
   return children;
 }
-import StaffProfilePage from "./pages/staff/profile.jsx";
+
 
 import "./App.css";
 
@@ -70,13 +67,6 @@ function App() {
         {/* Redirect root */}
         <Route path="/a" element={<Navigate to="/staff" />} />
 
-        {/* Staff management */}
-        <Route path="/staff" element={<StaffListPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/staff/add" element={<StaffAddPage />} />
-        <Route path="/staff/:id" element={<StaffProfilePage />} />
-        <Route path="/staff/:id/password" element={<ChangePasswordPage />} />
 
         {/* Default redirect */}
         <Route
