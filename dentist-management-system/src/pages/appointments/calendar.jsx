@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./calendar.css";
-import Sidebar from "../../components/Sidebar/Sidebar";
+import Sidebar from "../../components/sidebar/sidebar";
 
 const API_BASE = "http://127.0.0.1:5000";
 const CALENDAR_YEAR = 2025;
@@ -120,7 +120,7 @@ export default function Calendar() {
   const [appointments, setAppointments] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // ✅ GET CURRENT USER INFO
+  // âœ… GET CURRENT USER INFO
   const staffId = localStorage.getItem("staff_id");
   const userRole = localStorage.getItem("role");
 
@@ -154,10 +154,10 @@ export default function Calendar() {
   const [selectedDateKey, setSelectedDateKey] = useState(initialSelectedDateKey);
 
   function loadAppointments() {
-    // ✅ Build API URL - only filter for Dentists
+    // âœ… Build API URL - only filter for Dentists
     let apiUrl = `${API_BASE}/api/appointments`;
     
-    // 🔍 DETAILED DEBUG LOGGING
+    // ðŸ” DETAILED DEBUG LOGGING
     console.log("=== CALENDAR DEBUG ===");
     console.log("User Role from localStorage:", userRole);
     console.log("Staff ID from localStorage:", staffId);
@@ -170,13 +170,13 @@ export default function Calendar() {
       username: localStorage.getItem("username")
     });
     
-    // ✅ ONLY Dentists see filtered appointments
+    // âœ… ONLY Dentists see filtered appointments
     // Admins and Receptionists see ALL appointments
     if (userRole === "Dentist" && staffId) {
       apiUrl += `?dentist_id=${staffId}`;
-      console.log("🔒 Dentist view - Filtering appointments for dentist ID:", staffId);
+      console.log("ðŸ”’ Dentist view - Filtering appointments for dentist ID:", staffId);
     } else {
-      console.log("👁️ Admin/Receptionist view - Loading ALL appointments");
+      console.log("ðŸ‘ï¸ Admin/Receptionist view - Loading ALL appointments");
     }
 
     console.log("Final API URL:", apiUrl);
@@ -327,7 +327,7 @@ export default function Calendar() {
             <h2>Appointments</h2>
 
             <div className="appointments-date-label">
-              {selectedDateKey && formatDisplayDate(selectedDateKey)} ·{" "}
+              {selectedDateKey && formatDisplayDate(selectedDateKey)} Â·{" "}
               {filteredAppointments.length} appointment
               {filteredAppointments.length !== 1 ? "s" : ""}
             </div>

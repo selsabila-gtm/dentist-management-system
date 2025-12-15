@@ -1,27 +1,22 @@
 .add-page {
   flex: 1;
-  padding: 18px 40px;          /* less top padding */
+  padding: 18px 40px;
   background-color: #f5f7fb;
-
   display: flex;
-  justify-content: flex-start; /* ✅ start next to sidebar */
+  justify-content: flex-start;
   align-items: flex-start;
 }
 
 /* card stays small but aligned left */
 .add-card {
   width: 100%;
-  max-width: 560px;            /* keep it “small” */
+  max-width: 560px;
   background-color: #ffffff;
   border-radius: 16px;
   padding: 20px 24px;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.10);
-  margin-top: 0;               /* ✅ no extra top margin */
+  margin-top: 0;
 }
-
-
-
-
 
 /* title inside the card */
 .add-title {
@@ -130,7 +125,7 @@
   border-left: 3px solid #059669;
 }
 
-/* ===== BUTTONS (in case you remove them from index.css) ===== */
+/* ===== BUTTONS ===== */
 .primary-button {
   background-color: #1A73F0;
   color: white;
@@ -166,3 +161,96 @@
   margin-top: 10px;
 }
 
+/* ====== RESPONSIVE STYLES ====== */
+
+/* Tablet styles (768px - 1024px) */
+@media (max-width: 1024px) {
+  .add-page {
+    padding: 16px 24px;
+  }
+
+  .add-card {
+    max-width: 100%;
+  }
+}
+
+/* Mobile styles (below 768px) */
+@media (max-width: 768px) {
+  .add-page {
+    padding: 80px 16px 16px;
+    justify-content: center;
+  }
+
+  .add-card {
+    max-width: 100%;
+    padding: 16px 20px;
+    border-radius: 12px;
+  }
+
+  .add-title {
+    font-size: 18px;
+    margin-bottom: 16px;
+  }
+
+  .add-form {
+    gap: 12px;
+  }
+
+  .add-label {
+    font-size: 12px;
+  }
+
+  .add-input,
+  .add-select {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .add-notes {
+    min-height: 90px;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .availability-info {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+
+  .add-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .primary-button,
+  .secondary-button {
+    width: 100%;
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+}
+
+/* Small mobile adjustments (below 480px) */
+@media (max-width: 480px) {
+  .add-page {
+    padding: 70px 12px 12px;
+  }
+
+  .add-card {
+    padding: 14px 16px;
+  }
+
+  .add-title {
+    font-size: 17px;
+  }
+
+  .add-input,
+  .add-select {
+    padding: 9px 11px;
+    font-size: 12px;
+  }
+
+  .add-notes {
+    min-height: 80px;
+  }
+}

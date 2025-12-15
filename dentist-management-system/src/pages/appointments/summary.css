@@ -258,3 +258,136 @@
   font-size: 13px;
   background-color: #ffffff;
 }
+
+/* ====== RESPONSIVE STYLES ====== */
+
+/* Tablet styles (768px - 1024px) */
+@media (max-width: 1024px) {
+  .summary-page {
+    padding: 20px 24px;
+    max-width: 100%;
+  }
+
+  .summary-page .page-header {
+    font-size: 22px;
+  }
+
+  .cost-input-wrapper {
+    max-width: 100%;
+  }
+}
+
+/* Mobile styles (below 768px) */
+@media (max-width: 768px) {
+  .summary-page {
+    padding: 80px 16px 16px;
+  }
+
+  .summary-page .page-header {
+    font-size: 20px;
+    margin-bottom: 20px;
+  }
+
+  .summary-page .card {
+    padding: 14px 16px;
+    overflow-x: auto;
+  }
+
+  .summary-section h2 {
+    font-size: 14px;
+  }
+
+  /* Make tables scrollable */
+  .summary-page .appointments-table {
+    font-size: 12px;
+    min-width: 600px;
+  }
+
+  .summary-page .appointments-table th,
+  .summary-page .appointments-table td {
+    padding: 6px 8px;
+  }
+
+  .cost-input-wrapper {
+    max-width: 100%;
+  }
+
+  .cost-input {
+    font-size: 15px;
+    padding: 9px 11px;
+  }
+
+  .cost-currency {
+    font-size: 16px;
+  }
+
+  .notes-textarea {
+    min-height: 100px;
+    font-size: 12px;
+  }
+
+  /* Document upload row - stack vertically */
+  .doc-inline-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .doc-inline-input,
+  .doc-inline-select,
+  .doc-inline-file {
+    flex: 1;
+    width: 100%;
+  }
+
+  .summary-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .summary-page .primary-button,
+  .summary-page .secondary-button {
+    width: 100%;
+    padding: 10px 16px;
+  }
+
+  .table-edit-input {
+    font-size: 12px;
+    padding: 5px 7px;
+  }
+}
+
+/* Small mobile adjustments (below 480px) */
+@media (max-width: 480px) {
+  .summary-page {
+    padding: 70px 12px 12px;
+  }
+
+  .summary-page .page-header {
+    font-size: 18px;
+  }
+
+  .summary-page .card {
+    padding: 12px 14px;
+  }
+
+  .summary-section {
+    margin-bottom: 14px;
+  }
+
+  .summary-page .appointments-table {
+    font-size: 11px;
+  }
+
+  .cost-input {
+    font-size: 14px;
+  }
+
+  .cost-currency {
+    font-size: 15px;
+  }
+
+  .notes-textarea {
+    min-height: 90px;
+    font-size: 11px;
+  }
+}

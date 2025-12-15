@@ -31,6 +31,7 @@ import ChangePasswordPage from "./pages/staff/changePassword.jsx";
 import MedicalRecordsPage from "./pages/patients/MedicalRecords.jsx";
 import PrescriptionsPage from "./pages/patients/Prescriptions.jsx";
 import TreatmentPlansPage from "./pages/patients/TreatmentPlans.jsx";
+import AddPatientPage from "./pages/patients/AddPatient.jsx";
 
 // Reports page (real one, not placeholder)
 import ReportsPage from "./pages/reports/reports.jsx";
@@ -224,7 +225,14 @@ function App() {
             </ProtectedRoute>
           }
         />
-
+             <Route
+  path="/patients/add"
+  element={
+    <ProtectedRoute>
+      <AddPatientPage />
+    </ProtectedRoute>
+  }
+/>
         {/* Fallback route -> dashboard */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

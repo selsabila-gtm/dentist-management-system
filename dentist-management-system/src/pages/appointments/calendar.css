@@ -1,4 +1,4 @@
-/* calendar.css — FULL FILE (page-scoped, no need for index.css UI styles) */
+/* calendar.css – FULL FILE (page-scoped, no need for index.css UI styles) */
 
 /* ====== Layout / page wrapper ====== */
 .app-layout {
@@ -269,4 +269,143 @@
   color: #9ca3af;
   cursor: not-allowed;
   pointer-events: none;
+}
+
+/* ====== RESPONSIVE STYLES ====== */
+
+/* Tablet styles (768px - 1024px) */
+@media (max-width: 1024px) {
+  .calendar-page {
+    padding: 20px 24px;
+    max-width: 100%;
+  }
+
+  .calendar-page .page-header h1 {
+    font-size: 22px;
+  }
+
+  .month-card {
+    min-width: 320px;
+  }
+
+  .calendar-months {
+    gap: 20px;
+  }
+}
+
+/* Mobile styles (below 768px) */
+@media (max-width: 768px) {
+  .calendar-page {
+    padding: 80px 16px 16px;
+  }
+
+  .calendar-page .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .calendar-page .page-header h1 {
+    font-size: 20px;
+  }
+
+  .calendar-page .calendar-section {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .month-arrow {
+    width: 40px;
+    height: 40px;
+  }
+
+  .calendar-months {
+    width: 100%;
+    gap: 16px;
+  }
+
+  .month-card {
+    min-width: 280px;
+    padding: 10px 12px 14px;
+  }
+
+  .month-day {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+
+  .appointments-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .appointments-date-label {
+    order: -1;
+    margin-bottom: 4px;
+  }
+
+  /* Make table scrollable on mobile */
+  .calendar-page .card {
+    overflow-x: auto;
+    padding: 12px;
+  }
+
+  .calendar-page .appointments-table {
+    font-size: 12px;
+    min-width: 600px;
+  }
+
+  .calendar-page .appointments-table th,
+  .calendar-page .appointments-table td {
+    padding: 6px 8px;
+  }
+
+  .calendar-page .primary-button {
+    width: 100%;
+    padding: 10px 18px;
+  }
+
+  .status-cell {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}
+
+/* Small mobile adjustments (below 480px) */
+@media (max-width: 480px) {
+  .calendar-page {
+    padding: 70px 12px 12px;
+  }
+
+  .calendar-page .page-header h1 {
+    font-size: 18px;
+  }
+
+  .month-card {
+    min-width: 260px;
+    padding: 8px 10px 12px;
+  }
+
+  .month-day {
+    width: 26px;
+    height: 26px;
+    font-size: 10px;
+  }
+
+  .month-grid-header {
+    font-size: 10px;
+  }
+
+  .calendar-page .appointments-table {
+    font-size: 11px;
+  }
+
+  .calendar-page .primary-button,
+  .calendar-page .secondary-button {
+    font-size: 13px;
+    padding: 8px 14px;
+  }
 }
