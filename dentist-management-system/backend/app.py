@@ -2,20 +2,16 @@ from flask import Flask, send_from_directory
 from flask_cors import CORS
 import os
 
-from backend.models import *
-from backend.routes import bp
-
-from backend.models import *
-from backend.routes import bp
+from backend.models import db, seed_initial_data, SQLALCHEMY_DATABASE_URI, UPLOAD_FOLDER
 
 
 def create_app():
     app = Flask(__name__)
 
-    # BASIC CONFIG (temporary if you don't have config.py)
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///dentist.db"
+    # Use paths from models.py to ensure consistency
+    app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    app.config["UPLOAD_FOLDER"] = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "uploads")
+    app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
     # ENABLE CORS
     CORS(app, supports_credentials=True)
@@ -26,8 +22,8 @@ def create_app():
         db.create_all()
         seed_initial_data()
 
-    app.register_blueprint(bp)
-
+    # Import and register blueprint AFTER app context setup
+    from backend.routes import bp
     app.register_blueprint(bp)
 
     return app
@@ -35,8 +31,6 @@ def create_app():
 
 # Create the app instance
 app = create_app()
-
-
 
 
 if __name__ == "__main__":

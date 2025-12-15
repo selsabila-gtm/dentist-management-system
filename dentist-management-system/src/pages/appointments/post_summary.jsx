@@ -2,8 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 
 import "./summary.css";
-import Sidebar from "../../components/sidebar/sidebar";
-
+import Sidebar from "../../components/Sidebar/Sidebar"; 
 const API_BASE = "http://127.0.0.1:5000";
 
 export default function PostSummary() {
@@ -39,6 +38,9 @@ export default function PostSummary() {
   const userSavedRef = useRef(false);
   
   const [errors, setErrors] = useState({});
+  
+  // ✅ NEW: Inventory errors state
+  const [inventoryErrors, setInventoryErrors] = useState({});
 
   function navigateBackToCalendar() {
     if (returnDate) {
@@ -166,6 +168,7 @@ export default function PostSummary() {
     setNewInv({ item_id: "", item_name: "", quantity: "" });
   }
 
+  // ✅ UPDATED: Added stock validation
   function saveNewInv() {
     if (!newInv.item_id || !newInv.quantity) {
       alert("Item and quantity are required.");
@@ -178,22 +181,36 @@ export default function PostSummary() {
       return;
     }
 
+    const requestedQty = parseInt(newInv.quantity);
+
+    // ✅ NEW: Check if quantity is available in stock
+    if (selectedItem.quantity < requestedQty) {
+      setInventoryErrors({
+        ...inventoryErrors,
+        new: `Insufficient stock. Available: ${selectedItem.quantity}, Requested: ${requestedQty}`
+      });
+      return;
+    }
+
     setInventory((prev) => [
       ...prev,
       {
         item_id: selectedItem.id,
         item_name: selectedItem.item_name,
-        quantity: parseInt(newInv.quantity),
+        quantity: requestedQty,
       },
     ]);
 
     setNewInv(null);
+    setInventoryErrors({});
   }
 
   function cancelNewInv() {
     setNewInv(null);
+    setInventoryErrors(prev => ({ ...prev, new: undefined }));
   }
 
+  // ✅ UPDATED: Added stock validation
   function saveEditInv() {
     if (!editingInv.item_id || !editingInv.quantity) {
       alert("Item and quantity are required.");
@@ -206,159 +223,167 @@ export default function PostSummary() {
       return;
     }
 
+    const requestedQty = parseInt(editingInv.quantity);
+
+    // ✅ NEW: Check if quantity is available in stock
+    if (selectedItem.quantity < requestedQty) {
+      setInventoryErrors({
+        ...inventoryErrors,
+        [editingInv.index]: `Insufficient stock. Available: ${selectedItem.quantity}, Requested: ${requestedQty}`
+      });
+      return;
+    }
+
     const updated = [...inventory];
     updated[editingInv.index] = {
       item_id: selectedItem.id,
       item_name: selectedItem.item_name,
-      quantity: parseInt(editingInv.quantity),
+      quantity: requestedQty,
     };
 
     setInventory(updated);
     setEditingInv(null);
+    setInventoryErrors({});
   }
 
   function cancelEditInv() {
     setEditingInv(null);
+    setInventoryErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[editingInv?.index];
+      return newErrors;
+    });
   }
 
   function deleteInv(index) {
     setInventory((prev) => prev.filter((_, i) => i !== index));
   }
 
-
-
-
-
   function handleUploadDocument() {
-  console.log("=== UPLOAD DEBUG START ===");
-  console.log("Document name:", docName);
-  console.log("Document type:", docType);
-  console.log("File:", docFile);
-  console.log("Appointment ID:", id);
-  
-  // Clear previous errors
-  setDocError("");
-  
-  // Validation
-  if (!docName.trim()) {
-    console.log("ERROR: Document name required");
-    setDocError("Document name is required.");
-    return;
-  }
-  
-  if (!docFile) {
-    console.log("ERROR: File required");
-    setDocError("Please choose a file to upload.");
-    return;
-  }
-
-  // File type validation
-  const fileName = docFile.name.toLowerCase();
-  const fileExtension = fileName.substring(fileName.lastIndexOf('.') + 1);
-  
-  console.log("File name:", fileName);
-  console.log("File extension:", fileExtension);
-  
-  if (docType === "pdf") {
-    if (fileExtension !== "pdf") {
-      console.log("ERROR: Invalid PDF");
-      setDocError("Please select a PDF file.");
+    console.log("=== UPLOAD DEBUG START ===");
+    console.log("Document name:", docName);
+    console.log("Document type:", docType);
+    console.log("File:", docFile);
+    console.log("Appointment ID:", id);
+    
+    // Clear previous errors
+    setDocError("");
+    
+    // Validation
+    if (!docName.trim()) {
+      console.log("ERROR: Document name required");
+      setDocError("Document name is required.");
       return;
     }
-  } else if (docType === "img") {
-    const validImageExts = ["png", "jpg", "jpeg", "gif"];
-    if (!validImageExts.includes(fileExtension)) {
-      console.log("ERROR: Invalid image");
-      setDocError("Please select a valid image file (PNG, JPG, JPEG, or GIF).");
+    
+    if (!docFile) {
+      console.log("ERROR: File required");
+      setDocError("Please choose a file to upload.");
       return;
     }
-  }
 
-  // File size validation (16MB limit)
-  const maxSize = 16 * 1024 * 1024;
-  if (docFile.size > maxSize) {
-    console.log("ERROR: File too large");
-    setDocError("File is too large. Maximum size is 16MB.");
-    return;
-  }
-
-  console.log("✓ Validation passed");
-
-  // Create FormData
-  const formData = new FormData();
-  formData.append("name", docName.trim());
-  formData.append("type", docType);
-  formData.append("file", docFile);
-
-  // Debug FormData
-  console.log("FormData entries:");
-  for (let pair of formData.entries()) {
-    console.log(`  ${pair[0]}:`, pair[1]);
-  }
-
-  // Upload
-  const uploadUrl = `${API_BASE}/api/appointments/${id}/documents`;
-  console.log("Uploading to:", uploadUrl);
-
-  fetch(uploadUrl, {
-    method: "POST",
-    body: formData,
-    // IMPORTANT: Don't set Content-Type - browser will set it with boundary
-  })
-    .then(async (res) => {
-      console.log("Response status:", res.status);
-      console.log("Response OK:", res.ok);
-      
-      const text = await res.text();
-      console.log("Response text:", text);
-      
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch (e) {
-        console.error("Failed to parse JSON:", e);
-        throw new Error(`Server returned invalid JSON. Status: ${res.status}. Response: ${text.substring(0, 200)}`);
+    // File type validation
+    const fileName = docFile.name.toLowerCase();
+    const fileExtension = fileName.substring(fileName.lastIndexOf('.') + 1);
+    
+    console.log("File name:", fileName);
+    console.log("File extension:", fileExtension);
+    
+    if (docType === "pdf") {
+      if (fileExtension !== "pdf") {
+        console.log("ERROR: Invalid PDF");
+        setDocError("Please select a PDF file.");
+        return;
       }
-      
-      if (!res.ok) {
-        throw new Error(data.error || `Upload failed with status ${res.status}`);
+    } else if (docType === "img") {
+      const validImageExts = ["png", "jpg", "jpeg", "gif"];
+      if (!validImageExts.includes(fileExtension)) {
+        console.log("ERROR: Invalid image");
+        setDocError("Please select a valid image file (PNG, JPG, JPEG, or GIF).");
+        return;
       }
-      
-      return data;
+    }
+
+    // File size validation (16MB limit)
+    const maxSize = 16 * 1024 * 1024;
+    if (docFile.size > maxSize) {
+      console.log("ERROR: File too large");
+      setDocError("File is too large. Maximum size is 16MB.");
+      return;
+    }
+
+    console.log("✓ Validation passed");
+
+    // Create FormData
+    const formData = new FormData();
+    formData.append("name", docName.trim());
+    formData.append("type", docType);
+    formData.append("file", docFile);
+
+    // Debug FormData
+    console.log("FormData entries:");
+    for (let pair of formData.entries()) {
+      console.log(`  ${pair[0]}:`, pair[1]);
+    }
+
+    // Upload
+    const uploadUrl = `${API_BASE}/api/appointments/${id}/documents`;
+    console.log("Uploading to:", uploadUrl);
+
+    fetch(uploadUrl, {
+      method: "POST",
+      body: formData,
     })
-    .then((data) => {
-      // Success
-      console.log("✓ Upload successful");
-      console.log("Response data:", data);
-      setDocuments(data.documents);
-      setDocName("");
-      setDocFile(null);
-      setDocError("");
-      setShowDocRow(false);
+      .then(async (res) => {
+        console.log("Response status:", res.status);
+        console.log("Response OK:", res.ok);
+        
+        const text = await res.text();
+        console.log("Response text:", text);
+        
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          console.error("Failed to parse JSON:", e);
+          throw new Error(`Server returned invalid JSON. Status: ${res.status}. Response: ${text.substring(0, 200)}`);
+        }
+        
+        if (!res.ok) {
+          throw new Error(data.error || `Upload failed with status ${res.status}`);
+        }
+        
+        return data;
+      })
+      .then((data) => {
+        // Success
+        console.log("✓ Upload successful");
+        console.log("Response data:", data);
+        setDocuments(data.documents);
+        setDocName("");
+        setDocFile(null);
+        setDocError("");
+        setShowDocRow(false);
 
-      // Clear file input
-      const input = document.getElementById("doc-file-input");
-      if (input) input.value = "";
-      
-      console.log("=== UPLOAD DEBUG END ===");
-    })
-    .catch((error) => {
-      console.error("❌ Upload error:", error);
-      console.error("Error message:", error.message);
-      setDocError(`Failed to upload: ${error.message}`);
-      
-      // Clear file input on error
-      const input = document.getElementById("doc-file-input");
-      if (input) input.value = "";
-      setDocFile(null);
-      
-      console.log("=== UPLOAD DEBUG END (ERROR) ===");
-    });
-}
-
-
-
-
+        // Clear file input
+        const input = document.getElementById("doc-file-input");
+        if (input) input.value = "";
+        
+        console.log("=== UPLOAD DEBUG END ===");
+      })
+      .catch((error) => {
+        console.error("✗ Upload error:", error);
+        console.error("Error message:", error.message);
+        setDocError(`Failed to upload: ${error.message}`);
+        
+        // Clear file input on error
+        const input = document.getElementById("doc-file-input");
+        if (input) input.value = "";
+        setDocFile(null);
+        
+        console.log("=== UPLOAD DEBUG END (ERROR) ===");
+      });
+  }
 
   function viewDoc(d) {
     window.open(`${API_BASE}${d.url}`, "_blank");
@@ -369,6 +394,7 @@ export default function PostSummary() {
   }
 
   /* SAVE SUMMARY */
+  // ✅ UPDATED: Added backend error handling for inventory stock
   function saveSummary() {
     const newErrors = {};
 
@@ -403,12 +429,28 @@ export default function PostSummary() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     })
-      .then(() => {
+      .then(async (res) => {
+        const data = await res.json();
+        
+        if (!res.ok) {
+          // ✅ NEW: Handle inventory stock errors from backend
+          if (data.error === "insufficient_stock" && data.inventory_errors) {
+            const invErrors = {};
+            data.inventory_errors.forEach(err => {
+              invErrors[err.index] = err.message;
+            });
+            setInventoryErrors(invErrors);
+            setErrors({ submit: "Some inventory items have insufficient stock. Please check the errors below." });
+            return;
+          }
+          throw new Error(data.error || "Failed to save");
+        }
+        
         userSavedRef.current = true;
         navigateBackToCalendar();
       })
-      .catch(() => {
-        setErrors({ submit: "Failed to save summary. Please try again." });
+      .catch((error) => {
+        setErrors({ submit: `Failed to save summary: ${error.message}` });
       });
   }
 
@@ -690,7 +732,6 @@ export default function PostSummary() {
                   setDocError("");
                   setDocName("");
                   setDocFile(null);
-                  // 🔧 ADDED: Clear file input on cancel
                   const input = document.getElementById("doc-file-input");
                   if (input) input.value = "";
                 }}
@@ -725,9 +766,10 @@ export default function PostSummary() {
                       <select
                         className="table-edit-input"
                         value={editingInv.item_id}
-                        onChange={(e) =>
-                          setEditingInv({ ...editingInv, item_id: e.target.value })
-                        }
+                        onChange={(e) => {
+                          setEditingInv({ ...editingInv, item_id: e.target.value });
+                          setInventoryErrors(prev => ({ ...prev, [idx]: undefined }));
+                        }}
                       >
                         <option value="">Select Item</option>
                         {availableInventory.map((item) => (
@@ -740,14 +782,21 @@ export default function PostSummary() {
 
                     <td>
                       <input
-                        className="table-edit-input"
+                        className={`table-edit-input ${inventoryErrors[idx] ? 'error' : ''}`}
                         type="number"
                         min="1"
                         value={editingInv.quantity}
-                        onChange={(e) =>
-                          setEditingInv({ ...editingInv, quantity: e.target.value })
-                        }
+                        onChange={(e) => {
+                          setEditingInv({ ...editingInv, quantity: e.target.value });
+                          setInventoryErrors(prev => ({ ...prev, [idx]: undefined }));
+                        }}
                       />
+                      {/* ✅ NEW: Show error message under quantity field */}
+                      {inventoryErrors[idx] && (
+                        <div className="error-message" style={{ marginTop: "5px", fontSize: "12px" }}>
+                          {inventoryErrors[idx]}
+                        </div>
+                      )}
                     </td>
 
                     <td>
@@ -789,9 +838,10 @@ export default function PostSummary() {
                     <select
                       className="table-edit-input"
                       value={newInv.item_id}
-                      onChange={(e) =>
-                        setNewInv({ ...newInv, item_id: e.target.value })
-                      }
+                      onChange={(e) => {
+                        setNewInv({ ...newInv, item_id: e.target.value });
+                        setInventoryErrors(prev => ({ ...prev, new: undefined }));
+                      }}
                     >
                       <option value="">Select Item</option>
                       {availableInventory.map((item) => (
@@ -804,15 +854,22 @@ export default function PostSummary() {
 
                   <td>
                     <input
-                      className="table-edit-input"
+                      className={`table-edit-input ${inventoryErrors.new ? 'error' : ''}`}
                       type="number"
                       min="1"
                       value={newInv.quantity}
-                      onChange={(e) =>
-                        setNewInv({ ...newInv, quantity: e.target.value })
-                      }
+                      onChange={(e) => {
+                        setNewInv({ ...newInv, quantity: e.target.value });
+                        setInventoryErrors(prev => ({ ...prev, new: undefined }));
+                      }}
                       placeholder="Quantity"
                     />
+                    {/* ✅ NEW: Show error message under quantity field */}
+                    {inventoryErrors.new && (
+                      <div className="error-message" style={{ marginTop: "5px", fontSize: "12px" }}>
+                        {inventoryErrors.new}
+                      </div>
+                    )}
                   </td>
 
                   <td>

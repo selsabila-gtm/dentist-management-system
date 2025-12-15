@@ -58,11 +58,14 @@ export default function LoginPage() {
         return;
       }
 
+      // ✅ Clear old localStorage data first
+      localStorage.clear();
+
       // ✅ Find the "real" user object (backend may return it in different keys)
       const rawUser =
         data.user || data.staff || data.employee || data.current_user || null;
 
-      // ✅ Build a normalized user object that auth.js can understand
+      // ✅ Build a normalized user object that works with role-based access
       const normalizedUser = {
         ...(rawUser || {}),
         // fallbacks if backend returns flat fields
@@ -88,13 +91,10 @@ export default function LoginPage() {
         permissions: (rawUser && rawUser.permissions) ?? data.permissions ?? null,
       };
 
-      // ✅ Save logged-in user (used for admin checks in auth.js)
+      // ✅ Save logged-in user - single source of truth
       localStorage.setItem("currentUser", JSON.stringify(normalizedUser));
 
-      // ✅ (optional) if your ProtectedRoute still relies on staff_id
-      // keep this so you don’t get stuck on login
-      localStorage.setItem("staff_id", String(normalizedUser.id || ""));
-
+      // Success → navigate to staff dashboard
       navigate("/staff");
     } catch (err) {
       console.error(err);
@@ -106,6 +106,7 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
+      {/* Toast Notification */}
       {toast.visible && (
         <div className="toast-container">
           <div
@@ -128,6 +129,7 @@ export default function LoginPage() {
       <form className="login-panel" onSubmit={handleSubmit}>
         <h1 className="login-title">Welcome back</h1>
 
+        {/* Username Field */}
         <div className="staff-field">
           <label>Username</label>
           <input
@@ -143,6 +145,7 @@ export default function LoginPage() {
           )}
         </div>
 
+        {/* Password Field */}
         <div className="staff-field">
           <label>Password</label>
           <input
@@ -159,12 +162,14 @@ export default function LoginPage() {
           )}
         </div>
 
+        {/* Forgot Password Link */}
         <div className="login-row">
           <Link to="/reset-password" className="login-link">
             Forgot Password?
           </Link>
         </div>
 
+        {/* Remember Me Checkbox */}
         <div className="login-row">
           <label className="login-remember">
             <input
@@ -176,6 +181,7 @@ export default function LoginPage() {
           </label>
         </div>
 
+        {/* Submit Button */}
         <button
           type="submit"
           className="btn-primary login-button"

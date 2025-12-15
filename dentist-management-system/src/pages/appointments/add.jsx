@@ -12,15 +12,24 @@ export default function AddAppointment() {
   const query = new URLSearchParams(location.search);
   const preselectedDate = query.get("date") || "";
 
-  // ✅ GET CURRENT USER INFO
-  const staffId = localStorage.getItem("staff_id");
-  const userRole = localStorage.getItem("role");
+  // ✅ GET CURRENT USER INFO from currentUser object
+  const getCurrentUser = () => {
+    try {
+      const userStr = localStorage.getItem("currentUser");
+      return userStr ? JSON.parse(userStr) : null;
+    } catch (error) {
+      console.error("Error parsing currentUser:", error);
+      return null;
+    }
+  };
 
+  const currentUser = getCurrentUser();
+  const staffId = currentUser?.id;
+  const userRole = currentUser?.role_name;
 
   // State declarations
   const [patients, setPatients] = useState([]);
   const [dentists, setDentists] = useState([]);
-  const [allStaff, setAllStaff] = useState([]);
 
   const [patient, setPatient] = useState("");
   const [date, setDate] = useState(preselectedDate);
@@ -39,6 +48,7 @@ export default function AddAppointment() {
     start: "08:30",
     end: "17:00"
   });
+  const [loadingDentistInfo, setLoadingDentistInfo] = useState(false);
 
   const procedureOptions = [
     "Routine",
@@ -49,7 +59,7 @@ export default function AddAppointment() {
     "Orthodontics",
   ];
 
-  // Helper function
+  // Helper function to convert 12-hour time to 24-hour
   function convertTo24Hour(time, period) {
     if (!time) return "08:30";
     
@@ -71,76 +81,111 @@ export default function AddAppointment() {
     return `${String(hours).padStart(2, '0')}:${minutes}`;
   }
 
+  // Load patients and dentists on mount
   useEffect(() => {
     fetch(`${API_BASE}/api/patients`)
       .then((res) => res.json())
-      .then((data) => setPatients(data));
+      .then((data) => setPatients(data))
+      .catch((err) => console.error("Error loading patients:", err));
 
     fetch(`${API_BASE}/api/staff/dentists`)
       .then((res) => res.json())
-      .then((data) => setDentists(data));
-
-    fetch(`${API_BASE}/api/staff`)
-      .then((res) => res.json())
-      .then((data) => setAllStaff(data));
+      .then((data) => setDentists(data))
+      .catch((err) => console.error("Error loading dentists:", err));
   }, []);
 
   // ✅ AUTO-ASSIGN DENTIST IF USER IS DENTIST
   useEffect(() => {
-    if (userRole === "Dentist" && staffId && allStaff.length > 0) {
-      const currentDentist = allStaff.find(s => s.id === parseInt(staffId));
+    if (userRole === "Dentist" && staffId && dentists.length > 0) {
+      const currentDentist = dentists.find(d => d.id === parseInt(staffId));
       if (currentDentist) {
-        const fullName = currentDentist.full_name || 
-                        `${currentDentist.first_name || ''} ${currentDentist.last_name || ''}`.trim();
-        setDentist(fullName);
-        setDentistId(staffId);
+        setDentist(currentDentist.name);
+        setDentistId(String(staffId));
       }
     }
-  }, [userRole, staffId, allStaff]);
+  }, [userRole, staffId, dentists]);
 
-  // Update available days when dentist changes
+  // ✅ FETCH DENTIST AVAILABILITY FROM BACKEND when dentistId changes
   useEffect(() => {
-    if (!dentistId || allStaff.length === 0) {
-      if (availableDays.length > 0) setAvailableDays([]);
-      if (availableTimeRange.start !== "08:30" || availableTimeRange.end !== "17:00") {
-        setAvailableTimeRange({ start: "08:30", end: "17:00" });
-      }
+    if (!dentistId) {
+      // Reset to defaults when no dentist selected
+      setAvailableDays([]);
+      setAvailableTimeRange({ start: "08:30", end: "17:00" });
       return;
     }
 
-    const selectedStaff = allStaff.find(s => s.id === parseInt(dentistId));
-    if (!selectedStaff) return;
-
-    let newDays = [];
-    if (selectedStaff.days_available) {
-      newDays = selectedStaff.days_available.split(",").map(d => d.trim());
-    } else {
-      newDays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Saturday"];
-    }
-
-    let newTimeRange = { start: "08:30", end: "17:00" };
-    
-    if (selectedStaff.hours) {
-      let hoursMatch = selectedStaff.hours.match(/(\d{1,2}):(\d{2})\s*(AM|PM)\s*-\s*(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-      
-      if (hoursMatch) {
-        const startTime = convertTo24Hour(`${hoursMatch[1]}:${hoursMatch[2]}`, hoursMatch[3]);
-        const endTime = convertTo24Hour(`${hoursMatch[4]}:${hoursMatch[5]}`, hoursMatch[6]);
-        newTimeRange = { start: startTime, end: endTime };
-      } else {
-        hoursMatch = selectedStaff.hours.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
-        if (hoursMatch) {
-          const startTime = `${hoursMatch[1].padStart(2, '0')}:${hoursMatch[2]}`;
-          const endTime = `${hoursMatch[3].padStart(2, '0')}:${hoursMatch[4]}`;
-          newTimeRange = { start: startTime, end: endTime };
+    // Fetch dentist availability from backend
+    setLoadingDentistInfo(true);
+    fetch(`${API_BASE}/api/appointments/dentist/${dentistId}/availability`)
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Failed to fetch dentist availability");
         }
-      }
-    }
+        return res.json();
+      })
+      .then((dentistData) => {
+        console.log("=== DENTIST DATA FROM BACKEND ===");
+        console.log("Full response:", dentistData);
+        console.log("hours field:", dentistData.hours);
+        console.log("days_available field:", dentistData.days_available);
 
-    setAvailableDays(newDays);
-    setAvailableTimeRange(newTimeRange);
-    
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // Parse available days
+        let newDays = [];
+        if (dentistData.days_available) {
+          newDays = dentistData.days_available.split(",").map(d => d.trim());
+        } else {
+          // Default days if not specified
+          newDays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Saturday"];
+        }
+
+        // Parse available hours
+        let newTimeRange = { start: "08:30", end: "17:00" };
+        
+        console.log("Checking if hours exist:", dentistData.hours);
+        
+        if (dentistData.hours && dentistData.hours.trim() !== "") {
+          console.log("Hours found, parsing:", dentistData.hours);
+          // Try to match format like "9:00 AM - 5:00 PM" or "9:00 AM – 5:00 PM" (with en dash)
+          // Updated regex to handle -, –, —, and multiple spaces
+          let hoursMatch = dentistData.hours.match(/(\d{1,2}):(\d{2})\s*(AM|PM)\s*[-–—]\s*(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+          
+          if (hoursMatch) {
+            const startTime = convertTo24Hour(`${hoursMatch[1]}:${hoursMatch[2]}`, hoursMatch[3]);
+            const endTime = convertTo24Hour(`${hoursMatch[4]}:${hoursMatch[5]}`, hoursMatch[6]);
+            newTimeRange = { start: startTime, end: endTime };
+            console.log("Parsed 12-hour format:", newTimeRange);
+          } else {
+            // Try 24-hour format like "08:30 - 17:00" or "08:30 – 17:00"
+            hoursMatch = dentistData.hours.match(/(\d{1,2}):(\d{2})\s*[-–—]\s*(\d{1,2}):(\d{2})/);
+            if (hoursMatch) {
+              const startTime = `${hoursMatch[1].padStart(2, '0')}:${hoursMatch[2]}`;
+              const endTime = `${hoursMatch[3].padStart(2, '0')}:${hoursMatch[4]}`;
+              newTimeRange = { start: startTime, end: endTime };
+              console.log("Parsed 24-hour format:", newTimeRange);
+            } else {
+              console.log("Could not parse hours format:", dentistData.hours);
+            }
+          }
+        } else {
+          console.log("No hours set in database, using defaults");
+        }
+
+        setAvailableDays(newDays);
+        setAvailableTimeRange(newTimeRange);
+        setLoadingDentistInfo(false);
+
+        console.log("Parsed availability:", {
+          days: newDays,
+          timeRange: newTimeRange
+        });
+      })
+      .catch((err) => {
+        console.error("Error loading dentist availability:", err);
+        // Set defaults on error
+        setAvailableDays(["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Saturday"]);
+        setAvailableTimeRange({ start: "08:30", end: "17:00" });
+        setLoadingDentistInfo(false);
+      });
   }, [dentistId]);
 
   function validateForm() {
@@ -223,7 +268,7 @@ export default function AddAppointment() {
     
     const selectedDentist = dentists.find(d => d.name === selectedName);
     if (selectedDentist) {
-      setDentistId(selectedDentist.id);
+      setDentistId(String(selectedDentist.id));
     } else {
       setDentistId("");
     }
@@ -346,14 +391,21 @@ export default function AddAppointment() {
                   color: '#334155',
                   fontSize: '15px'
                 }}>
-                  Dr. {dentist.replace(/^Dr\.\s*/i, '')}
+                  {dentist}
                 </div>
               </>
             )}
 
-            {dentistId && availableDays.length > 0 && (
+            {/* ✅ SHOW AVAILABILITY INFO */}
+            {dentistId && !loadingDentistInfo && availableDays.length > 0 && (
               <div className="availability-info">
                 Available: {availableDays.join(", ")} • {availableTimeRange.start} - {availableTimeRange.end}
+              </div>
+            )}
+
+            {loadingDentistInfo && (
+              <div className="availability-info">
+                Loading dentist availability...
               </div>
             )}
 
@@ -367,7 +419,7 @@ export default function AddAppointment() {
                 setDate(e.target.value);
                 setErrors(prev => ({ ...prev, date: undefined }));
               }}
-              disabled={!dentistId}
+              disabled={!dentistId || loadingDentistInfo}
               min={new Date().toISOString().split('T')[0]}
             />
             {errors.date && <div className="error-message">{errors.date}</div>}
@@ -382,7 +434,7 @@ export default function AddAppointment() {
                 setTime(e.target.value);
                 setErrors(prev => ({ ...prev, time: undefined }));
               }}
-              disabled={!dentistId}
+              disabled={!dentistId || loadingDentistInfo}
             />
             {errors.time && <div className="error-message">{errors.time}</div>}
 

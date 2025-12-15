@@ -9,6 +9,9 @@ from backend.models import (
     db,
     Appointment,
     Summary,
+    InventoryItem,
+    Staff,
+    Role,
     allowed_file,
     load_json_field,
     dumps_field,
@@ -82,6 +85,30 @@ def update_appointment_status(appt_id):
     return jsonify(a.to_dict())
 
 
+# ✅ UPDATED: Get dentist availability from Staff table
+@bp.route("/api/appointments/dentist/<int:dentist_id>/availability", methods=["GET"])
+def get_dentist_availability(dentist_id):
+    """Get dentist availability including days and hours from Staff table"""
+    staff = Staff.query.get(dentist_id)
+    
+    if not staff:
+        return jsonify({"error": "Staff member not found"}), 404
+    
+    # Check if this staff member is actually a dentist
+    dentist_role = Role.query.filter_by(name="Dentist").first()
+    if dentist_role and staff.role_id != dentist_role.id:
+        return jsonify({"error": "Staff member is not a dentist"}), 400
+    
+    # ✅ Return data directly from Staff table
+    return jsonify({
+        "id": staff.id,
+        "name": staff.full_name or f"{staff.first_name or ''} {staff.last_name or ''}".strip(),
+        "days_available": staff.days_available,  # From Staff.days_available column
+        "hours": staff.hours,  # From Staff.hours column
+        "availability": staff.availability  # From Staff.availability column
+    }), 200
+
+
 # ---- SUMMARIES ----
 @bp.route("/api/appointments/<int:appt_id>/summary", methods=["GET"])
 def get_summary(appt_id):
@@ -110,12 +137,50 @@ def save_summary(appt_id):
     a = Appointment.query.get(appt_id)
     if not a:
         return jsonify({"error": "not_found"}), 404
+    
+    # ✅ Validate inventory quantities BEFORE saving
+    inventory_items = data.get("inventory", [])
+    inventory_errors = []
+    
+    for idx, item_data in enumerate(inventory_items):
+        item_id = item_data.get("item_id")
+        requested_qty = item_data.get("quantity", 0)
+        
+        # Get the actual inventory item from database
+        inventory_item = InventoryItem.query.get(item_id)
+        
+        if not inventory_item:
+            inventory_errors.append({
+                "index": idx,
+                "message": f"Item not found in inventory"
+            })
+            continue
+        
+        # Check if enough stock is available
+        if inventory_item.quantity < requested_qty:
+            inventory_errors.append({
+                "index": idx,
+                "item_name": inventory_item.item_name,
+                "requested": requested_qty,
+                "available": inventory_item.quantity,
+                "message": f"Insufficient stock. Available: {inventory_item.quantity}, Requested: {requested_qty}"
+            })
+    
+    # If there are inventory errors, return them
+    if inventory_errors:
+        return jsonify({
+            "error": "insufficient_stock",
+            "inventory_errors": inventory_errors
+        }), 400
+    
+    # Create or update summary
     if not a.summary:
-        a.summary = Summary()
+        a.summary = Summary(appointment_id=appt_id, inventory="[]")
+    
     a.summary.notes = data.get("notes", "")
     a.summary.prescriptions = dumps_field(data.get("prescriptions", []))
     a.summary.documents = dumps_field(data.get("documents", []))
-    a.summary.inventory = dumps_field(data.get("inventory", []))
+    a.summary.inventory = dumps_field(inventory_items)
     
     # Update cost if provided
     if "cost" in data:
@@ -124,9 +189,46 @@ def save_summary(appt_id):
         except (ValueError, TypeError):
             a.cost = 0.0
     
+    # ✅ Deduct the inventory quantities from stock
+    for item_data in inventory_items:
+        item_id = item_data.get("item_id")
+        used_qty = item_data.get("quantity", 0)
+        
+        inventory_item = InventoryItem.query.get(item_id)
+        if inventory_item:
+            inventory_item.quantity -= used_qty
+            inventory_item.last_updated = datetime.now().strftime("%Y-%m-%d")
+    
     a.status = "completed"
-    db.session.commit()
-    return jsonify({"message": "saved"})
+    
+    try:
+        db.session.commit()
+        return jsonify({"message": "saved"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Failed to save: {str(e)}"}), 500
+
+
+# ✅ Endpoint to check inventory stock availability
+@bp.route("/api/inventory/<int:item_id>/check-stock", methods=["POST"])
+def check_inventory_stock(item_id):
+    """Check if requested quantity is available in stock"""
+    data = request.json or {}
+    requested_qty = data.get("quantity", 0)
+    
+    item = InventoryItem.query.get(item_id)
+    if not item:
+        return jsonify({"error": "Item not found"}), 404
+    
+    available = item.quantity >= requested_qty
+    
+    return jsonify({
+        "available": available,
+        "stock_quantity": item.quantity,
+        "requested_quantity": requested_qty,
+        "item_name": item.item_name
+    })
+
 
 # ---- DOCUMENT UPLOAD & SERVE ----
 @bp.route("/api/appointments/<int:appt_id>/documents", methods=["POST"])

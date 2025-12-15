@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./calendar.css";
-import Sidebar from "../../components/sidebar/sidebar";
+import Sidebar from "../../components/Sidebar/Sidebar";
 
 const API_BASE = "http://127.0.0.1:5000";
 const CALENDAR_YEAR = 2025;
@@ -120,9 +120,20 @@ export default function Calendar() {
   const [appointments, setAppointments] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // âœ… GET CURRENT USER INFO
-  const staffId = localStorage.getItem("staff_id");
-  const userRole = localStorage.getItem("role");
+  // ✅ BEST PRACTICE: Get user info from single source
+  const getCurrentUser = () => {
+    try {
+      const userStr = localStorage.getItem("currentUser");
+      return userStr ? JSON.parse(userStr) : null;
+    } catch (error) {
+      console.error("Error parsing currentUser:", error);
+      return null;
+    }
+  };
+
+  const currentUser = getCurrentUser();
+  const staffId = currentUser?.id;
+  const userRole = currentUser?.role_name;
 
   const today = new Date();
   const initialMonth =
@@ -154,29 +165,25 @@ export default function Calendar() {
   const [selectedDateKey, setSelectedDateKey] = useState(initialSelectedDateKey);
 
   function loadAppointments() {
-    // âœ… Build API URL - only filter for Dentists
+    // ✅ Build API URL - only filter for Dentists
     let apiUrl = `${API_BASE}/api/appointments`;
     
-    // ðŸ” DETAILED DEBUG LOGGING
+    // 🔍 DETAILED DEBUG LOGGING
     console.log("=== CALENDAR DEBUG ===");
-    console.log("User Role from localStorage:", userRole);
-    console.log("Staff ID from localStorage:", staffId);
+    console.log("Current User Object:", currentUser);
+    console.log("User Role:", userRole);
+    console.log("Staff ID:", staffId);
     console.log("Role type:", typeof userRole);
     console.log("Staff ID type:", typeof staffId);
     console.log("Role === 'Dentist'?", userRole === "Dentist");
-    console.log("All localStorage:", {
-      role: localStorage.getItem("role"),
-      staff_id: localStorage.getItem("staff_id"),
-      username: localStorage.getItem("username")
-    });
     
-    // âœ… ONLY Dentists see filtered appointments
+    // ✅ ONLY Dentists see filtered appointments
     // Admins and Receptionists see ALL appointments
     if (userRole === "Dentist" && staffId) {
       apiUrl += `?dentist_id=${staffId}`;
-      console.log("ðŸ”’ Dentist view - Filtering appointments for dentist ID:", staffId);
+      console.log("🔒 Dentist view - Filtering appointments for dentist ID:", staffId);
     } else {
-      console.log("ðŸ‘ï¸ Admin/Receptionist view - Loading ALL appointments");
+      console.log("👁️ Admin/Receptionist view - Loading ALL appointments");
     }
 
     console.log("Final API URL:", apiUrl);
@@ -327,7 +334,7 @@ export default function Calendar() {
             <h2>Appointments</h2>
 
             <div className="appointments-date-label">
-              {selectedDateKey && formatDisplayDate(selectedDateKey)} Â·{" "}
+              {selectedDateKey && formatDisplayDate(selectedDateKey)} ·{" "}
               {filteredAppointments.length} appointment
               {filteredAppointments.length !== 1 ? "s" : ""}
             </div>
