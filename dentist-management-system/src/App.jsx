@@ -1,5 +1,3 @@
-// src/App.jsx
-
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
@@ -28,16 +26,19 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-
         {/* Patient Pages */}
         <Route path="/add-patient" element={<AddPatient />} />
-        <Route path="/b" element={<Appointment />} /> 
-        <Route path="/c" element={<PatientInvoices />} /> 
-        <Route path="/patients" element={<SearchPatient />} /> 
-        <Route path="/patient/:id" element={<ViewPatient />} /> 
-
-        {/* Redirect root */}
-        <Route path="/a" element={<Navigate to="/staff" />} />
+        <Route path="/patients" element={<SearchPatient />} />
+        
+        {/* Patient profile - General Info comes FIRST, must be exact match */}
+        <Route path="/patients/:id" element={<ViewPatient />} />
+        
+        {/* Patient profile tabs - these come AFTER the general route */}
+        <Route path="/patients/:id/appointments" element={<Appointment />} />
+        <Route path="/patients/:id/treatment-plans" element={<TreatmentPlansPage />} />
+        <Route path="/patients/:id/medical-records" element={<MedicalRecordsPage />} />
+        <Route path="/patients/:id/prescriptions" element={<PrescriptionsPage />} />
+        <Route path="/patients/:id/invoices" element={<PatientInvoices />} />
 
         {/* Staff management */}
         <Route path="/staff" element={<StaffListPage />} />
@@ -47,31 +48,9 @@ function App() {
         <Route path="/staff/:id" element={<StaffProfilePage />} />
         <Route path="/staff/:id/password" element={<ChangePasswordPage />} />
 
-        {/* Default redirect */}
-        <Route
-          path="/r"
-          element={<Navigate to="/patients/medical-records" replace />}
-        />
-
-        {/* Patient profile tabs */}
-        <Route
-          path="/patients/medical-records"
-          element={<MedicalRecordsPage />}
-        />
-        <Route
-          path="/patients/prescriptions"
-          element={<PrescriptionsPage />}
-        />
-        <Route
-          path="/patients/treatment-plans"
-          element={<TreatmentPlansPage />}
-        />
-
-        {/* Fallback */}
-        <Route
-          path="*"
-          element={<Navigate to="/patients/medical-records" replace />}
-        />
+        {/* Default redirects */}
+        <Route path="/" element={<Navigate to="/patients" replace />} />
+        <Route path="*" element={<Navigate to="/patients" replace />} />
       </Routes>
     </BrowserRouter>
   );

@@ -89,7 +89,7 @@ export default function PatientsList() {
   };
 
   const handleView = (patientId) => {
-    navigate(`/patient/${patientId}`);
+    navigate(`/patients/${patientId}`);
   };
 
   const handleDelete = async (patientId) => {
