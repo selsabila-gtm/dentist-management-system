@@ -32,14 +32,6 @@ import MedicalRecordsPage from "./pages/patients/MedicalRecords.jsx";
 import PrescriptionsPage from "./pages/patients/Prescriptions.jsx";
 import TreatmentPlansPage from "./pages/patients/TreatmentPlans.jsx";
 
-// Reports page (real one, not placeholder)
-import ReportsPage from "./pages/reports/reports.jsx";
-
-import BillingPage from "./pages/billing/billing.jsx";
-import AddInvoicePage from "./pages/billing/AddInvoice.jsx";
-import InvoicePrintPage from "./pages/billing/InvoicePrint.jsx";
-
-
 // ✅ Protected Route Component – only checks if user is logged in
 function ProtectedRoute({ children }) {
   const user = getCurrentUser();
@@ -206,7 +198,7 @@ function App() {
           path="/reports"
           element={
             <ProtectedRoute>
-              <ReportsPage />
+              <div>reports page comming soon</div>
             </ProtectedRoute>
           }
         />
@@ -215,23 +207,7 @@ function App() {
           path="/billing"
           element={
             <ProtectedRoute>
-              <div><BillingPage /></div>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/billing/new"
-          element={
-            <ProtectedRoute>
-              <div><AddInvoicePage /></div>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/billing/invoice/:id"
-          element={
-            <ProtectedRoute>
-              <InvoicePrintPage />
+              <div>billing page coming soon</div>
             </ProtectedRoute>
           }
         />
