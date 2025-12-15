@@ -14,6 +14,19 @@ export default function LoginPage() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
+  const [toast, setToast] = useState({
+    visible: false,
+    type: "success",
+    message: "",
+  });
+
+  const showToast = (message, type = "error") => {
+    setToast({ visible: true, type, message });
+    setTimeout(() => {
+      setToast((prev) => ({ ...prev, visible: false }));
+    }, 3000);
+  };
+
   const validate = () => {
     const newErrors = {};
     if (!username.trim()) newErrors.username = "Username is required.";
@@ -38,25 +51,54 @@ export default function LoginPage() {
       });
 
       const data = await res.json();
-      console.log("Login response:", data); // Debug log
+      console.log("LOGIN RESPONSE:", data);
 
       if (!res.ok || !data.success) {
-        alert(data.message || "Invalid username or password.");
+        showToast(data.message || "Invalid username or password.", "error");
         return;
       }
 
-      // Store user info in localStorage
-      localStorage.setItem("staff_id", data.staff_id);
-      localStorage.setItem("username", data.username);
-      localStorage.setItem("role", data.role || "");
+      // ✅ Find the "real" user object (backend may return it in different keys)
+      const rawUser =
+        data.user || data.staff || data.employee || data.current_user || null;
 
-      console.log("Login successful, redirecting..."); // Debug log
+      // ✅ Build a normalized user object that auth.js can understand
+      const normalizedUser = {
+        ...(rawUser || {}),
+        // fallbacks if backend returns flat fields
+        id: (rawUser && rawUser.id) ?? data.id,
+        username: (rawUser && rawUser.username) ?? data.username ?? username,
 
-      // Success → force redirect to dashboard using window.location
-      window.location.href = "/dashboard";
+        // IMPORTANT: normalize role into role_name and role.name
+        role_name:
+          (rawUser && rawUser.role_name) ??
+          (typeof (rawUser && rawUser.role) === "string" ? rawUser.role : null) ??
+          data.role_name ??
+          (typeof data.role === "string" ? data.role : null) ??
+          (data.role && data.role.name ? data.role.name : null),
+
+        role:
+          (rawUser && rawUser.role && typeof rawUser.role === "object"
+            ? rawUser.role
+            : null) ||
+          (data.role && typeof data.role === "object" ? data.role : null) ||
+          null,
+
+        // keep permissions if backend returns them
+        permissions: (rawUser && rawUser.permissions) ?? data.permissions ?? null,
+      };
+
+      // ✅ Save logged-in user (used for admin checks in auth.js)
+      localStorage.setItem("currentUser", JSON.stringify(normalizedUser));
+
+      // ✅ (optional) if your ProtectedRoute still relies on staff_id
+      // keep this so you don’t get stuck on login
+      localStorage.setItem("staff_id", String(normalizedUser.id || ""));
+
+      navigate("/staff");
     } catch (err) {
       console.error(err);
-      alert("Could not connect to server.");
+      showToast("Could not connect to server.", "error");
     } finally {
       setSubmitting(false);
     }
@@ -64,6 +106,25 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
+      {toast.visible && (
+        <div className="toast-container">
+          <div
+            className={`toast ${
+              toast.type === "error" ? "toast-error" : "toast-success"
+            }`}
+          >
+            <span className="toast-message">{toast.message}</span>
+            <button
+              type="button"
+              className="toast-close"
+              onClick={() => setToast((prev) => ({ ...prev, visible: false }))}
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
       <form className="login-panel" onSubmit={handleSubmit}>
         <h1 className="login-title">Welcome back</h1>
 

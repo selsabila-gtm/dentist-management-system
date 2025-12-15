@@ -1,9 +1,19 @@
 // src/pages/staff/changePassword.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { updateStaff } from "../../services/staffApi";
 import { useNavigate } from "react-router-dom";
-import StaffLayout from "../../components/StaffLayout";
+import StaffAdminLayout from "../../components/StaffAdminLayout";
+import Sidebar from "../../components/Sidebar/Sidebar";
 import "../../styles/staff.css";
+
+const getCurrentUser = () => {
+  try {
+    const raw = localStorage.getItem("currentUser");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
 
 // FIXED: extract ID safely
 const getIdFromLocation = () => {
@@ -24,26 +34,57 @@ export default function ChangePasswordPage() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
 
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // toast
+  const [toast, setToast] = useState({
+    visible: false,
+    type: "success",
+    message: "",
+  });
+
+  const showToast = (message, type = "success") => {
+    setToast({ visible: true, type, message });
+    setTimeout(() => {
+      setToast((prev) => ({ ...prev, visible: false }));
+    }, 3000);
+  };
+
+  // ✅ Check admin
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (!user || !user.is_admin) {
+      setIsAdmin(false);
+      showToast("You don't have permission to change staff passwords.", "error");
+    } else {
+      setIsAdmin(true);
+    }
+    setAuthChecked(true);
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (newPassword.length < 8) {
-      alert("Password must be at least 8 characters.");
+      showToast("Password must be at least 8 characters.", "error");
       return;
     }
     if (newPassword !== confirmPassword) {
-      alert("Passwords do not match.");
+      showToast("Passwords do not match.", "error");
       return;
     }
 
     try {
       setSaving(true);
       await updateStaff(staffId, { password: newPassword });
-      alert("Password updated successfully");
-      navigate(`/staff/${staffId}`);
+      showToast("Password updated successfully");
+      setTimeout(() => {
+        navigate(`/staff/${staffId}`);
+      }, 400);
     } catch (err) {
       console.error(err);
-      alert("Failed to update password");
+      showToast("Failed to update password", "error");
     } finally {
       setSaving(false);
     }
@@ -51,19 +92,108 @@ export default function ChangePasswordPage() {
 
   const handleResetPassword = () => {
     if (!resetEmail || !/^\S+@\S+\.\S+$/.test(resetEmail)) {
-      alert("Please enter a valid email");
+      showToast("Please enter a valid email", "error");
       return;
     }
 
     // 🔵 You can add your backend reset endpoint here:
     // await sendResetEmail(resetEmail);
 
-    alert("Password reset link sent to " + resetEmail);
+    showToast("Password reset link sent to " + resetEmail);
     setShowResetModal(false);
   };
 
+  // ⏳ waiting auth
+  if (!authChecked) {
+    return (
+      <div className="app-layout">
+        <Sidebar />
+      <StaffAdminLayout>
+        <div className="staff-main">
+          <p>Loading...</p>
+        </div>
+      </StaffAdminLayout>
+      </div>
+    );
+  }
+
+  // 🚫 not admin
+  if (!isAdmin) {
+    return (
+      <div className="app-layout">
+      <Sidebar />
+      <StaffAdminLayout>
+        {toast.visible && (
+          <div className="toast-container">
+            <div
+              className={`toast ${
+                toast.type === "error" ? "toast-error" : "toast-success"
+              }`}
+            >
+              <span className="toast-message">{toast.message}</span>
+              <button
+                type="button"
+                className="toast-close"
+                onClick={() =>
+                  setToast((prev) => ({ ...prev, visible: false }))
+                }
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="staff-main">
+          <div className="staff-card">
+            <h1 className="staff-page-title" style={{ fontSize: 22 }}>
+              Access denied
+            </h1>
+            <p style={{ marginTop: 8, color: "#6b7280", fontSize: 14 }}>
+              You do not have permission to change staff passwords.
+            </p>
+            <button
+              type="button"
+              className="btn-secondary"
+              style={{ marginTop: 16 }}
+              onClick={() => navigate("/")}
+            >
+              Go back
+            </button>
+          </div>
+        </div>
+      </StaffAdminLayout>
+      </div>
+    );
+  }
+
+  // ✅ admin UI (original)
   return (
-    <StaffLayout>
+    <div className="app-layout">
+      <Sidebar />
+    <StaffAdminLayout>
+      {/* Toast */}
+      {toast.visible && (
+        <div className="toast-container">
+          <div
+            className={`toast ${
+              toast.type === "error" ? "toast-error" : "toast-success"
+            }`}
+          >
+            <span className="toast-message">{toast.message}</span>
+            <button
+              type="button"
+              className="toast-close"
+              onClick={() =>
+                setToast((prev) => ({ ...prev, visible: false }))
+              }
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="staff-page-header">
         <button
           className="btn-secondary"
@@ -131,7 +261,9 @@ export default function ChangePasswordPage() {
           Forgot Password?
         </p>
 
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+        <div
+          style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}
+        >
           <button type="submit" className="btn-primary" disabled={saving}>
             {saving ? "Updating..." : "Update Password"}
           </button>
@@ -195,6 +327,7 @@ export default function ChangePasswordPage() {
           </div>
         </div>
       )}
-    </StaffLayout>
+    </StaffAdminLayout>
+    </div>
   );
 }

@@ -7,6 +7,9 @@ from backend.routes import bp
 
 def create_app():
     app = Flask(__name__)
+    from flask_cors import CORS
+    CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}})
+
 
     # BASIC CONFIG (temporary if you don't have config.py)
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///dentist.db"
