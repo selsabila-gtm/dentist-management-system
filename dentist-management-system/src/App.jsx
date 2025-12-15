@@ -1,48 +1,42 @@
+
+
+
 // src/App.jsx
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
 
-// Auth utils
-import { getCurrentUser } from "./utils/auth";
-
 // Auth pages
-import LoginPage from "./pages/auth/login.jsx"; // ⬅️ matches your file path
-import ResetPasswordPage from "./pages/staff/resetPassword";
+import LoginPage from "./pages/auth/login";
 
 // Inventory pages
 import InventoryListPage from "./pages/inventory/list";
 import InventoryAddPage from "./pages/inventory/add";
 import InventoryDetailsPage from "./pages/inventory/details";
+import DashboardPage from "./pages/dashboard/dashboard.jsx";
 
 // Calendar / Appointments pages
 import Calendar from "./pages/appointments/calendar";
 import AppointmentAddPage from "./pages/appointments/add";
 import AppointmentPostSummaryPage from "./pages/appointments/post_summary";
-
+import SettingsPage from "./pages/settings/settings.jsx";
 // Staff pages
 import Staff from "./pages/staff/list";
 import StaffAddPage from "./pages/staff/add.jsx";
 import StaffProfilePage from "./pages/staff/profile.jsx";
+import ResetPasswordPage from "./pages/staff/resetPassword";
 import ChangePasswordPage from "./pages/staff/changePassword.jsx";
-import PatientPage from "./pages/patients/SearchPatient.jsx";
-import SettingsPage from "./pages/settings/settings.jsx";
 
 // Patient pages
 import MedicalRecordsPage from "./pages/patients/MedicalRecords.jsx";
 import PrescriptionsPage from "./pages/patients/Prescriptions.jsx";
 import TreatmentPlansPage from "./pages/patients/TreatmentPlans.jsx";
-
-// Reports page (real one, not placeholder)
-import ReportsPage from "./pages/reports/reports.jsx";
-
 import BillingPage from "./pages/billing/billing.jsx";
-
-// ✅ Protected Route Component – only checks if user is logged in
+// Protected Route Component
 function ProtectedRoute({ children }) {
-  const user = getCurrentUser();
+  const staffId = localStorage.getItem("staff_id");
 
-  if (!user) {
+  if (!staffId) {
     return <Navigate to="/login" replace />;
   }
 
@@ -57,22 +51,22 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-        {/* Root redirects to dashboard (staff list for now) */}
+        {/* Root redirects to dashboard */}
         <Route
           path="/"
           element={
             <ProtectedRoute>
-              <Staff />
+              <DashboardPage />
             </ProtectedRoute>
           }
         />
 
-        {/* Dashboard -> same as staff list for now */}
+        {/* Dashboard */}
         <Route
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <Staff />
+              <DashboardPage />
             </ProtectedRoute>
           }
         />
@@ -129,7 +123,7 @@ function App() {
           }
         />
 
-        {/* Staff management (admin-only logic is inside the pages/layout) */}
+        {/* Staff management */}
         <Route
           path="/staff"
           element={
@@ -162,8 +156,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* Patient pages (protected) */}
+{/* Patient pages (protected) */}
         <Route
           path="/patients/medical-records"
           element={
@@ -190,7 +183,7 @@ function App() {
         />
 
         {/* Placeholder / other sections (protected) */}
-       <Route
+        <Route
           path="/patients"
           element={
             <ProtectedRoute>
@@ -198,22 +191,19 @@ function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* ✅ Real reports page, admin-only logic is inside ReportsPage */}
-        <Route
-          path="/reports"
-          element={
-            <ProtectedRoute>
-              <ReportsPage />
-            </ProtectedRoute>
-          }
-        />
-
         <Route
           path="/billing"
           element={
             <ProtectedRoute>
-              <div><BillingPage /></div>
+              <BillingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute>
+              <div>Reports Page (Coming Soon)</div>
             </ProtectedRoute>
           }
         />

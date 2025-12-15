@@ -26,7 +26,8 @@ export default function SettingsPage() {
     }
   };
 
-  const currentUser = getCurrentUser();
+  // Initialize currentUser safely
+  const [currentUser, setCurrentUser] = useState(getCurrentUser());
   const staffId = currentUser?.staff_id || currentUser?.id;
 
   // Profile data
@@ -67,7 +68,7 @@ export default function SettingsPage() {
     }
     
     fetchStaffData();
-  }, [staffId]);
+  }, [staffId, navigate]);
 
   const fetchStaffData = async () => {
     try {
@@ -123,6 +124,7 @@ export default function SettingsPage() {
 
       const updatedUser = { ...currentUser, ...data, staff_id: data.id };
       localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+      setCurrentUser(updatedUser);
       
     } catch (err) {
       console.error("Error fetching staff data:", err);
@@ -135,6 +137,9 @@ export default function SettingsPage() {
   const handleLogout = () => {
     if (window.confirm("Are you sure you want to log out?")) {
       localStorage.removeItem("currentUser");
+      localStorage.removeItem("staff_id");
+      localStorage.removeItem("username");
+      localStorage.removeItem("role");
       navigate("/login");
     }
   };
@@ -210,6 +215,7 @@ export default function SettingsPage() {
       
       const updatedUser = { ...currentUser, ...updatedData, staff_id: updatedData.id };
       localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+      setCurrentUser(updatedUser);
 
       setSuccess("Profile updated successfully!");
       setTimeout(() => setSuccess(""), 3000);
@@ -269,6 +275,9 @@ export default function SettingsPage() {
       
       setTimeout(() => {
         localStorage.removeItem("currentUser");
+        localStorage.removeItem("staff_id");
+        localStorage.removeItem("username");
+        localStorage.removeItem("role");
         navigate("/login");
       }, 3000);
     } catch (err) {
@@ -350,6 +359,7 @@ export default function SettingsPage() {
 
       const updatedUser = { ...currentUser, profile_photo: photoUrl };
       localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+      setCurrentUser(updatedUser);
 
       setSuccess("Profile photo updated!");
       setTimeout(() => setSuccess(""), 3000);
