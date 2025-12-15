@@ -12,7 +12,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 INSTANCE_DIR = os.path.join(BASE_DIR, "instance")
 os.makedirs(INSTANCE_DIR, exist_ok=True)
 
-UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
+# 🔧 ONLY CHANGE: Fixed to work with app.py "uploads" path
+UPLOAD_FOLDER = os.path.join(os.path.dirname(BASE_DIR), "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 DB_PATH = os.path.join(INSTANCE_DIR, "dentist.db")
@@ -98,14 +99,18 @@ class Staff(db.Model):
         )
         return {
             "id": self.id,
+            # name fields (old + new frontend)
             "name": full_name,
             "full_name": full_name,
             "first_name": self.first_name,
             "last_name": self.last_name,
+            # contact
             "email": self.email,
             "phone": self.phone,
             "address": self.address,
+            # auth
             "username": self.username,
+            # schedule
             "availability": self.availability,
             "days_available": self.days_available,
             "hours": self.hours,
@@ -120,6 +125,7 @@ class Patient(db.Model):
     __tablename__ = "patients"
     id = db.Column(db.Integer, primary_key=True)
 
+    # team uses full_name in seeds & queries
     full_name = db.Column(db.String(200))
     first_name = db.Column(db.String(100))
     last_name = db.Column(db.String(100))
@@ -164,8 +170,8 @@ class Appointment(db.Model):
     procedure = db.Column(db.String(200))
     status = db.Column(db.String(20), default="scheduled")
 
-    # NEW: cost of this appointment / visit
-    cost = db.Column(db.Float, default=0.0)
+    # NEW: cost of this appointment / visit - CHANGED: added nullable=False
+    cost = db.Column(db.Float, default=0.0, nullable=False)
 
     summary_id = db.Column(db.Integer, db.ForeignKey("summaries.id"), nullable=True)
 
@@ -200,7 +206,7 @@ class Summary(db.Model):
     notes = db.Column(db.Text)
     prescriptions = db.Column(db.Text)  # JSON list
     documents = db.Column(db.Text)  # JSON list of docs
-    inventory = db.Column(db.Text)  # JSON list
+    inventory = db.Column(db.Text, nullable=False)  # JSON list - CHANGED: added nullable=False
 
     appointment = db.relationship(
         "Appointment",
@@ -475,7 +481,7 @@ def seed_initial_data():
 
         appts = [
             Appointment(
-                date="2025-11-26",
+                date="2025-12-15",
                 time="09:00 AM",
                 patient="Sophia Clark",
                 patient_id=sophia.id if sophia else None,
@@ -486,7 +492,7 @@ def seed_initial_data():
                 cost=150.0,
             ),
             Appointment(
-                date="2025-11-26",
+                date="2025-12-15",
                 time="10:30 AM",
                 patient="Ethan Harper",
                 patient_id=ethan.id if ethan else None,
@@ -494,7 +500,7 @@ def seed_initial_data():
                 dentist_id=david.id if david else None,   # ✅ ADD THIS
                 procedure="Teeth Cleaning",
                 status="scheduled",
-                cost=200.0,
+                cost=100.0,
             ),
         ]
         db.session.add_all(appts)
@@ -581,4 +587,150 @@ def seed_initial_data():
         db.session.commit()
 
     # final commit if any leftover
+    db.session.commit()
+
+# ---------- DB SEED (same as old app.py) ----------
+
+def seed_initial_data():
+    # Called with app context
+    if Role.query.count() == 0:
+        roles = [
+            Role(name="Admin"),
+            Role(name="Dentist"),
+            Role(name="Receptionist"),
+            Role(name="Manager"),
+        ]
+        db.session.add_all(roles)
+        db.session.commit()
+
+    if Staff.query.count() == 0:
+        dentist_role = Role.query.filter_by(name="Dentist").first()
+        admin_role = Role.query.filter_by(name="Admin").first()
+
+        staff_items = [
+            Staff(
+                full_name="Dr. Sarah Miller",
+                first_name="Sarah",
+                last_name="Miller",
+                email="sarah@example.com",
+                username="sarah",
+                password_hash=generate_password_hash("password123"),
+                role_id=dentist_role.id if dentist_role else None,
+            ),
+            Staff(
+                full_name="Dr. David Lee",
+                first_name="David",
+                last_name="Lee",
+                email="david@example.com",
+                username="david",
+                password_hash=generate_password_hash("password123"),
+                role_id=dentist_role.id if dentist_role else None,
+            ),
+            Staff(
+                full_name="Emma Lopez",
+                first_name="Emma",
+                last_name="Lopez",
+                email="emma@example.com",
+                username="emma",
+                password_hash=generate_password_hash("password123"),
+                role_id=admin_role.id if admin_role else None,
+            ),
+        ]
+        db.session.add_all(staff_items)
+        db.session.commit()
+
+    if Patient.query.count() == 0:
+        p = Patient(
+            full_name="John Doe",
+            first_name="John",
+            last_name="Doe",
+            date_of_birth="1990-05-10",
+            phone="+1 555-1234",
+            email="john.doe@example.com",
+        )
+        p2 = Patient(
+            full_name="Sophia Clark",
+            first_name="Sophia",
+            last_name="Clark",
+            phone="555-0101",
+            email="sophia.clark@example.com",
+        )
+        p3 = Patient(
+            full_name="Ethan Harper",
+            first_name="Ethan",
+            last_name="Harper",
+            phone="555-0102",
+            email="ethan.harper@example.com",
+        )
+        db.session.add_all([p, p2, p3])
+        db.session.commit()
+
+    if Appointment.query.count() == 0:
+        sophia = Patient.query.filter_by(first_name="Sophia").first()
+        ethan = Patient.query.filter_by(first_name="Ethan").first()
+
+        # ✅ GET DENTIST IDs
+        sarah = Staff.query.filter_by(first_name="Sarah").first()
+        david = Staff.query.filter_by(first_name="David").first()
+
+        appts = [
+            Appointment(
+                date="2025-12-15",
+                time="09:00 AM",
+                patient="Sophia Clark",
+                patient_id=sophia.id if sophia else None,
+                dentist="Dr. Sarah Miller",
+                dentist_id=sarah.id if sarah else None,  # ✅ ADDED
+                procedure="Routine Checkup",
+                status="scheduled",
+                cost=150.0,
+            ),
+            Appointment(
+                date="2025-12-15",
+                time="10:30 AM",
+                patient="Ethan Harper",
+                patient_id=ethan.id if ethan else None,
+                dentist="Dr. David Lee",
+                dentist_id=david.id if david else None,  # ✅ ADDED
+                procedure="Teeth Cleaning",
+                status="scheduled",
+                cost=100.0,
+            ),
+        ]
+        db.session.add_all(appts)
+        db.session.commit()
+
+    # demo medical record, prescriptions, treatment plans
+    john = Patient.query.filter_by(full_name="John Doe").first()
+    if john and MedicalRecord.query.filter_by(patient_id=john.id).count() == 0:
+        record = MedicalRecord(
+            patient_id=john.id,
+            past_diagnoses="History of cavities",
+            allergies="Penicillin",
+            medications="Ibuprofen",
+        )
+        db.session.add(record)
+
+    if john and Prescription.query.filter_by(patient_id=john.id).count() == 0:
+        presc = Prescription(
+            patient_id=john.id,
+            medication="Amoxicillin",
+            dosage="500mg",
+            frequency="Three times a day",
+            date_issued="2024-01-15",
+            prescribing_dentist="Dr. Sarah Miller",
+        )
+        db.session.add(presc)
+
+    if john and TreatmentPlan.query.filter_by(patient_id=john.id).count() == 0:
+        t = TreatmentPlan(
+            patient_id=john.id,
+            procedure="Filling",
+            tooth="Tooth #3",
+            date="2023-08-29",
+            cost="150",
+            status="Completed",
+        )
+        db.session.add(t)
+
     db.session.commit()
