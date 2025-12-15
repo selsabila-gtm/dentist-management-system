@@ -470,6 +470,8 @@ def seed_initial_data():
     if Appointment.query.count() == 0:
         sophia = Patient.query.filter_by(first_name="Sophia").first()
         ethan = Patient.query.filter_by(first_name="Ethan").first()
+        sarah = Staff.query.filter_by(full_name="Dr. Sarah Miller").first()
+        david = Staff.query.filter_by(full_name="Dr. David Lee").first()
 
         appts = [
             Appointment(
@@ -478,6 +480,7 @@ def seed_initial_data():
                 patient="Sophia Clark",
                 patient_id=sophia.id if sophia else None,
                 dentist="Dr. Sarah Miller",
+                dentist_id=sarah.id if sarah else None,   # ✅ ADD THIS
                 procedure="Routine Checkup",
                 status="scheduled",
                 cost=150.0,
@@ -488,6 +491,7 @@ def seed_initial_data():
                 patient="Ethan Harper",
                 patient_id=ethan.id if ethan else None,
                 dentist="Dr. David Lee",
+                dentist_id=david.id if david else None,   # ✅ ADD THIS
                 procedure="Teeth Cleaning",
                 status="scheduled",
                 cost=200.0,
