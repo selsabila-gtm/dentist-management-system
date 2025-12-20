@@ -64,8 +64,21 @@ export default function DashboardPage() {
     totalRevenue: 0,
     avgAppointmentCost: 0,
     todayAppointments: [], // <-- holds only today's appointments
+    upcomingCount: 0, // <-- count of scheduled appointments today
   });
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Get current user from localStorage
+  useEffect(() => {
+    try {
+      const user = JSON.parse(localStorage.getItem("currentUser") || "{}");
+      setCurrentUser(user);
+    } catch (err) {
+      console.error("Error reading current user:", err);
+      navigate("/login");
+    }
+  }, [navigate]);
 
   // read dismissed notifications from localStorage (same key used by Notifications component)
   const getDismissed = () => {
@@ -86,11 +99,22 @@ export default function DashboardPage() {
   }
 
   const fetchStats = useCallback(async () => {
+    if (!currentUser || !currentUser.id) return;
+
     setLoading(true);
     try {
+      const userRole = (currentUser.role_name || "").toLowerCase();
+      const isDentist = userRole === "dentist";
+      const userId = currentUser.id;
+
+      // Build appointments URL with dentist filter if needed
+      const appointmentsUrl = isDentist 
+        ? `${API_BASE}/api/appointments?dentist_id=${userId}`
+        : `${API_BASE}/api/appointments`;
+
       // fetch main resources in parallel
       const [apptsRes, patientsRes, staffRes, inventoryRes] = await Promise.allSettled([
-        fetch(`${API_BASE}/api/appointments`),
+        fetch(appointmentsUrl),
         fetch(`${API_BASE}/api/patients`),
         fetch(`${API_BASE}/api/staff`),
         fetch(`${API_BASE}/api/inventory`),
@@ -174,6 +198,11 @@ export default function DashboardPage() {
         ? appointments.filter((a) => String(a.date) === today)
         : [];
 
+      // Count upcoming (scheduled) appointments for today
+      const upcomingCount = todayAppointments.filter(
+        (a) => String(a.status).toLowerCase() === "scheduled"
+      ).length;
+
       setStats({
         appointments: Array.isArray(appointments) ? appointments.length : 0,
         patients: Array.isArray(patients) ? patients.length : 0,
@@ -183,29 +212,26 @@ export default function DashboardPage() {
         totalRevenue,
         avgAppointmentCost,
         todayAppointments,
+        upcomingCount,
       });
     } catch (err) {
       console.error("Error fetching dashboard stats:", err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
-    const staffId = localStorage.getItem("staff_id");
-    if (!staffId) {
-      navigate("/login");
-      return;
-    }
+    if (!currentUser) return;
     fetchStats();
 
     // optional: refresh every 5 minutes
     const id = setInterval(fetchStats, 5 * 60 * 1000);
     return () => clearInterval(id);
-  }, [fetchStats, navigate]);
+  }, [fetchStats, currentUser]);
 
-  const username = localStorage.getItem("username") || "User";
-  const role = localStorage.getItem("role") || "";
+  const username = currentUser?.username || localStorage.getItem("username") || "User";
+  const role = currentUser?.role_name || localStorage.getItem("role") || "";
 
   const fmtCurrency = (v) =>
     v === 0 ? "$0" : v ? `$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "—";
@@ -223,8 +249,6 @@ export default function DashboardPage() {
                 Welcome back, <strong>{username}</strong> {role && <span className="muted">({role})</span>}
               </p>
             </div>
-
-            
           </header>
 
           <section className="dashboard-top">
@@ -292,7 +316,7 @@ export default function DashboardPage() {
 
                 <div className="overview-card card" onClick={() => navigate("/calendar")}>
                   <div className="overview-title">Upcoming Appointments</div>
-                  <div className="overview-value">{loading ? "—" : fmtNumber(stats.appointments)}</div>
+                  <div className="overview-value">{loading ? "—" : fmtNumber(stats.upcomingCount)}</div>
                 </div>
 
                 <div className="overview-card card" onClick={() => navigate("/notifications")}>
@@ -307,7 +331,6 @@ export default function DashboardPage() {
                     <div>
                       <div className="kpi-title">Revenue</div>
                       <div className="kpi-value">{loading ? "—" : fmtCurrency(stats.totalRevenue)}</div>
-                      <div className="kpi-sub">Last 12 Months <span className="green">+10%</span></div>
                     </div>
                     <div className="kpi-chart">
                       <svg viewBox="0 0 120 40" className="mini-line">
@@ -345,7 +368,9 @@ export default function DashboardPage() {
             <div className="action-buttons">
               <button onClick={() => navigate("/calendar/add")} className="action-button">➕ New Appointment</button>
               <button onClick={() => navigate("/patients/add")} className="action-button">👤 Add Patient</button>
-              <button onClick={() => navigate("/inventory/add")} className="action-button">📦 Add Inventory</button>
+              {currentUser && (currentUser.role_name || "").toLowerCase() === "admin" && (
+                <button onClick={() => navigate("/inventory/add")} className="action-button">📦 Add Inventory</button>
+              )}
             </div>
           </section>
         </div>
