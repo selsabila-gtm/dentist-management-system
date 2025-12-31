@@ -1,7 +1,7 @@
 // src/pages/billing/AddInvoice.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "../../components/Sidebar/Sidebar";
+import Sidebar from "../../components/sidebar/sidebar";
 import "../../styles/staff.css";
 import "./billing.css";
 import {

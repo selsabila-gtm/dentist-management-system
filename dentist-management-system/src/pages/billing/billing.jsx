@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import "../../styles/staff.css";
 import "./billing.css";
 import { fetchInvoices, fetchPatientsSimple } from "../../services/billingApi";
-import Sidebar from "../../components/Sidebar/Sidebar";
+import Sidebar from "../../components/sidebar/sidebar";
 
 function formatCurrency(value) {
   const num = Number(value || 0);
