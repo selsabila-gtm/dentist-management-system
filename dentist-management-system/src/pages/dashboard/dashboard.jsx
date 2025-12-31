@@ -386,7 +386,7 @@ for (const pid in patientBilling) {
                   <div className="overview-value">{loading ? "—" : fmtNumber(stats.patients)}</div>
                 </div>
 
-                <div className="overview-card card" onClick={() => navigate("/invoices")}>
+                <div className="overview-card card" onClick={() => navigate("/billing")}>
                   <div className="overview-title">Pending Payments / Bills</div>
                   <div className="overview-value">{loading ? "—" : fmtCurrency(stats.pendingPayments)}</div>
                 </div>
@@ -396,7 +396,7 @@ for (const pid in patientBilling) {
                   <div className="overview-value">{loading ? "—" : fmtNumber(stats.upcomingCount)}</div>
                 </div>
 
-                <div className="overview-card card" onClick={() => navigate("/notifications")}>
+                <div className="overview-card card" onClick={() => navigate("/inventory")}>
                   <div className="overview-title">Alerts</div>
                   <div className="overview-value">{loading ? "—" : fmtNumber(stats.alerts)}</div>
                 </div>
