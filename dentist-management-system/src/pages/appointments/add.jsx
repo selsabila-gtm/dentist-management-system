@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./add.css";
-import Sidebar from "../../components/Sidebar/Sidebar"; 
+import Sidebar from "../../components/sidebar/sidebar"; 
 
 const API_BASE = "http://127.0.0.1:5000";
 
@@ -287,41 +287,45 @@ export default function AddAppointment() {
   }
 
   function handleSubmit(e) {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!validateForm()) {
-      return;
-    }
-
-    // Convert 24-hour time to 12-hour format for display
-    const [hours, minutes] = time.split(':');
-    const hour = parseInt(hours);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = hour % 12 || 12;
-    const displayTime = `${displayHour}:${minutes} ${ampm}`;
-
-    const payload = {
-      patient,
-      date,
-      time: displayTime,
-      dentist,
-      dentist_id: dentistId,
-      procedure,
-      notes,
-      cost: 0.0,
-    };
-
-    fetch(`${API_BASE}/api/appointments`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-      .then((res) => res.json())
-      .then(() => navigate("/calendar"))
-      .catch(() => {
-        setErrors({ submit: "Failed to save appointment. Please try again." });
-      });
+  if (!validateForm()) {
+    return;
   }
+
+  // Convert 24-hour time to 12-hour format for display
+  const [hours, minutes] = time.split(':');
+  const hour = parseInt(hours);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const displayHour = hour % 12 || 12;
+  const displayTime = `${displayHour}:${minutes} ${ampm}`;
+
+  // ✅ ADD THIS LINE - Find the patient_id from the selected patient name
+  const selectedPatient = patients.find(p => p.name === patient);
+
+  const payload = {
+    patient,
+    patient_id: selectedPatient?.id,  // ✅ ADD THIS LINE
+    date,
+    time: displayTime,
+    dentist,
+    dentist_id: dentistId,
+    procedure,
+    notes,
+    cost: 0.0,
+  };
+
+  fetch(`${API_BASE}/api/appointments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+    .then((res) => res.json())
+    .then(() => navigate("/calendar"))
+    .catch(() => {
+      setErrors({ submit: "Failed to save appointment. Please try again." });
+    });
+}
 
   // ✅ CHECK IF DENTIST ROLE (for hiding dentist selector)
   const isDentistRole = userRole === "Dentist";
