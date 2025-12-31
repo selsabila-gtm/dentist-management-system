@@ -5,7 +5,6 @@ from flask import request, jsonify
 from backend.routes import bp
 from backend.models import db, Invoice, Patient, Appointment
 
-
 # ---------- BILLING HELPERS ----------
 def _calculate_billing_for_patient(patient_id: int):
     """Return (total_cost_from_appointments, total_paid_from_invoices, outstanding)."""
@@ -28,7 +27,6 @@ def _calculate_billing_for_patient(patient_id: int):
     outstanding = max(total_cost - paid_sum, 0.0)
     return total_cost, paid_sum, outstanding
 
-
 # ---------- BILLING SUMMARY ----------
 @bp.route("/api/patients/<int:patient_id>/billing-summary", methods=["GET"])
 def get_billing_summary(patient_id):
@@ -49,8 +47,7 @@ def get_billing_summary(patient_id):
         }
     )
 
-
-# ---------- INVOICES ----------
+# ---------- INVOICES (GET + POST) ----------
 @bp.route("/api/invoices", methods=["GET", "POST"])
 def invoices_collection():
     if request.method == "GET":
@@ -128,7 +125,10 @@ def invoices_collection():
 
     if amount_value > outstanding + 1e-6:
         return jsonify(
-            {"error": "Amount exceeds outstanding balance.", "outstanding": outstanding}
+            {
+                "error": "Amount exceeds outstanding balance.",
+                "outstanding": outstanding,
+            }
         ), 400
 
     today_str = datetime.utcnow().strftime("%Y-%m-%d")
