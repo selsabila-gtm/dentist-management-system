@@ -65,6 +65,7 @@ export default function DashboardPage() {
     avgAppointmentCost: 0,
     todayAppointments: [],
     upcomingCount: 0,
+    pendingPayments: 0,
   });
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
@@ -118,6 +119,7 @@ export default function DashboardPage() {
         fetch(appointmentsUrl),
         fetch(`${API_BASE}/api/patients`),
         fetch(`${API_BASE}/api/inventory`),
+        fetch(`${API_BASE}/api/invoices`),
       ];
 
       // Only fetch staff if admin
@@ -138,7 +140,8 @@ export default function DashboardPage() {
       const appointments = (await extract(0)) || [];
       const allPatients = (await extract(1)) || [];
       const inventory = (await extract(2)) || [];
-      const staff = isAdmin ? ((await extract(3)) || []) : [];
+      const invoices = (await extract(3)) || [];
+      const staff = isAdmin ? ((await extract(4)) || []) : [];
 
       // For dentists, filter patients to only those who have appointments with them
       let patients = allPatients;
@@ -198,28 +201,105 @@ export default function DashboardPage() {
         }
       }
 
-      // compute revenue & avg appointment cost from appointment.cost
-      let totalRevenue = 0;
-      let countedAppointments = 0;
-      for (const a of appointments) {
-        const c = parseFloat(a.cost);
-        if (!Number.isNaN(c)) {
-          totalRevenue += c;
-          countedAppointments++;
-        }
-      }
-      const avgAppointmentCost = countedAppointments > 0 ? totalRevenue / countedAppointments : 0;
-
       // filter only today's appointments
       const today = todayKey();
       const todayAppointments = Array.isArray(appointments)
         ? appointments.filter((a) => String(a.date) === today)
         : [];
 
+      // ✅ Calculate revenue ONLY from today's COMPLETED appointments
+      let totalRevenue = 0;
+      let completedTodayCount = 0;
+      
+      for (const a of todayAppointments) {
+        if (String(a.status).toLowerCase() === "completed") {
+          const c = parseFloat(a.cost);
+          if (!Number.isNaN(c)) {
+            totalRevenue += c;
+            completedTodayCount++;
+          }
+        }
+      }
+      
+      // ✅ Average = today's revenue / today's completed appointments
+      const avgAppointmentCost = completedTodayCount > 0 
+        ? totalRevenue / completedTodayCount 
+        : 0;
+
       // Count upcoming (scheduled) appointments for today
       const upcomingCount = todayAppointments.filter(
         (a) => String(a.status).toLowerCase() === "scheduled"
       ).length;
+
+
+
+
+
+      
+      // ✅ Calculate pending payments by summing each patient's outstanding balance
+      // Outstanding per patient = (completed appointment costs) - (invoices paid for that patient)
+      // Then sum all patient outstandings for dentist's patients (or all patients if admin)
+      
+      const patientBilling = {};
+      
+      // Step 1: Identify relevant patients
+      const relevantPatientIds = new Set();
+      
+      if (isDentist) {
+        // Dentist: only patients from their appointments
+        for (const appt of appointments) {
+          if (appt.patient_id) {
+            relevantPatientIds.add(appt.patient_id);
+          }
+        }
+      } else {
+        // Admin: all patients from all appointments
+        const allAppointments = await safeJson(await fetch(`${API_BASE}/api/appointments`));
+        if (allAppointments) {
+          for (const appt of allAppointments) {
+            if (appt.patient_id) {
+              relevantPatientIds.add(appt.patient_id);
+            }
+          }
+        }
+      }
+      
+      // Step 2: Calculate total COMPLETED appointment costs per patient
+      const allAppointmentsForBilling = isDentist ? appointments : (await safeJson(await fetch(`${API_BASE}/api/appointments`))) || [];
+      
+      for (const appt of allAppointmentsForBilling) {
+        const patientId = appt.patient_id;
+        if (!patientId || !relevantPatientIds.has(patientId)) continue;
+        
+        // Only count COMPLETED appointments
+        if (String(appt.status).toLowerCase() !== "completed") continue;
+        
+        const cost = parseFloat(appt.cost) || 0;
+        if (!patientBilling[patientId]) {
+          patientBilling[patientId] = { totalCost: 0, totalPaid: 0 };
+        }
+        patientBilling[patientId].totalCost += cost;
+      }
+      
+      // Step 3: Calculate total invoice payments per patient
+      for (const inv of invoices) {
+        const patientId = inv.patient_id;
+        if (!patientId || !relevantPatientIds.has(patientId)) continue;
+        
+        const amount = parseFloat(inv.amount) || 0;
+        if (!patientBilling[patientId]) {
+          patientBilling[patientId] = { totalCost: 0, totalPaid: 0 };
+        }
+        patientBilling[patientId].totalPaid += amount;
+      }
+      
+      // Step 4: Calculate outstanding per patient, then sum all outstandings
+      let totalPending = 0;
+      for (const patientId in patientBilling) {
+        const { totalCost, totalPaid } = patientBilling[patientId];
+        const patientOutstanding = Math.max(totalCost - totalPaid, 0);
+        totalPending += patientOutstanding;
+      }
 
       setStats({
         appointments: Array.isArray(appointments) ? appointments.length : 0,
@@ -231,6 +311,7 @@ export default function DashboardPage() {
         avgAppointmentCost,
         todayAppointments,
         upcomingCount,
+        pendingPayments: totalPending,
       });
     } catch (err) {
       console.error("Error fetching dashboard stats:", err);
@@ -253,8 +334,9 @@ export default function DashboardPage() {
   const isAdmin = (currentUser?.role_name || "").toLowerCase() === "admin";
   const isDentist = (currentUser?.role_name || "").toLowerCase() === "dentist";
 
+  // ✅ Format currency in DA (Algerian Dinar)
   const fmtCurrency = (v) =>
-    v === 0 ? "$0" : v ? `$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "—";
+    v === 0 ? "0 DA" : v ? `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })} DA` : "—";
   const fmtNumber = (v) => (v === 0 ? "0" : v ? Number(v).toLocaleString() : "—");
 
   return (
@@ -331,7 +413,7 @@ export default function DashboardPage() {
 
                 <div className="overview-card card" onClick={() => navigate("/invoices")}>
                   <div className="overview-title">Pending Payments / Bills</div>
-                  <div className="overview-value">$1,500</div>
+                  <div className="overview-value">{loading ? "—" : fmtCurrency(stats.pendingPayments)}</div>
                 </div>
 
                 <div className="overview-card card" onClick={() => navigate("/calendar")}>
@@ -349,8 +431,9 @@ export default function DashboardPage() {
                 <div className="kpi-card card">
                   <div className="kpi-header">
                     <div>
-                      <div className="kpi-title">{isDentist ? "Your Revenue" : "Revenue"}</div>
+                      <div className="kpi-title">{isDentist ? "Today's Revenue" : "Today's Revenue"}</div>
                       <div className="kpi-value">{loading ? "—" : fmtCurrency(stats.totalRevenue)}</div>
+                      <div className="kpi-sub">From completed appointments today</div>
                     </div>
                     <div className="kpi-chart">
                       <svg viewBox="0 0 120 40" className="mini-line">
@@ -365,7 +448,7 @@ export default function DashboardPage() {
                     <div>
                       <div className="kpi-title">Avg Appointment Cost</div>
                       <div className="kpi-value">{loading ? "—" : fmtCurrency(stats.avgAppointmentCost)}</div>
-                      <div className="kpi-sub">Calculated from appointments</div>
+                      <div className="kpi-sub">Today's completed appointments</div>
                     </div>
                     <div className="kpi-chart small-bars">
                       <svg viewBox="0 0 100 40" className="mini-bars">

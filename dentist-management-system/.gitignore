@@ -27,5 +27,3 @@ __pycache__/
 *.pyo
 *.pyd
 *.db
-__pycache__/
-*.pyc
