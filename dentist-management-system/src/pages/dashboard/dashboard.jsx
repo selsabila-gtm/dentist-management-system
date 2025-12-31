@@ -1,7 +1,7 @@
 // src/pages/dashboard/dashboard.jsx
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "../../components/Sidebar/Sidebar";
+import Sidebar from "../../components/sidebar/sidebar";
 import Notifications from "../../components/notification/notifications";
 import "./dashboard.css";
 

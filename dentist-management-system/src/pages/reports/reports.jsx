@@ -7,7 +7,7 @@ import {
   fetchPatientBillingSummary,
 } from "../../services/billingApi";
 import { getCurrentUser, isAdminUser } from "../../utils/auth";
-import Sidebar from "../../components/Sidebar/Sidebar";
+import Sidebar from "../../components/sidebar/sidebar";
 
 const API_BASE = "http://localhost:5000";
 
