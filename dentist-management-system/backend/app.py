@@ -13,11 +13,9 @@ def create_app():
     UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
     INSTANCE_DIR = os.path.join(BASE_DIR, "instance")
     
-    # Create directories
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     os.makedirs(INSTANCE_DIR, exist_ok=True)
     
-    # Configuration
     app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
     app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(INSTANCE_DIR, 'dentist.db')}"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -26,30 +24,28 @@ def create_app():
     print(f"📁 Upload folder: {UPLOAD_FOLDER}")
     print(f"📁 Database: {app.config['SQLALCHEMY_DATABASE_URI']}")
 
-    # Enable CORS
+    # ✅ Enable CORS
     CORS(app, resources={
-        r"/*": {
-            "origins": "*",
+        r"/api/*": {
+            "origins": "http://localhost:5173",
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type"]
         }
     })
-    
-    # Initialize database
-    db.init_app(app)
 
+    # ✅ Init DB
+    db.init_app(app)
     with app.app_context():
         db.create_all()
         seed_initial_data()
 
-    # Register blueprints (includes /uploads route)
+    # ✅ REGISTER BLUEPRINT (THIS WAS MISSING)
     app.register_blueprint(bp)
-    
-    # Print routes for debugging
-    print("\n📋 Registered /uploads routes:")
+
+    # Debug routes
+    print("\n📋 Registered routes:")
     for rule in app.url_map.iter_rules():
-        if '/uploads' in rule.rule or '/debug' in rule.rule:
-            print(f"  ✓ {rule.rule} -> {rule.endpoint}")
+        print(f"  ✓ {rule.rule} -> {rule.endpoint}")
     print()
 
     return app
