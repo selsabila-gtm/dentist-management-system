@@ -1,7 +1,7 @@
 // src/pages/dashboard/dashboard.jsx
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "../../components/Sidebar/Sidebar";
+import Sidebar from "../../components/sidebar/sidebar";
 import Notifications from "../../components/notification/notifications";
 import "./dashboard.css";
 
@@ -63,8 +63,8 @@ export default function DashboardPage() {
     alerts: 0,
     totalRevenue: 0,
     avgAppointmentCost: 0,
-    todayAppointments: [], // <-- holds only today's appointments
-    upcomingCount: 0, // <-- count of scheduled appointments today
+    todayAppointments: [],
+    upcomingCount: 0,
   });
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
@@ -105,6 +105,7 @@ export default function DashboardPage() {
     try {
       const userRole = (currentUser.role_name || "").toLowerCase();
       const isDentist = userRole === "dentist";
+      const isAdmin = userRole === "admin";
       const userId = currentUser.id;
 
       // Build appointments URL with dentist filter if needed
@@ -113,25 +114,42 @@ export default function DashboardPage() {
         : `${API_BASE}/api/appointments`;
 
       // fetch main resources in parallel
-      const [apptsRes, patientsRes, staffRes, inventoryRes] = await Promise.allSettled([
+      const fetchPromises = [
         fetch(appointmentsUrl),
         fetch(`${API_BASE}/api/patients`),
-        fetch(`${API_BASE}/api/staff`),
         fetch(`${API_BASE}/api/inventory`),
-      ]);
+      ];
+
+      // Only fetch staff if admin
+      if (isAdmin) {
+        fetchPromises.push(fetch(`${API_BASE}/api/staff`));
+      }
+
+      const settled = await Promise.allSettled(fetchPromises);
 
       // helpers to extract results
-      const extract = async (settled) => {
-        if (!settled || settled.status !== "fulfilled") return null;
-        const res = settled.value;
+      const extract = async (index) => {
+        if (!settled[index] || settled[index].status !== "fulfilled") return null;
+        const res = settled[index].value;
         if (!res || !res.ok) return null;
         return safeJson(res);
       };
 
-      const appointments = (await extract(apptsRes)) || [];
-      const patients = (await extract(patientsRes)) || [];
-      const staff = (await extract(staffRes)) || [];
-      const inventory = (await extract(inventoryRes)) || [];
+      const appointments = (await extract(0)) || [];
+      const allPatients = (await extract(1)) || [];
+      const inventory = (await extract(2)) || [];
+      const staff = isAdmin ? ((await extract(3)) || []) : [];
+
+      // For dentists, filter patients to only those who have appointments with them
+      let patients = allPatients;
+      if (isDentist) {
+        const patientIds = new Set(
+          appointments
+            .filter(a => a.patient_id)
+            .map(a => a.patient_id)
+        );
+        patients = allPatients.filter(p => patientIds.has(p.id));
+      }
 
       // compute low stock and expiry notifications (same logic as Notifications component)
       const now = new Date();
@@ -232,6 +250,8 @@ export default function DashboardPage() {
 
   const username = currentUser?.username || localStorage.getItem("username") || "User";
   const role = currentUser?.role_name || localStorage.getItem("role") || "";
+  const isAdmin = (currentUser?.role_name || "").toLowerCase() === "admin";
+  const isDentist = (currentUser?.role_name || "").toLowerCase() === "dentist";
 
   const fmtCurrency = (v) =>
     v === 0 ? "$0" : v ? `$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "—";
@@ -254,7 +274,7 @@ export default function DashboardPage() {
           <section className="dashboard-top">
             <div className="appointments-card card">
               <div className="card-header">
-                <h3>Today's Appointments</h3>
+                <h3>Today's Appointments{isDentist && " (Your Schedule)"}</h3>
                 <button className="link-button" onClick={() => navigate("/calendar")}>View Calendar</button>
               </div>
 
@@ -305,7 +325,7 @@ export default function DashboardPage() {
             <div className="overview-cards">
               <div className="overview-grid">
                 <div className="overview-card card" onClick={() => navigate("/patients")}>
-                  <div className="overview-title">Total Patients</div>
+                  <div className="overview-title">{isDentist ? "Your Patients" : "Total Patients"}</div>
                   <div className="overview-value">{loading ? "—" : fmtNumber(stats.patients)}</div>
                 </div>
 
@@ -329,7 +349,7 @@ export default function DashboardPage() {
                 <div className="kpi-card card">
                   <div className="kpi-header">
                     <div>
-                      <div className="kpi-title">Revenue</div>
+                      <div className="kpi-title">{isDentist ? "Your Revenue" : "Revenue"}</div>
                       <div className="kpi-value">{loading ? "—" : fmtCurrency(stats.totalRevenue)}</div>
                     </div>
                     <div className="kpi-chart">
@@ -367,8 +387,10 @@ export default function DashboardPage() {
             <h3>Quick Actions</h3>
             <div className="action-buttons">
               <button onClick={() => navigate("/calendar/add")} className="action-button">➕ New Appointment</button>
-              <button onClick={() => navigate("/patients/add")} className="action-button">👤 Add Patient</button>
-              {currentUser && (currentUser.role_name || "").toLowerCase() === "admin" && (
+              {!isDentist && (
+                <button onClick={() => navigate("/patients/add")} className="action-button">👤 Add Patient</button>
+              )}
+              {isAdmin && (
                 <button onClick={() => navigate("/inventory/add")} className="action-button">📦 Add Inventory</button>
               )}
             </div>

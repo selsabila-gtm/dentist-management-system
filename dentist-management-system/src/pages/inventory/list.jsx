@@ -20,8 +20,18 @@ export default function InventoryListPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    // Check if user is admin
+    try {
+      const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+      const role = (currentUser.role_name || "").toLowerCase();
+      setIsAdmin(role === "admin");
+    } catch (err) {
+      console.error("Error reading user role:", err);
+    }
+
     fetchItems();
     fetchCategories();
   }, []);
@@ -49,6 +59,11 @@ export default function InventoryListPage() {
   };
 
   const handleDelete = async (id) => {
+    if (!isAdmin) {
+      alert("Only administrators can delete inventory items.");
+      return;
+    }
+
     if (!confirm("Are you sure you want to delete this item?")) return;
 
     try {
@@ -85,12 +100,14 @@ export default function InventoryListPage() {
 
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <Notifications onOpenItem={(id) => navigate(`/inventory/${id}`)} />
-              <button
-                className="primary-button"
-                onClick={() => navigate("/inventory/add")}
-              >
-                Add New Item
-              </button>
+              {isAdmin && (
+                <button
+                  className="primary-button"
+                  onClick={() => navigate("/inventory/add")}
+                >
+                  Add New Item
+                </button>
+              )}
             </div>
           </header>
 
@@ -172,13 +189,17 @@ export default function InventoryListPage() {
                           >
                             View
                           </button>
-                          {" | "}
-                          <button
-                            className="link-button"
-                            onClick={() => handleDelete(item.id)}
-                          >
-                            Delete
-                          </button>
+                          {isAdmin && (
+                            <>
+                              {" | "}
+                              <button
+                                className="link-button"
+                                onClick={() => handleDelete(item.id)}
+                              >
+                                Delete
+                              </button>
+                            </>
+                          )}
                         </td>
                       </tr>
                     );

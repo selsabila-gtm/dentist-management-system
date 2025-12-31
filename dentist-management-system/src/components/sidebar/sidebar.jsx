@@ -40,13 +40,10 @@ const Sidebar = () => {
 
   // Check if user has access to certain features
   const isAdmin = userRole === "admin";
-  const isDentist = userRole === "dentist";
-  const isReceptionist = userRole === "receptionist";
 
   // Admin sees everything
-  // Dentist and Receptionist don't see: Reports, Inventory, Staff
+  // Staff and Reports are admin-only
   const canSeeReports = isAdmin;
-  const canSeeInventory = isAdmin;
   const canSeeStaff = isAdmin;
 
   return (
@@ -120,16 +117,14 @@ const Sidebar = () => {
             <FiDollarSign className="icon" /> Billing
           </NavLink>
 
-          {/* Inventory - Admin only */}
-          {canSeeInventory && (
-            <NavLink
-              to="/inventory"
-              className={({ isActive }) => (isActive ? "menu-item active" : "menu-item")}
-              onClick={closeSidebar}
-            >
-              <FiBox className="icon" /> Inventory
-            </NavLink>
-          )}
+          {/* Inventory - Now visible to all users */}
+          <NavLink
+            to="/inventory"
+            className={({ isActive }) => (isActive ? "menu-item active" : "menu-item")}
+            onClick={closeSidebar}
+          >
+            <FiBox className="icon" /> Inventory
+          </NavLink>
 
           {/* Reports - Admin only */}
           {canSeeReports && (

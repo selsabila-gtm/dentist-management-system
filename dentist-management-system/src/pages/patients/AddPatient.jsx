@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Sidebar from '../../components/Sidebar/Sidebar';
 
 export default function AddPatient() {
   const [formData, setFormData] = useState({
@@ -45,8 +46,10 @@ export default function AddPatient() {
   };
 
   return (
+    
     <div className="flex h-screen bg-gray-50">
-      
+      <div className="app-layout">
+      <Sidebar />
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
@@ -226,6 +229,7 @@ export default function AddPatient() {
           </div>
         </div>
       </main>
+    </div>
     </div>
   );
 }
