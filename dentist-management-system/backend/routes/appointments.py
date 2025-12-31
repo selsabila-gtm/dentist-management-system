@@ -1,10 +1,11 @@
 import os
 import json
 from datetime import datetime
-from flask import request, jsonify, current_app
+from flask import request, jsonify, current_app, send_from_directory
 from werkzeug.utils import secure_filename
 
 from backend.routes import bp
+from backend.models import Staff
 from backend.models import (
     db,
     Appointment,
@@ -13,7 +14,6 @@ from backend.models import (
     load_json_field,
     dumps_field,
 )
-
 
 # ---- APPOINTMENTS ----
 @bp.route("/api/appointments", methods=["GET"])
@@ -37,13 +37,23 @@ def create_appointment():
     except (TypeError, ValueError):
         return jsonify({"error": "Invalid cost value"}), 400
 
+    # ✅ IMPORTANT FIX:
+    # Always set dentist_id if possible (needed for filtering in Reports.jsx)
+    dentist_id = data.get("dentist_id")
+
+    # If frontend didn't send dentist_id, try to lookup from Staff by full_name
+    if not dentist_id and data.get("dentist"):
+        staff = Staff.query.filter_by(full_name=data["dentist"]).first()
+        if staff:
+            dentist_id = staff.id
+
     appt = Appointment(
         date=data["date"],
         time=data["time"],
         patient=data["patient"],
         patient_id=data.get("patient_id"),
         dentist=data["dentist"],
-        dentist_id=data.get("dentist_id"),
+        dentist_id=dentist_id,  # ✅ use computed dentist_id
         procedure=data["procedure"],
         status="scheduled",
         cost=cost_value,
@@ -67,6 +77,26 @@ def update_appointment_status(appt_id):
     a.status = new
     db.session.commit()
     return jsonify(a.to_dict())
+
+
+# ✅ ONE-TIME FIX ENDPOINT (for old appointments that already exist in DB)
+# Call once after you paste this file:
+# POST http://localhost:5000/api/appointments/backfill-dentist-ids
+@bp.route("/api/appointments/backfill-dentist-ids", methods=["GET", "POST"])
+def backfill_dentist_ids():
+    appts = Appointment.query.filter(Appointment.dentist_id.is_(None)).all()
+    fixed = 0
+
+    for a in appts:
+        if not a.dentist:
+            continue
+        staff = Staff.query.filter_by(full_name=a.dentist).first()
+        if staff:
+            a.dentist_id = staff.id
+            fixed += 1
+
+    db.session.commit()
+    return jsonify({"message": "done", "updated": fixed}), 200
 
 
 # ---- SUMMARIES ----
@@ -97,7 +127,7 @@ def save_summary(appt_id):
     return jsonify({"message": "saved"})
 
 
-# ---- DOCUMENT UPLOAD ----
+# ---- DOCUMENT UPLOAD & SERVE ----
 @bp.route("/api/appointments/<int:appt_id>/documents", methods=["POST"])
 def upload_document(appt_id):
     doc_name = request.form.get("name")
@@ -128,5 +158,7 @@ def upload_document(appt_id):
     db.session.commit()
     return jsonify({"documents": docs})
 
-# ✅ REMOVED: @bp.route("/uploads/<path:filename>") 
-# This route is now in backend/routes/__init__.py to avoid duplication
+
+@bp.route("/uploads/<path:filename>")
+def serve_upload(filename):
+    return send_from_directory(current_app.config["UPLOAD_FOLDER"], filename)

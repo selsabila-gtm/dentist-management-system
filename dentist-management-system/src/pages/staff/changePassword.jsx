@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { updateStaff } from "../../services/staffApi";
 import { useNavigate } from "react-router-dom";
 import StaffAdminLayout from "../../components/StaffAdminLayout";
+import Sidebar from "../../components/Sidebar/Sidebar";
 import "../../styles/staff.css";
 
 const getCurrentUser = () => {
@@ -105,17 +106,22 @@ export default function ChangePasswordPage() {
   // ⏳ waiting auth
   if (!authChecked) {
     return (
+      <div className="app-layout">
+        <Sidebar />
       <StaffAdminLayout>
         <div className="staff-main">
           <p>Loading...</p>
         </div>
       </StaffAdminLayout>
+      </div>
     );
   }
 
   // 🚫 not admin
   if (!isAdmin) {
     return (
+      <div className="app-layout">
+      <Sidebar />
       <StaffAdminLayout>
         {toast.visible && (
           <div className="toast-container">
@@ -157,11 +163,14 @@ export default function ChangePasswordPage() {
           </div>
         </div>
       </StaffAdminLayout>
+      </div>
     );
   }
 
   // ✅ admin UI (original)
   return (
+    <div className="app-layout">
+      <Sidebar />
     <StaffAdminLayout>
       {/* Toast */}
       {toast.visible && (
@@ -319,5 +328,6 @@ export default function ChangePasswordPage() {
         </div>
       )}
     </StaffAdminLayout>
+    </div>
   );
 }

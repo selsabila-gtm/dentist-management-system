@@ -42,6 +42,9 @@ import TreatmentPlansPage from "./pages/patients/TreatmentPlans.jsx";
 
 // Billing
 import BillingPage from "./pages/billing/billing.jsx";
+import AddInvoicePage from "./pages/billing/AddInvoice.jsx";
+import InvoicePrintPage from "./pages/billing/InvoicePrint.jsx";
+
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
@@ -224,7 +227,14 @@ function App() {
           }
         />
 
-        {/* Settings */}
+        <Route
+          path="/billing"
+          element={
+            <ProtectedRoute>
+              <div><BillingPage /></div>
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/settings"
           element={

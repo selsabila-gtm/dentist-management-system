@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import StaffAdminLayout from "../../components/StaffAdminLayout";
+import Sidebar from "../../components/Sidebar/Sidebar";
 import "../../styles/staff.css";
 import {
   fetchRoles,
@@ -130,17 +131,22 @@ export default function StaffProfilePage() {
   // auth loading
   if (!authChecked) {
     return (
+      <div className="app-layout">
+        <Sidebar />
       <StaffAdminLayout>
         <div className="staff-main">
           <p>Loading...</p>
         </div>
       </StaffAdminLayout>
+      </div>
     );
   }
 
   // access denied
   if (!isAdmin) {
     return (
+      <div className="app-layout">
+      <Sidebar />
       <StaffAdminLayout>
         {toast.visible && (
           <div className="toast-container">
@@ -182,16 +188,20 @@ export default function StaffProfilePage() {
           </div>
         </main>
       </StaffAdminLayout>
+      </div>
     );
   }
 
   if (!staff || !form) {
     return (
+      <div className="app-layout">
+        <Sidebar />
       <StaffAdminLayout>
         <div className="staff-main">
           <p>Loading...</p>
         </div>
       </StaffAdminLayout>
+      </div>
     );
   }
 
@@ -337,6 +347,8 @@ export default function StaffProfilePage() {
   // ------- render -------
 
   return (
+    <div className="app-layout">
+      <Sidebar />
     <StaffAdminLayout>
       {/* Toast */}
       {toast.visible && (
@@ -719,5 +731,6 @@ export default function StaffProfilePage() {
         </div>
       )}
     </StaffAdminLayout>
+    </div>
   );
 }
