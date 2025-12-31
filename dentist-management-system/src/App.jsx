@@ -44,6 +44,7 @@ import TreatmentPlansPage from "./pages/patients/TreatmentPlans.jsx";
 import BillingPage from "./pages/billing/billing.jsx";
 import AddInvoicePage from "./pages/billing/AddInvoice.jsx";
 import InvoicePrintPage from "./pages/billing/InvoicePrint.jsx";
+import ReportsPage from "./pages/reports/reports.jsx";
 
 
 // Protected Route Component
@@ -222,16 +223,7 @@ function App() {
           path="/reports"
           element={
             <ProtectedRoute>
-              <div>Reports Page (Coming Soon)</div>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/billing"
-          element={
-            <ProtectedRoute>
-              <div><BillingPage /></div>
+              <ReportsPage />
             </ProtectedRoute>
           }
         />
