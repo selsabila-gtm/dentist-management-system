@@ -50,6 +50,18 @@ export default function Notifications({ onOpenItem = (id) => {} }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    // Check if user is admin
+    try {
+      const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+      const role = (currentUser.role_name || "").toLowerCase();
+      setIsAdmin(role === "admin");
+    } catch (err) {
+      console.error("Error reading user role:", err);
+    }
+  }, []);
 
   const getDismissed = () => {
     try {
@@ -139,6 +151,11 @@ export default function Notifications({ onOpenItem = (id) => {} }) {
   }, [fetchInventoryAndBuildNotifications]);
 
   const dismiss = (notifId) => {
+    if (!isAdmin) {
+      alert("Only administrators can dismiss notifications.");
+      return;
+    }
+
     const dismissed = getDismissed();
     if (!dismissed.includes(notifId)) {
       dismissed.push(notifId);
@@ -149,6 +166,11 @@ export default function Notifications({ onOpenItem = (id) => {} }) {
   };
 
   const clearAll = () => {
+    if (!isAdmin) {
+      alert("Only administrators can dismiss notifications.");
+      return;
+    }
+
     const dismissed = getDismissed();
     const ids = notifications.map((n) => n.id);
     setDismissed([...new Set([...dismissed, ...ids])]);
@@ -180,7 +202,9 @@ export default function Notifications({ onOpenItem = (id) => {} }) {
             <h3>Notifications</h3>
             <div className="notif-actions">
               <button className="link-btn" onClick={fetchInventoryAndBuildNotifications} title="Refresh">Refresh</button>
-              <button className="link-btn" onClick={clearAll} title="Dismiss all">Dismiss all</button>
+              {isAdmin && (
+                <button className="link-btn" onClick={clearAll} title="Dismiss all">Dismiss all</button>
+              )}
               <button className="close-btn" onClick={() => setOpen(false)}><FiX /></button>
             </div>
           </div>
@@ -216,7 +240,12 @@ export default function Notifications({ onOpenItem = (id) => {} }) {
                         <button className="link-btn" onClick={() => onOpenItem(n.itemId)}>
                           <FiExternalLink /> View
                         </button>
-                        <button className="link-btn" onClick={() => dismiss(n.id)}>Dismiss</button>
+                        {isAdmin && (
+                          <>
+                            {" | "}
+                            <button className="link-btn" onClick={() => dismiss(n.id)}>Dismiss</button>
+                          </>
+                        )}
                       </td>
                     </tr>
                   ))}

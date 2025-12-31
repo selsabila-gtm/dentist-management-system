@@ -23,6 +23,47 @@ const getCurrentUser = () => {
   }
 };
 
+// Helper to validate hours are between 8:00 AM and 6:00 PM
+const validateHoursRange = (hoursString) => {
+  if (!hoursString || hoursString.trim() === "") return { valid: true };
+  
+  // Match format like "9:00 AM – 5:00 PM" or "9:00 AM - 5:00 PM"
+  const match = hoursString.match(/(\d{1,2}):(\d{2})\s*(AM|PM)\s*[-–—]\s*(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  
+  if (!match) return { valid: false, error: "Invalid hours format. Use format like '9:00 AM - 5:00 PM'" };
+  
+  const startHour = parseInt(match[1]);
+  const startMin = parseInt(match[2]);
+  const startPeriod = match[3].toUpperCase();
+  const endHour = parseInt(match[4]);
+  const endMin = parseInt(match[5]);
+  const endPeriod = match[6].toUpperCase();
+  
+  // Convert to 24-hour format
+  let start24 = startHour;
+  if (startPeriod === 'PM' && startHour !== 12) start24 += 12;
+  if (startPeriod === 'AM' && startHour === 12) start24 = 0;
+  
+  let end24 = endHour;
+  if (endPeriod === 'PM' && endHour !== 12) end24 += 12;
+  if (endPeriod === 'AM' && endHour === 12) end24 = 0;
+  
+  // Check if between 8:00 AM (8) and 6:00 PM (18)
+  if (start24 < 8 || start24 > 18) {
+    return { valid: false, error: "Start time must be between 8:00 AM and 6:00 PM" };
+  }
+  
+  if (end24 < 8 || end24 > 18) {
+    return { valid: false, error: "End time must be between 8:00 AM and 6:00 PM" };
+  }
+  
+  if (start24 >= end24) {
+    return { valid: false, error: "Start time must be before end time" };
+  }
+  
+  return { valid: true };
+};
+
 export default function StaffAddPage() {
   const navigate = useNavigate();
 
@@ -57,7 +98,6 @@ export default function StaffAddPage() {
     password: "",
     role_id: "",
     permissions: defaultPermissions,
-    availability: "",
     days_available: "",
     hours: "",
   });
@@ -152,6 +192,14 @@ export default function StaffAddPage() {
       newErrors.role_id = "Please select a role.";
     }
 
+    // Validate custom hours if selected
+    if (form.hours === "Custom" && customHours.trim()) {
+      const hoursValidation = validateHoursRange(customHours);
+      if (!hoursValidation.valid) {
+        newErrors.hours = hoursValidation.error;
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -160,7 +208,6 @@ export default function StaffAddPage() {
     e.preventDefault();
 
     if (!validateForm()) {
-      // errors will be shown under the fields
       return;
     }
 
@@ -178,7 +225,6 @@ export default function StaffAddPage() {
 
       await createStaff(payload);
       showToast("Employee created", "success");
-      // navigate after short delay so the toast is visible for a moment
       setTimeout(() => {
         window.location.href = "/staff";
       }, 400);
@@ -190,7 +236,6 @@ export default function StaffAddPage() {
     }
   };
 
-  // ⏳ While checking auth
   if (!authChecked) {
     return (
       <div className="app-layout">
@@ -204,7 +249,6 @@ export default function StaffAddPage() {
     );
   }
 
-  // 🚫 Not admin
   if (!isAdmin) {
     return (
       <div className="app-layout">
@@ -254,12 +298,10 @@ export default function StaffAddPage() {
     );
   }
 
-  // ✅ Admin UI (original)
   return (
     <div className="app-layout">
       <Sidebar />
     <StaffAdminLayout>
-      {/* Toast */}
       {toast.visible && (
         <div className="toast-container">
           <div
@@ -432,20 +474,6 @@ export default function StaffAddPage() {
           </div>
 
           <h2>Work Schedule</h2>
-          <div className="staff-field">
-            <label>Availability</label>
-            <select
-              name="availability"
-              value={form.availability}
-              onChange={handleChange}
-              className="staff-input"
-            >
-              <option value="">Select availability</option>
-              <option value="Full-time">Full-time</option>
-              <option value="Part-time">Part-time</option>
-              <option value="On-call">On-call</option>
-            </select>
-          </div>
 
           <div className="staff-field">
             <label>Days Available</label>
@@ -456,10 +484,10 @@ export default function StaffAddPage() {
               className="staff-input"
             >
               <option value="">Select days</option>
-              <option value="Monday – Friday">
-                Monday, Tuesday, Wednesday, Thursday, Friday
+              <option value="Sunday, Monday, Tuesday, Wednesday, Thursday">
+                Sunday, Monday, Tuesday, Wednesday, Thursday
               </option>
-              <option value="Weekends">Saturday, Sunday</option>
+              <option value="Saturday, Sunday">Saturday, Sunday</option>
               <option value="Custom">Custom</option>
             </select>
 
@@ -467,7 +495,7 @@ export default function StaffAddPage() {
               <input
                 type="text"
                 className="staff-input"
-                placeholder="Enter custom days (e.g. Mon, Wed, Fri)"
+                placeholder="Enter custom days (e.g. Monday, Wednesday) - No Fridays"
                 value={customDays}
                 onChange={(e) => setCustomDays(e.target.value)}
                 required
@@ -476,28 +504,43 @@ export default function StaffAddPage() {
           </div>
 
           <div className="staff-field">
-            <label>Hours</label>
+            <label>Hours (8:00 AM - 6:00 PM only)</label>
             <select
               name="hours"
               value={form.hours}
               onChange={handleChange}
-              className="staff-input"
+              className={
+                errors.hours ? "staff-input staff-input-error" : "staff-input"
+              }
             >
               <option value="">Select hours</option>
               <option value="9:00 AM – 5:00 PM">9:00 AM – 5:00 PM</option>
               <option value="10:00 AM – 6:00 PM">10:00 AM – 6:00 PM</option>
+              <option value="8:00 AM – 4:00 PM">8:00 AM – 4:00 PM</option>
               <option value="Custom">Custom</option>
             </select>
 
             {form.hours === "Custom" && (
-              <input
-                type="text"
-                className="staff-input"
-                placeholder="Enter custom hours (e.g. 2:00 PM – 8:00 PM)"
-                value={customHours}
-                onChange={(e) => setCustomHours(e.target.value)}
-                required
-              />
+              <>
+                <input
+                  type="text"
+                  className={
+                    errors.hours
+                      ? "staff-input staff-input-error"
+                      : "staff-input"
+                  }
+                  placeholder="Enter hours (e.g. 9:00 AM – 5:00 PM)"
+                  value={customHours}
+                  onChange={(e) => setCustomHours(e.target.value)}
+                  required
+                />
+                <p style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
+                  Hours must be between 8:00 AM and 6:00 PM
+                </p>
+              </>
+            )}
+            {errors.hours && (
+              <p className="staff-error-text">{errors.hours}</p>
             )}
           </div>
 

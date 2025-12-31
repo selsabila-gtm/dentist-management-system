@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import "./calendar.css";
 import Sidebar from "../../components/Sidebar/Sidebar";
-
 
 const API_BASE = "http://127.0.0.1:5000";
 const CALENDAR_YEAR = 2025;
@@ -24,13 +23,48 @@ function formatDisplayDate(dateKey) {
   });
 }
 
-function MonthView({ year, monthIndex, selectedDateKey, onSelectDate }) {
+function MonthView({
+  year,
+  monthIndex,
+  selectedDateKey,
+  onSelectDate,
+  appointments,
+}) {
   const firstDay = new Date(year, monthIndex, 1).getDay();
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
   const monthLabel = new Date(year, monthIndex, 1).toLocaleDateString(
     "en-US",
     { month: "long", year: "numeric" }
   );
+
+  const today = new Date();
+  const todayKey = formatDateKey(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+
+  function getDayStatus(dateKey) {
+    const dayAppointments = appointments.filter((appt) => appt.date === dateKey);
+
+    if (dayAppointments.length === 0) {
+      return null;
+    }
+
+    const allCompleted = dayAppointments.every(
+      (appt) => appt.status === "completed"
+    );
+    const hasScheduled = dayAppointments.some(
+      (appt) => appt.status === "scheduled"
+    );
+
+    if (allCompleted) {
+      return "all-completed";
+    } else if (hasScheduled) {
+      return "has-scheduled";
+    }
+    return null;
+  }
 
   const cells = [];
   for (let i = 0; i < 42; i++) {
@@ -39,7 +73,10 @@ function MonthView({ year, monthIndex, selectedDateKey, onSelectDate }) {
       cells.push(null);
     } else {
       const key = formatDateKey(year, monthIndex, dayNum);
-      cells.push({ dayNum, key });
+      const dayStatus = getDayStatus(key);
+      const isToday = key === todayKey;
+
+      cells.push({ dayNum, key, dayStatus, isToday });
     }
   }
 
@@ -59,7 +96,10 @@ function MonthView({ year, monthIndex, selectedDateKey, onSelectDate }) {
               key={idx}
               className={
                 "month-day" +
-                (selectedDateKey === cell.key ? " selected" : "")
+                (selectedDateKey === cell.key ? " selected" : "") +
+                (cell.isToday ? " today" : "") +
+                (cell.dayStatus === "has-scheduled" ? " has-scheduled" : "") +
+                (cell.dayStatus === "all-completed" ? " all-completed" : "")
               }
               onClick={() => onSelectDate(cell.key)}
             >
@@ -76,25 +116,107 @@ function MonthView({ year, monthIndex, selectedDateKey, onSelectDate }) {
 
 export default function Calendar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [appointments, setAppointments] = useState([]);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  // initial month: current month if year 2025, otherwise November (10)
+  // ✅ BEST PRACTICE: Get user info from single source
+  const getCurrentUser = () => {
+    try {
+      const userStr = localStorage.getItem("currentUser");
+      return userStr ? JSON.parse(userStr) : null;
+    } catch (error) {
+      console.error("Error parsing currentUser:", error);
+      return null;
+    }
+  };
+
+  const currentUser = getCurrentUser();
+  const staffId = currentUser?.id;
+  const userRole = currentUser?.role_name;
+
   const today = new Date();
   const initialMonth =
     today.getFullYear() === CALENDAR_YEAR ? today.getMonth() : 10;
 
-  const [monthIndex, setMonthIndex] = useState(
-    CALENDAR_YEAR * 12 + initialMonth
-  );
-  const [selectedDateKey, setSelectedDateKey] = useState("2025-11-26");
+  const returnDate = location.state?.returnDate;
+  
+  const getInitialMonthIndex = () => {
+    if (returnDate) {
+      try {
+        const [year, month] = returnDate.split("-").map(Number);
+        if (year && month && month >= 1 && month <= 12) {
+          return (year * 12) + (month - 1);
+        }
+      } catch (error) {
+        console.error("Error parsing return date:", error);
+      }
+    }
+    return CALENDAR_YEAR * 12 + initialMonth;
+  };
 
-  const [errorMessage, setErrorMessage] = useState("");
+  const [monthIndex, setMonthIndex] = useState(getInitialMonthIndex());
+  
+  const initialSelectedDateKey = returnDate || 
+    (today.getFullYear() === CALENDAR_YEAR
+      ? formatDateKey(CALENDAR_YEAR, initialMonth, today.getDate())
+      : "2025-11-01");
+
+  const [selectedDateKey, setSelectedDateKey] = useState(initialSelectedDateKey);
+
+  function loadAppointments() {
+    // ✅ Build API URL - only filter for Dentists
+    let apiUrl = `${API_BASE}/api/appointments`;
+    
+    // 🔍 DETAILED DEBUG LOGGING
+    console.log("=== CALENDAR DEBUG ===");
+    console.log("Current User Object:", currentUser);
+    console.log("User Role:", userRole);
+    console.log("Staff ID:", staffId);
+    console.log("Role type:", typeof userRole);
+    console.log("Staff ID type:", typeof staffId);
+    console.log("Role === 'Dentist'?", userRole === "Dentist");
+    
+    // ✅ ONLY Dentists see filtered appointments
+    // Admins and Receptionists see ALL appointments
+    if (userRole === "Dentist" && staffId) {
+      apiUrl += `?dentist_id=${staffId}`;
+      console.log("🔒 Dentist view - Filtering appointments for dentist ID:", staffId);
+    } else {
+      console.log("👁️ Admin/Receptionist view - Loading ALL appointments");
+    }
+
+    console.log("Final API URL:", apiUrl);
+    console.log("======================");
+
+    fetch(apiUrl)
+      .then((res) => {
+        console.log("Response status:", res.status);
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        console.log("Appointments received:", data.length, "appointments");
+        console.log("First appointment (if any):", data[0]);
+        setAppointments(data);
+        setErrorMessage("");
+      })
+      .catch((err) => {
+        console.error("Error loading appointments:", err);
+        setErrorMessage("Failed to load appointments.");
+      });
+  }
+
+  function handleSelectDate(dateKey) {
+    setSelectedDateKey(dateKey);
+    setErrorMessage("");
+  }
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/appointments`)
-      .then((res) => res.json())
-      .then((data) => setAppointments(data))
-      .catch((err) => console.error("Error loading appointments", err));
+    loadAppointments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredAppointments = useMemo(() => {
@@ -116,6 +238,21 @@ export default function Calendar() {
     setMonthIndex((prev) => prev - 2);
   }
 
+  function handleAddAppointmentClick() {
+    if (selectedDateKey) {
+      const selectedDate = new Date(selectedDateKey);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (selectedDate < today) {
+        setErrorMessage("Cannot add appointments for past dates.");
+        return;
+      }
+    }
+
+    navigate(`/calendar/add?date=${selectedDateKey}`);
+  }
+
   function handleStatusChange(appt, newStatus) {
     setErrorMessage("");
 
@@ -124,154 +261,158 @@ export default function Calendar() {
       return;
     }
 
-    fetch(`${API_BASE}/api/appointments/${appt.id}/status`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus }),
-    })
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.error || "Error updating status");
-        }
-        if (newStatus === "completed") {
-          navigate(`/calendar/post-summary/${appt.id}`);
-          return;
-        }
-        setAppointments((prev) =>
-          prev.map((a) => (a.id === data.id ? data : a))
-        );
-      })
-      .catch((err) => {
-        console.error(err);
-        setErrorMessage(err.message);
+    if (newStatus === "completed") {
+      navigate(`/calendar/post-summary/${appt.id}`, {
+        state: { returnDate: selectedDateKey }
       });
+      return;
+    }
+
+    if (newStatus === "cancelled") {
+      fetch(`${API_BASE}/api/appointments/${appt.id}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      })
+        .then(async (res) => {
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.error || "Error updating status");
+          }
+          loadAppointments();
+        })
+        .catch((err) => {
+          console.error(err);
+          setErrorMessage(err.message);
+        });
+    }
   }
 
   return (
     <div className="app-layout">
       <Sidebar />
-    <div className="page calendar-page">
-      <header className="page-header">
-        <h1>Calendar</h1>
-        <button
-          className="primary-button pill-button"
-          onClick={() => navigate("/calendar/add")}
-        >
-          New Appointment
-        </button>
-      </header>
+      <div className="page calendar-page">
+        <header className="page-header">
+          <h1>Calendar</h1>
+          <button
+            className="primary-button pill-button"
+            onClick={() => navigate("/calendar/add")}
+          >
+            New Appointment
+          </button>
+        </header>
 
-      {/* CALENDAR */}
-      <section className="calendar-section">
-        <button type="button" className="month-arrow" onClick={goPrev}>
-          &lt;
-        </button>
+        <section className="calendar-section">
+          <button type="button" className="month-arrow" onClick={goPrev}>
+            &lt;
+          </button>
 
-        <div className="calendar-months">
-          <MonthView
-            year={currentYear}
-            monthIndex={currentMonth}
-            selectedDateKey={selectedDateKey}
-            onSelectDate={setSelectedDateKey}
-          />
-          <MonthView
-            year={secondYear}
-            monthIndex={secondMonth}
-            selectedDateKey={selectedDateKey}
-            onSelectDate={setSelectedDateKey}
-          />
-        </div>
-
-        <button type="button" className="month-arrow" onClick={goNext}>
-          &gt;
-        </button>
-      </section>
-
-      {/* APPOINTMENTS TABLE */}
-      <section className="appointments-section">
-        <div className="appointments-header">
-          <h2>Appointments</h2>
-
-          <div className="appointments-date-label">
-            {selectedDateKey && formatDisplayDate(selectedDateKey)} ·{" "}
-            {filteredAppointments.length} appointment
-            {filteredAppointments.length !== 1 ? "s" : ""}
+          <div className="calendar-months">
+            <MonthView
+              year={currentYear}
+              monthIndex={currentMonth}
+              selectedDateKey={selectedDateKey}
+              onSelectDate={handleSelectDate}
+              appointments={appointments}
+            />
+            <MonthView
+              year={secondYear}
+              monthIndex={secondMonth}
+              selectedDateKey={selectedDateKey}
+              onSelectDate={handleSelectDate}
+              appointments={appointments}
+            />
           </div>
-          <div >
 
-            <button
-               className="primary-button"
-                   onClick={() => navigate(`/calendar/add?date=${selectedDateKey}`)}
-                    >
+          <button type="button" className="month-arrow" onClick={goNext}>
+            &gt;
+          </button>
+        </section>
+
+        <section className="appointments-section">
+          <div className="appointments-header">
+            <h2>Appointments</h2>
+
+            <div className="appointments-date-label">
+              {selectedDateKey && formatDisplayDate(selectedDateKey)} ·{" "}
+              {filteredAppointments.length} appointment
+              {filteredAppointments.length !== 1 ? "s" : ""}
+            </div>
+
+            <div>
+              <button className="primary-button" onClick={handleAddAppointmentClick}>
                 Add Appointment
-            </button>
+              </button>
+            </div>
           </div>
 
-          
-        </div>
+          {errorMessage && <div className="error-banner">{errorMessage}</div>}
 
-        {errorMessage && <div className="error-banner">{errorMessage}</div>}
-
-        <div className="card">
-          <table className="appointments-table">
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>Patient</th>
-                <th>Dentist</th>
-                <th>Procedure</th>
-                <th>Status</th>
-                <th style={{ width: 180 }}>Change Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAppointments.map((appt) => (
-                <tr key={appt.id}>
-                  <td className="time-link">{appt.time}</td>
-                  <td>{appt.patient}</td>
-                  <td>{appt.dentist}</td>
-                  <td className="link-text">{appt.procedure}</td>
-                  <td>
-                    <span
-                      className={`status-badge status-${appt.status}`}
-                    >
-                      {appt.status}
-                    </span>
-                  </td>
-                  <td>
-                    <select
-                      className="status-select"
-                      value={appt.status}
-                      disabled={appt.status !== "scheduled"}
-                      onChange={(e) =>
-                        handleStatusChange(appt, e.target.value)
-                      }
-                    >
-                      <option value="scheduled">scheduled</option>
-                      <option value="completed">completed</option>
-                      <option value="cancelled">cancelled</option>
-                    </select>
-                  </td>
-                </tr>
-              ))}
-              {filteredAppointments.length === 0 && (
+          <div className="card">
+            <table className="appointments-table">
+              <thead>
                 <tr>
-                  <td colSpan={6} style={{ textAlign: "center", padding: 16 }}>
-                    No appointments on this date.
-                  </td>
+                  <th>Time</th>
+                  <th>Patient</th>
+                  <th>Dentist</th>
+                  <th>Procedure</th>
+                  <th>Status</th>
+                  <th style={{ width: 180 }}>Change Status</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-       
+              </thead>
+              <tbody>
+                {filteredAppointments.map((appt) => (
+                  <tr key={appt.id}>
+                    <td className="time-link">{appt.time}</td>
+                    <td>{appt.patient}</td>
+                    <td>{appt.dentist}</td>
+                    <td className="link-text">{appt.procedure}</td>
 
-        </div>
-      </section>
-    </div>
+                    <td className="status-cell">
+                      <span className={`status-badge status-${appt.status}`}>
+                        {appt.status}
+                      </span>
+
+                      <button
+                        className={`link-button view-btn ${
+                          appt.status === "completed" ? "" : "disabled"
+                        }`}
+                        disabled={appt.status !== "completed"}
+                        onClick={() => 
+                          navigate(`/calendar/post-summary/${appt.id}`, {
+                            state: { returnDate: selectedDateKey }
+                          })
+                        }
+                      >
+                        View
+                      </button>
+                    </td>
+
+                    <td>
+                      <select
+                        className="status-select"
+                        value={appt.status}
+                        onChange={(e) => handleStatusChange(appt, e.target.value)}
+                      >
+                        <option value="scheduled">scheduled</option>
+                        <option value="completed">completed</option>
+                        <option value="cancelled">cancelled</option>
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+                {filteredAppointments.length === 0 && (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: "center", padding: 16 }}>
+                      No appointments on this date.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
-
-
-

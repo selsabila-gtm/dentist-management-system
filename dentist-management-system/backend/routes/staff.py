@@ -60,7 +60,6 @@ def create_staff():
         address=data.get("address"),
         username=data.get("username"),
         role_id=role_id,
-        availability=data.get("availability"),
         days_available=data.get("days_available"),
         hours=data.get("hours"),
         permissions=dumps_field(data.get("permissions")),
@@ -88,15 +87,14 @@ def update_staff(staff_id):
     s = Staff.query.get_or_404(staff_id)
     data = request.get_json() or {}
 
-    # ---- Optional password change (simple version) ----
-    # If you want the "current_password required" version, tell me and I’ll adapt it cleanly.
+    # Optional password change
     new_password = data.get("password")
     if new_password:
         if len(new_password) < 8:
             return jsonify({"error": "Password must be at least 8 characters"}), 400
         s.password_hash = generate_password_hash(new_password)
 
-    # ---- Update normal fields ----
+    # Update normal fields (REMOVED availability)
     for field in (
         "full_name",
         "first_name",
@@ -106,7 +104,6 @@ def update_staff(staff_id):
         "address",
         "username",
         "role_id",
-        "availability",
         "days_available",
         "hours",
         "profile_photo",
@@ -128,7 +125,6 @@ def update_staff(staff_id):
         db.session.rollback()
         print("Error updating staff:", e)
         return jsonify({"error": "Failed to update staff", "detail": str(e)}), 500
-
 
 @bp.route("/api/staff/<int:staff_id>", methods=["DELETE"])
 def delete_staff(staff_id):
@@ -178,7 +174,6 @@ def login():
     perms = load_json_field(staff.permissions) if getattr(staff, "permissions", None) else {}
     role_name = staff.role.name if staff.role else None
 
-    # ✅ This is what your frontend should store in localStorage as currentUser
     user = {
         "id": staff.id,
         "username": staff.username,
@@ -191,8 +186,8 @@ def login():
 
     return jsonify({
         "success": True,
-        "staff_id": staff.id,   # keep for old frontend compatibility
-        "user": user,           # ✅ new clean payload
+        "staff_id": staff.id,
+        "user": user,
     }), 200
 
 
@@ -210,7 +205,6 @@ def reset_password():
 
     staff = Staff.query.filter_by(email=email).first()
 
-    # ✅ don’t leak whether email exists
     if not staff:
         return jsonify({"message": "If the email exists, the password was updated."}), 200
 

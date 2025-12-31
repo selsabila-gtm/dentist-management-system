@@ -98,9 +98,12 @@ export default function AddPatient() {
   };
 
   return (
+    
     <div className="flex h-screen bg-gray-50">
+      <div className="app-layout">
       <Sidebar />
 
+      {/* Main Content */}
       <main className="flex-1 overflow-auto">
         <div className="p-8">
 
@@ -289,6 +292,7 @@ export default function AddPatient() {
 
         </div>
       </main>
+    </div>
     </div>
   );
 }

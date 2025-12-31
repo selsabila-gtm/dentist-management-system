@@ -10,10 +10,45 @@ import {
   updateStaff,
 } from "../../services/staffApi";
 
-const availabilityOptions = ["Full-time", "Part-time", "On-call"];
 // preset values must match what add.jsx saves
-const daysPresetOptions = ["Monday – Friday", "Weekends"];
-const hoursPresetOptions = ["9:00 AM – 5:00 PM", "10:00 AM – 6:00 PM"];
+const daysPresetOptions = ["Sunday, Monday, Tuesday, Wednesday, Thursday", "Saturday, Sunday"];
+const hoursPresetOptions = ["9:00 AM – 5:00 PM", "10:00 AM – 6:00 PM", "8:00 AM – 4:00 PM"];
+
+// Helper to validate hours are between 8:00 AM and 6:00 PM
+const validateHoursRange = (hoursString) => {
+  if (!hoursString || hoursString.trim() === "") return { valid: true };
+  
+  const match = hoursString.match(/(\d{1,2}):(\d{2})\s*(AM|PM)\s*[-–—]\s*(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  
+  if (!match) return { valid: false, error: "Invalid hours format. Use format like '9:00 AM - 5:00 PM'" };
+  
+  const startHour = parseInt(match[1]);
+  const startPeriod = match[3].toUpperCase();
+  const endHour = parseInt(match[4]);
+  const endPeriod = match[6].toUpperCase();
+  
+  let start24 = startHour;
+  if (startPeriod === 'PM' && startHour !== 12) start24 += 12;
+  if (startPeriod === 'AM' && startHour === 12) start24 = 0;
+  
+  let end24 = endHour;
+  if (endPeriod === 'PM' && endHour !== 12) end24 += 12;
+  if (endPeriod === 'AM' && endHour === 12) end24 = 0;
+  
+  if (start24 < 8 || start24 > 18) {
+    return { valid: false, error: "Start time must be between 8:00 AM and 6:00 PM" };
+  }
+  
+  if (end24 < 8 || end24 > 18) {
+    return { valid: false, error: "End time must be between 8:00 AM and 6:00 PM" };
+  }
+  
+  if (start24 >= end24) {
+    return { valid: false, error: "Start time must be before end time" };
+  }
+  
+  return { valid: true };
+};
 
 const getCurrentUser = () => {
   try {
@@ -38,11 +73,9 @@ export default function StaffProfilePage() {
   const [authChecked, setAuthChecked] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // extra state for "Custom" schedule values
   const [customDays, setCustomDays] = useState("");
   const [customHours, setCustomHours] = useState("");
 
-  // toast
   const [toast, setToast] = useState({
     visible: false,
     type: "success",
@@ -58,7 +91,6 @@ export default function StaffProfilePage() {
     }, 3000);
   };
 
-  // ------- auth check -------
   useEffect(() => {
     const user = getCurrentUser();
     if (!user || !user.is_admin) {
@@ -70,7 +102,6 @@ export default function StaffProfilePage() {
     setAuthChecked(true);
   }, []);
 
-  // ------- load staff + roles -------  
   useEffect(() => {
     if (!isAdmin) return;
 
@@ -81,7 +112,6 @@ export default function StaffProfilePage() {
           fetchRoles(),
         ]);
 
-        // detect custom vs preset days/hours
         const rawDays = staffData.days_available || "";
         const rawHours = staffData.hours || "";
 
@@ -111,7 +141,6 @@ export default function StaffProfilePage() {
           phone: staffData.phone || "",
           address: staffData.address || "",
           role_id: staffData.role_id || "",
-          availability: staffData.availability || "",
           days_available: daysValue,
           hours: hoursValue,
         });
@@ -128,7 +157,6 @@ export default function StaffProfilePage() {
     load();
   }, [id, navigate, isAdmin]);
 
-  // auth loading
   if (!authChecked) {
     return (
       <div className="app-layout">
@@ -142,7 +170,6 @@ export default function StaffProfilePage() {
     );
   }
 
-  // access denied
   if (!isAdmin) {
     return (
       <div className="app-layout">
@@ -205,24 +232,19 @@ export default function StaffProfilePage() {
     );
   }
 
-  // ---------- derived display values ----------
-
   const fullName = `${staff.first_name || ""} ${staff.last_name || ""}`.trim();
 
-  // avatar initial: prefer name, then username, then "E"
   const avatarInitial = fullName
     ? fullName.charAt(0).toUpperCase()
     : staff.username
     ? staff.username.charAt(0).toUpperCase()
     : "E";
 
-  // role display: use nested role OR find by role_id OR fallback
   const roleName =
     staff.role?.name ||
     roles.find((r) => r.id === staff.role_id)?.name ||
     "No role";
 
-  // joined text based on created_at (days/weeks/months/years)
   let joinedText = "";
   if (staff.created_at) {
     const created = new Date(staff.created_at);
@@ -254,8 +276,6 @@ export default function StaffProfilePage() {
       }
     }
   }
-
-  // ------- form handlers -------
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -299,6 +319,14 @@ export default function StaffProfilePage() {
       newErrors.hours = "Please enter custom hours or choose a preset.";
     }
 
+    // Validate custom hours if selected
+    if (form.hours === "Custom" && customHours.trim()) {
+      const hoursValidation = validateHoursRange(customHours);
+      if (!hoursValidation.valid) {
+        newErrors.hours = hoursValidation.error;
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -339,18 +367,14 @@ export default function StaffProfilePage() {
   };
 
   const confirmDeactivate = () => {
-    // demo only
     showToast("For the demo, we only show this confirmation.");
     setShowDeactivate(false);
   };
-
-  // ------- render -------
 
   return (
     <div className="app-layout">
       <Sidebar />
     <StaffAdminLayout>
-      {/* Toast */}
       {toast.visible && (
         <div className="toast-container">
           <div
@@ -382,7 +406,6 @@ export default function StaffProfilePage() {
         </div>
 
         <div className="staff-card">
-          {/* top row: avatar + name + actions */}
           <div className="profile-header">
             <div className="profile-avatar">{avatarInitial}</div>
 
@@ -422,9 +445,7 @@ export default function StaffProfilePage() {
             </div>
           </div>
 
-          {/* form grid: personal info + work schedule */}
           <form className="staff-form" onSubmit={handleSave}>
-            {/* LEFT COLUMN */}
             <section className="staff-form-section">
               <h2>Personal Information</h2>
 
@@ -556,27 +577,8 @@ export default function StaffProfilePage() {
               </div>
             </section>
 
-            {/* RIGHT COLUMN */}
             <section className="staff-form-section">
               <h2>Work Schedule</h2>
-
-              <div className="staff-field">
-                <label>Availability</label>
-                <select
-                  name="availability"
-                  value={form.availability}
-                  onChange={handleChange}
-                  disabled={!editing}
-                  className="staff-input"
-                >
-                  <option value="">Select availability</option>
-                  {availabilityOptions.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-              </div>
 
               <div className="staff-field">
                 <label>Days Available</label>
@@ -604,7 +606,7 @@ export default function StaffProfilePage() {
                   <input
                     type="text"
                     className="staff-input"
-                    placeholder="Enter custom days (e.g. Mon, Wed, Fri)"
+                    placeholder="Enter custom days (e.g. Monday, Wednesday) - No Fridays"
                     value={customDays}
                     onChange={(e) => setCustomDays(e.target.value)}
                     disabled={!editing}
@@ -620,7 +622,7 @@ export default function StaffProfilePage() {
               </div>
 
               <div className="staff-field">
-                <label>Hours</label>
+                <label>Hours (8:00 AM - 6:00 PM only)</label>
                 <select
                   name="hours"
                   value={form.hours}
@@ -642,15 +644,24 @@ export default function StaffProfilePage() {
                 </select>
 
                 {form.hours === "Custom" && (
-                  <input
-                    type="text"
-                    className="staff-input"
-                    placeholder="Enter custom hours (e.g. 2:00 PM – 8:00 PM)"
-                    value={customHours}
-                    onChange={(e) => setCustomHours(e.target.value)}
-                    disabled={!editing}
-                    style={{ marginTop: 6 }}
-                  />
+                  <>
+                    <input
+                      type="text"
+                      className={
+                        errors.hours
+                          ? "staff-input staff-input-error"
+                          : "staff-input"
+                      }
+                      placeholder="Enter hours (e.g. 9:00 AM – 5:00 PM)"
+                      value={customHours}
+                      onChange={(e) => setCustomHours(e.target.value)}
+                      disabled={!editing}
+                      style={{ marginTop: 6 }}
+                    />
+                    <p style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
+                      Hours must be between 8:00 AM and 6:00 PM
+                    </p>
+                  </>
                 )}
 
                 {errors.hours && (
@@ -659,7 +670,6 @@ export default function StaffProfilePage() {
               </div>
             </section>
 
-            {/* actions row */}
             <div className="staff-form-actions">
               <button
                 type="button"
@@ -680,7 +690,6 @@ export default function StaffProfilePage() {
         </div>
       </main>
 
-      {/* Deactivate confirm modal */}
       {showDeactivate && (
         <div
           style={{

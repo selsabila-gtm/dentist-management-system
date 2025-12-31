@@ -1,7 +1,7 @@
 // src/pages/dashboard/dashboard.jsx
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "../../components/Sidebar/Sidebar";
+import Sidebar from "../../components/sidebar/sidebar";
 import Notifications from "../../components/notification/notifications";
 import "./dashboard.css";
 
@@ -63,9 +63,23 @@ export default function DashboardPage() {
     alerts: 0,
     totalRevenue: 0,
     avgAppointmentCost: 0,
-    todayAppointments: [], // <-- holds only today's appointments
+    todayAppointments: [],
+    upcomingCount: 0,
+    pendingPayments: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Get current user from localStorage
+  useEffect(() => {
+    try {
+      const user = JSON.parse(localStorage.getItem("currentUser") || "{}");
+      setCurrentUser(user);
+    } catch (err) {
+      console.error("Error reading current user:", err);
+      navigate("/login");
+    }
+  }, [navigate]);
 
   // read dismissed notifications from localStorage (same key used by Notifications component)
   const getDismissed = () => {
@@ -86,28 +100,59 @@ export default function DashboardPage() {
   }
 
   const fetchStats = useCallback(async () => {
+    if (!currentUser || !currentUser.id) return;
+
     setLoading(true);
     try {
+      const userRole = (currentUser.role_name || "").toLowerCase();
+      const isDentist = userRole === "dentist";
+      const isAdmin = userRole === "admin";
+      const userId = currentUser.id;
+
+      // Build appointments URL with dentist filter if needed
+      const appointmentsUrl = isDentist 
+        ? `${API_BASE}/api/appointments?dentist_id=${userId}`
+        : `${API_BASE}/api/appointments`;
+
       // fetch main resources in parallel
-      const [apptsRes, patientsRes, staffRes, inventoryRes] = await Promise.allSettled([
-        fetch(`${API_BASE}/api/appointments`),
+      const fetchPromises = [
+        fetch(appointmentsUrl),
         fetch(`${API_BASE}/api/patients`),
-        fetch(`${API_BASE}/api/staff`),
         fetch(`${API_BASE}/api/inventory`),
-      ]);
+        fetch(`${API_BASE}/api/invoices`),
+      ];
+
+      // Only fetch staff if admin
+      if (isAdmin) {
+        fetchPromises.push(fetch(`${API_BASE}/api/staff`));
+      }
+
+      const settled = await Promise.allSettled(fetchPromises);
 
       // helpers to extract results
-      const extract = async (settled) => {
-        if (!settled || settled.status !== "fulfilled") return null;
-        const res = settled.value;
+      const extract = async (index) => {
+        if (!settled[index] || settled[index].status !== "fulfilled") return null;
+        const res = settled[index].value;
         if (!res || !res.ok) return null;
         return safeJson(res);
       };
 
-      const appointments = (await extract(apptsRes)) || [];
-      const patients = (await extract(patientsRes)) || [];
-      const staff = (await extract(staffRes)) || [];
-      const inventory = (await extract(inventoryRes)) || [];
+      const appointments = (await extract(0)) || [];
+      const allPatients = (await extract(1)) || [];
+      const inventory = (await extract(2)) || [];
+      const invoices = (await extract(3)) || [];
+      const staff = isAdmin ? ((await extract(4)) || []) : [];
+
+      // For dentists, filter patients to only those who have appointments with them
+      let patients = allPatients;
+      if (isDentist) {
+        const patientIds = new Set(
+          appointments
+            .filter(a => a.patient_id)
+            .map(a => a.patient_id)
+        );
+        patients = allPatients.filter(p => patientIds.has(p.id));
+      }
 
       // compute low stock and expiry notifications (same logic as Notifications component)
       const now = new Date();
@@ -156,23 +201,80 @@ export default function DashboardPage() {
         }
       }
 
-      // compute revenue & avg appointment cost from appointment.cost
-      let totalRevenue = 0;
-      let countedAppointments = 0;
-      for (const a of appointments) {
-        const c = parseFloat(a.cost);
-        if (!Number.isNaN(c)) {
-          totalRevenue += c;
-          countedAppointments++;
-        }
-      }
-      const avgAppointmentCost = countedAppointments > 0 ? totalRevenue / countedAppointments : 0;
-
       // filter only today's appointments
       const today = todayKey();
       const todayAppointments = Array.isArray(appointments)
         ? appointments.filter((a) => String(a.date) === today)
         : [];
+
+      // ✅ Calculate revenue ONLY from today's COMPLETED appointments
+      let totalRevenue = 0;
+      let completedTodayCount = 0;
+      
+      for (const a of todayAppointments) {
+        if (String(a.status).toLowerCase() === "completed") {
+          const c = parseFloat(a.cost);
+          if (!Number.isNaN(c)) {
+            totalRevenue += c;
+            completedTodayCount++;
+          }
+        }
+      }
+      
+      // ✅ Average = today's revenue / today's completed appointments
+      const avgAppointmentCost = completedTodayCount > 0 
+        ? totalRevenue / completedTodayCount 
+        : 0;
+
+      // Count upcoming (scheduled) appointments for today
+      const upcomingCount = todayAppointments.filter(
+        (a) => String(a.status).toLowerCase() === "scheduled"
+      ).length;
+
+
+
+
+
+let totalPending = 0;
+
+// Step 1: Identify relevant patients
+const relevantPatientIds = new Set();
+if (isDentist) {
+  appointments.forEach((appt) => {
+    if (appt.patient_id) relevantPatientIds.add(appt.patient_id);
+  });
+} else {
+  patients.forEach((p) => relevantPatientIds.add(p.id));
+}
+
+// Step 2: Compute total appointment costs per patient (ALL statuses)
+const patientBilling = {};
+appointments.forEach((appt) => {
+  const patientId = appt.patient_id;
+  if (!patientId || !relevantPatientIds.has(patientId)) return;
+
+  const cost = parseFloat(appt.cost) || 0;
+  if (!patientBilling[patientId]) patientBilling[patientId] = { totalCost: 0, totalPaid: 0 };
+  patientBilling[patientId].totalCost += cost;
+});
+
+// Step 3: Add invoice payments
+invoices.forEach((inv) => {
+  const patientId = inv.patient_id;
+  if (!patientId || !relevantPatientIds.has(patientId)) return;
+
+  const amount = parseFloat(inv.amount) || 0;
+  if (!patientBilling[patientId]) patientBilling[patientId] = { totalCost: 0, totalPaid: 0 };
+  patientBilling[patientId].totalPaid += amount;
+});
+
+// Step 4: Sum outstanding per patient
+for (const pid in patientBilling) {
+  const { totalCost, totalPaid } = patientBilling[pid];
+  totalPending += Math.max(totalCost - totalPaid, 0);
+}
+
+
 
       setStats({
         appointments: Array.isArray(appointments) ? appointments.length : 0,
@@ -183,32 +285,33 @@ export default function DashboardPage() {
         totalRevenue,
         avgAppointmentCost,
         todayAppointments,
+        upcomingCount,
+        pendingPayments: totalPending,
       });
     } catch (err) {
       console.error("Error fetching dashboard stats:", err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
-    const staffId = localStorage.getItem("staff_id");
-    if (!staffId) {
-      navigate("/login");
-      return;
-    }
+    if (!currentUser) return;
     fetchStats();
 
     // optional: refresh every 5 minutes
     const id = setInterval(fetchStats, 5 * 60 * 1000);
     return () => clearInterval(id);
-  }, [fetchStats, navigate]);
+  }, [fetchStats, currentUser]);
 
-  const username = localStorage.getItem("username") || "User";
-  const role = localStorage.getItem("role") || "";
+  const username = currentUser?.username || localStorage.getItem("username") || "User";
+  const role = currentUser?.role_name || localStorage.getItem("role") || "";
+  const isAdmin = (currentUser?.role_name || "").toLowerCase() === "admin";
+  const isDentist = (currentUser?.role_name || "").toLowerCase() === "dentist";
 
+  // ✅ Format currency in DA (Algerian Dinar)
   const fmtCurrency = (v) =>
-    v === 0 ? "$0" : v ? `$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "—";
+    v === 0 ? "0 DA" : v ? `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })} DA` : "—";
   const fmtNumber = (v) => (v === 0 ? "0" : v ? Number(v).toLocaleString() : "—");
 
   return (
@@ -223,14 +326,12 @@ export default function DashboardPage() {
                 Welcome back, <strong>{username}</strong> {role && <span className="muted">({role})</span>}
               </p>
             </div>
-
-            
           </header>
 
           <section className="dashboard-top">
             <div className="appointments-card card">
               <div className="card-header">
-                <h3>Today's Appointments</h3>
+                <h3>Today's Appointments{isDentist && " (Your Schedule)"}</h3>
                 <button className="link-button" onClick={() => navigate("/calendar")}>View Calendar</button>
               </div>
 
@@ -281,21 +382,21 @@ export default function DashboardPage() {
             <div className="overview-cards">
               <div className="overview-grid">
                 <div className="overview-card card" onClick={() => navigate("/patients")}>
-                  <div className="overview-title">Total Patients</div>
+                  <div className="overview-title">{isDentist ? "Your Patients" : "Total Patients"}</div>
                   <div className="overview-value">{loading ? "—" : fmtNumber(stats.patients)}</div>
                 </div>
 
-                <div className="overview-card card" onClick={() => navigate("/invoices")}>
+                <div className="overview-card card" onClick={() => navigate("/billing")}>
                   <div className="overview-title">Pending Payments / Bills</div>
-                  <div className="overview-value">$1,500</div>
+                  <div className="overview-value">{loading ? "—" : fmtCurrency(stats.pendingPayments)}</div>
                 </div>
 
                 <div className="overview-card card" onClick={() => navigate("/calendar")}>
                   <div className="overview-title">Upcoming Appointments</div>
-                  <div className="overview-value">{loading ? "—" : fmtNumber(stats.appointments)}</div>
+                  <div className="overview-value">{loading ? "—" : fmtNumber(stats.upcomingCount)}</div>
                 </div>
 
-                <div className="overview-card card" onClick={() => navigate("/notifications")}>
+                <div className="overview-card card" onClick={() => navigate("/inventory")}>
                   <div className="overview-title">Alerts</div>
                   <div className="overview-value">{loading ? "—" : fmtNumber(stats.alerts)}</div>
                 </div>
@@ -305,9 +406,9 @@ export default function DashboardPage() {
                 <div className="kpi-card card">
                   <div className="kpi-header">
                     <div>
-                      <div className="kpi-title">Revenue</div>
+                      <div className="kpi-title">{isDentist ? "Today's Revenue" : "Today's Revenue"}</div>
                       <div className="kpi-value">{loading ? "—" : fmtCurrency(stats.totalRevenue)}</div>
-                      <div className="kpi-sub">Last 12 Months <span className="green">+10%</span></div>
+                      <div className="kpi-sub">From completed appointments today</div>
                     </div>
                     <div className="kpi-chart">
                       <svg viewBox="0 0 120 40" className="mini-line">
@@ -322,7 +423,7 @@ export default function DashboardPage() {
                     <div>
                       <div className="kpi-title">Avg Appointment Cost</div>
                       <div className="kpi-value">{loading ? "—" : fmtCurrency(stats.avgAppointmentCost)}</div>
-                      <div className="kpi-sub">Calculated from appointments</div>
+                      <div className="kpi-sub">Today's completed appointments</div>
                     </div>
                     <div className="kpi-chart small-bars">
                       <svg viewBox="0 0 100 40" className="mini-bars">
@@ -344,8 +445,12 @@ export default function DashboardPage() {
             <h3>Quick Actions</h3>
             <div className="action-buttons">
               <button onClick={() => navigate("/calendar/add")} className="action-button">➕ New Appointment</button>
-              <button onClick={() => navigate("/patients/add")} className="action-button">👤 Add Patient</button>
-              <button onClick={() => navigate("/inventory/add")} className="action-button">📦 Add Inventory</button>
+              {!isDentist && (
+                <button onClick={() => navigate("/patients/add")} className="action-button">👤 Add Patient</button>
+              )}
+              {isAdmin && (
+                <button onClick={() => navigate("/inventory/add")} className="action-button">📦 Add Inventory</button>
+              )}
             </div>
           </section>
         </div>

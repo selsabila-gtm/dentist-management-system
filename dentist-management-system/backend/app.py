@@ -1,9 +1,8 @@
-# backend/app.py
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_cors import CORS
 import os
 
-from backend.models import db, seed_initial_data
+from backend.models import db, seed_initial_data, SQLALCHEMY_DATABASE_URI, UPLOAD_FOLDER
 from backend.routes import bp
 
 def create_app():
@@ -54,6 +53,7 @@ def create_app():
     print()
 
     return app
+
 
 
 if __name__ == "__main__":

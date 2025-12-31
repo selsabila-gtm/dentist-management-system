@@ -12,7 +12,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 INSTANCE_DIR = os.path.join(BASE_DIR, "instance")
 os.makedirs(INSTANCE_DIR, exist_ok=True)
 
-UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
+# 🔧 ONLY CHANGE: Fixed to work with app.py "uploads" path
+UPLOAD_FOLDER = os.path.join(os.path.dirname(BASE_DIR), "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 DB_PATH = os.path.join(INSTANCE_DIR, "dentist.db")
@@ -63,6 +64,7 @@ class Role(db.Model):
         return {"id": self.id, "name": self.name}
 
 
+
 class Staff(db.Model):
     __tablename__ = "staff"
     id = db.Column(db.Integer, primary_key=True)
@@ -86,9 +88,8 @@ class Staff(db.Model):
     role_id = db.Column(db.Integer, db.ForeignKey("roles.id"), nullable=True)
     role = db.relationship("Role", backref="staff_members")
 
-    # permissions & schedule
+    # permissions & schedule (REMOVED availability field)
     permissions = db.Column(db.Text)  # JSON string
-    availability = db.Column(db.String(50))
     days_available = db.Column(db.String(100))
     hours = db.Column(db.String(100))
     profile_photo = db.Column(db.String(300), nullable=True)
@@ -100,15 +101,18 @@ class Staff(db.Model):
         )
         return {
             "id": self.id,
+            # name fields (old + new frontend)
             "name": full_name,
             "full_name": full_name,
             "first_name": self.first_name,
             "last_name": self.last_name,
+            # contact
             "email": self.email,
             "phone": self.phone,
             "address": self.address,
+            # auth
             "username": self.username,
-            "availability": self.availability,
+            # schedule (REMOVED availability)
             "days_available": self.days_available,
             "hours": self.hours,
             "permissions": load_json_field(self.permissions),
@@ -124,6 +128,7 @@ class Patient(db.Model):
     __tablename__ = "patients"
     id = db.Column(db.Integer, primary_key=True)
 
+    # team uses full_name in seeds & queries
     full_name = db.Column(db.String(200))
     first_name = db.Column(db.String(100))
     last_name = db.Column(db.String(100))
@@ -168,8 +173,8 @@ class Appointment(db.Model):
     procedure = db.Column(db.String(200))
     status = db.Column(db.String(20), default="scheduled")
 
-    # NEW: cost of this appointment / visit
-    cost = db.Column(db.Float, default=0.0)
+    # NEW: cost of this appointment / visit - CHANGED: added nullable=False
+    cost = db.Column(db.Float, default=0.0, nullable=False)
 
     summary_id = db.Column(db.Integer, db.ForeignKey("summaries.id"), nullable=True)
 
@@ -204,7 +209,7 @@ class Summary(db.Model):
     notes = db.Column(db.Text)
     prescriptions = db.Column(db.Text)  # JSON list
     documents = db.Column(db.Text)  # JSON list of docs
-    inventory = db.Column(db.Text)  # JSON list
+    inventory = db.Column(db.Text, nullable=False)  # JSON list - CHANGED: added nullable=False
 
     appointment = db.relationship(
         "Appointment",
@@ -463,7 +468,7 @@ def seed_initial_data():
 
         appts = [
             Appointment(
-                date="2025-11-26",
+                date="2025-12-15",
                 time="09:00 AM",
                 patient="Sophia Clark",
                 patient_id=sophia.id if sophia else None,
@@ -474,7 +479,7 @@ def seed_initial_data():
                 cost=150.0,
             ),
             Appointment(
-                date="2025-11-26",
+                date="2025-12-15",
                 time="10:30 AM",
                 patient="Ethan Harper",
                 patient_id=ethan.id if ethan else None,
@@ -482,7 +487,7 @@ def seed_initial_data():
                 dentist_id=david.id if david else None,   # ✅ ADD THIS
                 procedure="Teeth Cleaning",
                 status="scheduled",
-                cost=200.0,
+                cost=100.0,
             ),
         ]
         db.session.add_all(appts)
@@ -570,3 +575,5 @@ def seed_initial_data():
 
     # final commit if any leftover
     db.session.commit()
+
+# ---------- DB SEED (same as old app.py) ----------

@@ -1,5 +1,92 @@
-/* SUMMARY PAGE ONLY — original code unchanged */
+/* ========= PAGE WRAPPERS / LAYOUT (moved from index.css) ========= */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
 
+/* your page container */
+.summary-page {
+  flex: 1;
+  padding: 24px 40px;
+  background-color: #f5f7fb;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* page header */
+.summary-page .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* ========= SHARED UI (scoped ONLY to summary page) ========= */
+.summary-page .card {
+  background-color: white;
+  border-radius: 14px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.summary-page .primary-button {
+  background-color: #1A73F0;
+  color: white;
+  border-radius: 10px;
+  border: none;
+  padding: 8px 18px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.summary-page .primary-button:hover {
+  background-color: #0d2771;
+}
+
+.summary-page .secondary-button {
+  background-color: #e5e7eb;
+  border-radius: 10px;
+  border: none;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.summary-page .secondary-button:hover {
+  background-color: #d1d5db;
+}
+
+.summary-page .appointments-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.summary-page .appointments-table th,
+.summary-page .appointments-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #edf2f7;
+  text-align: left;
+}
+
+.summary-page .appointments-table th {
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.summary-page .link-button {
+  color: #2563eb;
+  font-size: 13px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* ========= YOUR ORIGINAL SUMMARY PAGE CSS ========= */
 .summary-section {
   margin-bottom: 16px;
 }
@@ -15,17 +102,72 @@
   border-radius: 10px;
   border: 1px solid #e5e7eb;
   padding: 8px 10px;
-  
   font-family: inherit;
   font-size: 13px;
 }
 
-.table-input {
-  width: 100%;
-  border-radius: 6px;
+/* Cost input styling */
+.cost-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 300px;
+}
+
+.cost-currency {
+  font-size: 18px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.cost-input {
+  flex: 1;
+  border-radius: 10px;
   border: 1px solid #e5e7eb;
-  padding: 4px 6px;
+  padding: 10px 12px;
+  font-size: 16px;
+  font-weight: 500;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cost-input:hover:not(.error) {
+  border-color: #cbd5f5;
+}
+
+.cost-input:focus:not(.error) {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.35);
+}
+
+/* Error state */
+.cost-input.error {
+  border-color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.cost-input.error:focus {
+  outline: none;
+  border-color: #dc2626;
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.35);
+}
+
+/* Error message styling */
+.summary-page .error-message {
+  color: #dc2626;
   font-size: 13px;
+  margin-top: 6px;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+.summary-page .submit-error {
+  margin-top: 0;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background-color: #fef2f2;
+  border-radius: 8px;
+  border-left: 3px solid #dc2626;
 }
 
 .summary-actions {
@@ -35,40 +177,13 @@
   margin-top: 16px;
 }
 
-/* error banner */
-.error-banner {
-  margin-bottom: 8px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background-color: #fef2f2;
-  color: #991b1b;
-  font-size: 13px;
-}
-
-/* status dropdown */
-.status-select {
-  border-radius: 999px;
-  padding: 6px 14px;
-  font-size: 12px;
-  border: 1px solid #d1d5db;
-  background-color: #ffffff;
-  color: #111827;
-  appearance: none;
-}
-
-.status-select:hover,
-.status-select:focus {
-  border-color: #2563eb;
-  outline: none;
-  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.4);
-}
-
 /* document upload UI */
 .doc-inline-row {
   margin-top: 12px;
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .doc-inline-input {
@@ -77,6 +192,29 @@
   border: 1px solid #d1d5db;
   padding: 8px 10px;
   font-size: 13px;
+  transition: border-color 0.15s ease;
+}
+
+.doc-inline-input:hover:not(.error) {
+  border-color: #9ca3af;
+}
+
+.doc-inline-input:focus:not(.error) {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25);
+}
+
+/* Error state for document input */
+.doc-inline-input.error {
+  border-color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.doc-inline-input.error:focus {
+  outline: none;
+  border-color: #dc2626;
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.35);
 }
 
 .doc-inline-select {
@@ -119,4 +257,137 @@
   padding: 6px 8px;
   font-size: 13px;
   background-color: #ffffff;
+}
+
+/* ====== RESPONSIVE STYLES ====== */
+
+/* Tablet styles (768px - 1024px) */
+@media (max-width: 1024px) {
+  .summary-page {
+    padding: 20px 24px;
+    max-width: 100%;
+  }
+
+  .summary-page .page-header {
+    font-size: 22px;
+  }
+
+  .cost-input-wrapper {
+    max-width: 100%;
+  }
+}
+
+/* Mobile styles (below 768px) */
+@media (max-width: 768px) {
+  .summary-page {
+    padding: 80px 16px 16px;
+  }
+
+  .summary-page .page-header {
+    font-size: 20px;
+    margin-bottom: 20px;
+  }
+
+  .summary-page .card {
+    padding: 14px 16px;
+    overflow-x: auto;
+  }
+
+  .summary-section h2 {
+    font-size: 14px;
+  }
+
+  /* Make tables scrollable */
+  .summary-page .appointments-table {
+    font-size: 12px;
+    min-width: 600px;
+  }
+
+  .summary-page .appointments-table th,
+  .summary-page .appointments-table td {
+    padding: 6px 8px;
+  }
+
+  .cost-input-wrapper {
+    max-width: 100%;
+  }
+
+  .cost-input {
+    font-size: 15px;
+    padding: 9px 11px;
+  }
+
+  .cost-currency {
+    font-size: 16px;
+  }
+
+  .notes-textarea {
+    min-height: 100px;
+    font-size: 12px;
+  }
+
+  /* Document upload row - stack vertically */
+  .doc-inline-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .doc-inline-input,
+  .doc-inline-select,
+  .doc-inline-file {
+    flex: 1;
+    width: 100%;
+  }
+
+  .summary-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .summary-page .primary-button,
+  .summary-page .secondary-button {
+    width: 100%;
+    padding: 10px 16px;
+  }
+
+  .table-edit-input {
+    font-size: 12px;
+    padding: 5px 7px;
+  }
+}
+
+/* Small mobile adjustments (below 480px) */
+@media (max-width: 480px) {
+  .summary-page {
+    padding: 70px 12px 12px;
+  }
+
+  .summary-page .page-header {
+    font-size: 18px;
+  }
+
+  .summary-page .card {
+    padding: 12px 14px;
+  }
+
+  .summary-section {
+    margin-bottom: 14px;
+  }
+
+  .summary-page .appointments-table {
+    font-size: 11px;
+  }
+
+  .cost-input {
+    font-size: 14px;
+  }
+
+  .cost-currency {
+    font-size: 15px;
+  }
+
+  .notes-textarea {
+    min-height: 90px;
+    font-size: 11px;
+  }
 }

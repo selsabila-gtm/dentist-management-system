@@ -19,6 +19,7 @@ export default function InventoryDetailsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [isEditing, setIsEditing] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const [formData, setFormData] = useState({
     item_name: "",
@@ -28,10 +29,19 @@ export default function InventoryDetailsPage() {
     supplier: "",
     expiration_date: "",
     notes: "",
-    price_per_unit: "", // new field
+    price_per_unit: "",
   });
 
   useEffect(() => {
+    // Check if user is admin
+    try {
+      const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+      const role = (currentUser.role_name || "").toLowerCase();
+      setIsAdmin(role === "admin");
+    } catch (err) {
+      console.error("Error reading user role:", err);
+    }
+
     fetchCategories();
     fetchItem();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -62,7 +72,7 @@ export default function InventoryDetailsPage() {
         supplier: data.supplier || "",
         expiration_date: data.expiration_date || "",
         notes: data.notes || "",
-        price_per_unit: data.price_per_unit ?? data.price ?? "", // accept either field
+        price_per_unit: data.price_per_unit ?? data.price ?? "",
       });
     } catch (err) {
       setError(err.message || "Failed to load item");
@@ -81,6 +91,12 @@ export default function InventoryDetailsPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!isAdmin) {
+      setError("Only administrators can edit inventory items.");
+      return;
+    }
+
     setError("");
     setSaving(true);
 
@@ -144,6 +160,11 @@ export default function InventoryDetailsPage() {
   };
 
   const handleDelete = async () => {
+    if (!isAdmin) {
+      alert("Only administrators can delete inventory items.");
+      return;
+    }
+
     if (!confirm("Are you sure you want to delete this item?")) return;
 
     try {
@@ -197,7 +218,7 @@ export default function InventoryDetailsPage() {
           <header className="page-header">
             <h1>{isEditing ? "Edit Inventory Item" : "Inventory Item Details"}</h1>
             <div style={{ display: "flex", gap: "12px" }}>
-              {!isEditing && (
+              {!isEditing && isAdmin && (
                 <>
                   <button
                     className="secondary-button"
@@ -221,7 +242,7 @@ export default function InventoryDetailsPage() {
             {error && <div className="error-banner">{error}</div>}
 
             {isEditing ? (
-              // EDIT MODE
+              // EDIT MODE (only for admin)
               <form onSubmit={handleSubmit}>
                 <div className="form-group">
                   <label htmlFor="item_name">
