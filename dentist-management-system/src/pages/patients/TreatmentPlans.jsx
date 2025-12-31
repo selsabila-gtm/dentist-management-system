@@ -1,13 +1,49 @@
 // src/pages/patients/TreatmentPlans.jsx
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import "./patientProfile.css";
+import Sidebar from "../../components/sidebar/sidebar.jsx";
 
-const API_BASE = "http://localhost:5000/api";
-const PATIENT_ID = 1;
+const API_BASE = "/api";
+
+/* ---------------- TOAST ---------------- */
+function Toast({ toast, onClose }) {
+  if (!toast) return null;
+  return (
+    <div className={`toast toast-${toast.type}`}>
+      <span>{toast.message}</span>
+      <button className="toast-close" onClick={onClose}>
+        ✕
+      </button>
+    </div>
+  );
+}
+
+/* ---------------- CONFIRM MODAL ---------------- */
+function ConfirmModal({ open, title, message, onConfirm, onCancel }) {
+  if (!open) return null;
+  return (
+    <div className="confirm-backdrop" onClick={onCancel}>
+      <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
+        <h3 className="confirm-title">{title}</h3>
+        <p className="confirm-message">{message}</p>
+
+        <div className="confirm-actions">
+          <button className="secondary-button" onClick={onCancel}>
+            Cancel
+          </button>
+          <button className="primary-button" onClick={onConfirm}>
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function TreatmentPlansPage() {
   const navigate = useNavigate();
+  const { patientId } = useParams();
 
   const [treatments, setTreatments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,6 +51,15 @@ export default function TreatmentPlansPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState(null);
+
+  const [toast, setToast] = useState(null);
+  const showToast = (type, message) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 2600);
+  };
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const [form, setForm] = useState({
     procedure: "",
@@ -24,32 +69,42 @@ export default function TreatmentPlansPage() {
     status: "Proposed",
   });
 
+  const proposed = useMemo(
+    () => treatments.filter((t) => t.status === "Proposed"),
+    [treatments]
+  );
+
+  const completed = useMemo(
+    () => treatments.filter((t) => t.status === "Completed"),
+    [treatments]
+  );
+
+  /* ---------- LOAD ---------- */
   useEffect(() => {
     async function loadTreatments() {
       try {
-        const res = await fetch(
-          `${API_BASE}/patients/${PATIENT_ID}/treatments`
-        );
-        const data = await res.json();
+        setLoading(true);
+        const res = await fetch(`${API_BASE}/patients/${patientId}/treatments`);
+        const data = await res.json().catch(() => []);
 
         if (!res.ok) {
-          console.error("Failed to load treatments", data);
-          alert(data.error || "Could not load treatments.");
+          showToast("error", data?.error || "Failed to load treatments.");
           return;
         }
 
-        setTreatments(data);
-      } catch (err) {
-        console.error(err);
-        alert("Could not connect to backend.");
+        setTreatments(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.error(e);
+        showToast("error", "Could not connect to backend.");
       } finally {
         setLoading(false);
       }
     }
 
-    loadTreatments();
-  }, []);
+    if (patientId) loadTreatments();
+  }, [patientId]);
 
+  /* ---------- MODAL ---------- */
   const openAddModal = () => {
     setIsEditing(false);
     setEditingId(null);
@@ -67,11 +122,11 @@ export default function TreatmentPlansPage() {
     setIsEditing(true);
     setEditingId(t.id);
     setForm({
-      procedure: t.procedure,
+      procedure: t.procedure || "",
       tooth: t.tooth || "",
-      date: t.date,
-      cost: t.cost,
-      status: t.status,
+      date: t.date || "",
+      cost: t.cost ?? "",
+      status: t.status || "Proposed",
     });
     setModalOpen(true);
   };
@@ -79,78 +134,104 @@ export default function TreatmentPlansPage() {
   const closeModal = () => setModalOpen(false);
 
   const handleChange = (field, value) => {
-    setForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  /* ---------- SAVE ---------- */
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const { procedure, date, cost, status } = form;
-    if (!procedure || !date || !cost || !status) {
-      alert("Please fill in procedure, date, cost and status.");
+    const procedure = form.procedure?.trim();
+    const tooth = form.tooth?.trim();
+    const date = form.date;
+    const status = form.status;
+
+    const costValue = String(form.cost).trim();
+    const cost = costValue === "" ? "" : Number(costValue);
+
+    if (!procedure || !date || cost === "" || Number.isNaN(cost) || !status) {
+      showToast("error", "Please fill in procedure, date, cost and status.");
       return;
     }
+
+    const payload = { procedure, tooth, date, cost, status };
 
     try {
       if (isEditing && editingId != null) {
         const res = await fetch(`${API_BASE}/treatments/${editingId}`, {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(form),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
         });
 
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          console.error("Failed to update treatment", data);
-          alert(data.error || "Failed to update treatment.");
+          showToast("error", data.error || "Failed to update treatment.");
           return;
         }
 
         setTreatments((prev) =>
           prev.map((t) => (t.id === editingId ? data.treatment : t))
         );
-        alert("Treatment updated.");
+        showToast("success", "Treatment updated.");
       } else {
-        const res = await fetch(
-          `${API_BASE}/patients/${PATIENT_ID}/treatments`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(form),
-          }
-        );
+        const res = await fetch(`${API_BASE}/patients/${patientId}/treatments`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          console.error("Failed to add treatment", data);
-          alert(data.error || "Failed to add treatment.");
+          showToast("error", data.error || "Failed to add treatment.");
           return;
         }
 
         setTreatments((prev) => [...prev, data.treatment]);
-        alert("Treatment added.");
+        showToast("success", "Treatment added.");
       }
 
       setModalOpen(false);
-    } catch (err) {
-      console.error(err);
-      alert("Could not connect to backend.");
+    } catch (e) {
+      console.error(e);
+      showToast("error", "Could not connect to backend.");
     }
   };
 
-  const proposed = treatments.filter((t) => t.status === "Proposed");
-  const completed = treatments.filter((t) => t.status === "Completed");
+  /* ---------- DELETE ---------- */
+  const requestDelete = (t) => {
+    setDeleteTarget(t);
+    setConfirmOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget?.id) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/treatments/${deleteTarget.id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        showToast("error", "Failed to delete treatment.");
+        return;
+      }
+
+      setTreatments((prev) => prev.filter((t) => t.id !== deleteTarget.id));
+      showToast("success", "Treatment deleted.");
+    } catch (e) {
+      console.error(e);
+      showToast("error", "Could not connect to backend.");
+    } finally {
+      setConfirmOpen(false);
+      setDeleteTarget(null);
+    }
+  };
 
   if (loading) {
     return (
       <div className="app-layout">
+        <Sidebar />
         <main className="main-content">
           <p>Loading treatment plans...</p>
         </main>
@@ -160,42 +241,59 @@ export default function TreatmentPlansPage() {
 
   return (
     <div className="app-layout">
+      <Sidebar />
 
-      {/* Main content */}
       <main className="main-content">
+        <Toast toast={toast} onClose={() => setToast(null)} />
+
+        <ConfirmModal
+          open={confirmOpen}
+          title="Delete treatment?"
+          message="This will permanently remove this treatment."
+          onConfirm={confirmDelete}
+          onCancel={() => setConfirmOpen(false)}
+        />
+
         <header className="page-header">
-          <h1 className="page-title">Patient Profile</h1>
-          <p className="page-subtitle">View and manage patient information</p>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <button
+              onClick={() => navigate("/patients")}
+              className="secondary-button"
+            >
+              ← Back to Patients
+            </button>
+
+            <div>
+              <h1 className="page-title">Patient Profile</h1>
+              <p className="page-subtitle">View and manage patient information</p>
+            </div>
+          </div>
         </header>
 
         <div className="tabs-row">
-          <button className="tab-btn">General Info</button>
-          <button className="tab-btn">Appointments</button>
+          <button className="tab-btn" onClick={() => navigate(`/patients/${patientId}`)}>
+            General Info
+          </button>
+          <button className="tab-btn" onClick={() => navigate(`/patients/${patientId}/appointments`)}>
+            Appointments
+          </button>
           <button className="tab-btn active">Treatment Plans</button>
-          <button
-            className="tab-btn"
-            onClick={() => navigate("/patients/medical-records")}
-          >
+          <button className="tab-btn" onClick={() => navigate(`/patients/${patientId}/medical-records`)}>
             Medical Records
           </button>
-          <button
-            className="tab-btn"
-            onClick={() => navigate("/patients/prescriptions")}
-          >
+          <button className="tab-btn" onClick={() => navigate(`/patients/${patientId}/prescriptions`)}>
             Prescriptions
           </button>
-          <button className="tab-btn">Invoices/Payments</button>
+          <button className="tab-btn" onClick={() => navigate(`/patients/${patientId}/invoices`)}>
+            Invoices/Payments
+          </button>
         </div>
 
-        {/* Proposed Treatments */}
+        {/* Proposed */}
         <section className="card">
           <div className="card-header">
             <h2 className="card-title">Proposed Treatments</h2>
-            <button
-              className="pill-button"
-              type="button"
-              onClick={openAddModal}
-            >
+            <button className="pill-button" onClick={openAddModal}>
               Add procedure
             </button>
           </div>
@@ -209,7 +307,7 @@ export default function TreatmentPlansPage() {
                   <th>Date</th>
                   <th>Cost</th>
                   <th>Status</th>
-                  <th style={{ width: "80px" }}></th>
+                  <th style={{ width: "140px" }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -222,13 +320,13 @@ export default function TreatmentPlansPage() {
                     <td>
                       <span className="status-pill proposed">Proposed</span>
                     </td>
-                    <td>
-                      <button
-                        type="button"
-                        className="table-edit-button"
-                        onClick={() => openEditModal(t)}
-                      >
+                    <td className="actions-cell">
+                      <button className="table-edit-button" onClick={() => openEditModal(t)}>
                         Edit
+                      </button>
+                      <span className="separator">|</span>
+                      <button className="action-link delete-link" onClick={() => requestDelete(t)}>
+                        Delete
                       </button>
                     </td>
                   </tr>
@@ -236,7 +334,7 @@ export default function TreatmentPlansPage() {
 
                 {proposed.length === 0 && (
                   <tr>
-                    <td colSpan="6" style={{ color: "#6b7280" }}>
+                    <td colSpan="6" className="no-data">
                       No proposed treatments.
                     </td>
                   </tr>
@@ -246,7 +344,7 @@ export default function TreatmentPlansPage() {
           </div>
         </section>
 
-        {/* Completed Treatments */}
+        {/* Completed */}
         <section className="card">
           <div className="card-header">
             <h2 className="card-title">Completed Treatments</h2>
@@ -261,7 +359,7 @@ export default function TreatmentPlansPage() {
                   <th>Date</th>
                   <th>Cost</th>
                   <th>Status</th>
-                  <th style={{ width: "80px" }}></th>
+                  <th style={{ width: "140px" }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -274,13 +372,13 @@ export default function TreatmentPlansPage() {
                     <td>
                       <span className="status-pill completed">Completed</span>
                     </td>
-                    <td>
-                      <button
-                        type="button"
-                        className="table-edit-button"
-                        onClick={() => openEditModal(t)}
-                      >
+                    <td className="actions-cell">
+                      <button className="table-edit-button" onClick={() => openEditModal(t)}>
                         Edit
+                      </button>
+                      <span className="separator">|</span>
+                      <button className="action-link delete-link" onClick={() => requestDelete(t)}>
+                        Delete
                       </button>
                     </td>
                   </tr>
@@ -288,7 +386,7 @@ export default function TreatmentPlansPage() {
 
                 {completed.length === 0 && (
                   <tr>
-                    <td colSpan="6" style={{ color: "#6b7280" }}>
+                    <td colSpan="6" className="no-data">
                       No completed treatments.
                     </td>
                   </tr>
@@ -299,34 +397,31 @@ export default function TreatmentPlansPage() {
         </section>
       </main>
 
-      {/* Modal */}
+      {/* Add/Edit Modal */}
       {modalOpen && (
         <div className="modal-backdrop">
           <div className="modal">
-            <h3 className="modal-title">
-              {isEditing ? "Edit Treatment" : "Add procedure"}
-            </h3>
+            <h3 className="modal-title">{isEditing ? "Edit Treatment" : "Add procedure"}</h3>
+
             <form className="modal-form" onSubmit={handleSubmit}>
               <div className="modal-row">
                 <input
-                  type="text"
                   className="add-doc-input"
                   placeholder="Procedure"
                   value={form.procedure}
-                  onChange={(e) =>
-                    handleChange("procedure", e.target.value)
-                  }
+                  onChange={(e) => handleChange("procedure", e.target.value)}
                 />
               </div>
+
               <div className="modal-row">
                 <input
-                  type="text"
                   className="add-doc-input"
-                  placeholder="Tooth (e.g. Tooth #14)"
+                  placeholder="Tooth (optional)"
                   value={form.tooth}
                   onChange={(e) => handleChange("tooth", e.target.value)}
                 />
               </div>
+
               <div className="modal-row">
                 <input
                   type="date"
@@ -335,15 +430,17 @@ export default function TreatmentPlansPage() {
                   onChange={(e) => handleChange("date", e.target.value)}
                 />
               </div>
+
               <div className="modal-row">
                 <input
                   type="number"
                   className="add-doc-input"
-                  placeholder="Cost (e.g. 800)"
+                  placeholder="Cost (e.g. 200)"
                   value={form.cost}
                   onChange={(e) => handleChange("cost", e.target.value)}
                 />
               </div>
+
               <div className="modal-row">
                 <select
                   className="add-doc-input"
@@ -356,15 +453,11 @@ export default function TreatmentPlansPage() {
               </div>
 
               <div className="modal-actions">
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={closeModal}
-                >
+                <button type="button" className="secondary-button" onClick={closeModal}>
                   Cancel
                 </button>
                 <button type="submit" className="primary-button">
-                  {isEditing ? "Save Changes" : "Add"}
+                  {isEditing ? "Save" : "Add"}
                 </button>
               </div>
             </form>
