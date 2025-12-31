@@ -94,8 +94,8 @@ export default function LoginPage() {
       // ✅ Save logged-in user - single source of truth
       localStorage.setItem("currentUser", JSON.stringify(normalizedUser));
 
-      // Success → navigate to staff dashboard
-      navigate("/staff");
+      // Success → navigate to dashboard dashboard
+      navigate("/dashboard");
     } catch (err) {
       console.error(err);
       showToast("Could not connect to server.", "error");

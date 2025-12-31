@@ -31,7 +31,14 @@ import ChangePasswordPage from "./pages/staff/changePassword.jsx";
 import MedicalRecordsPage from "./pages/patients/MedicalRecords.jsx";
 import PrescriptionsPage from "./pages/patients/Prescriptions.jsx";
 import TreatmentPlansPage from "./pages/patients/TreatmentPlans.jsx";
-import AddPatientPage from "./pages/patients/AddPatient.jsx";
+
+// Reports page (real one, not placeholder)
+import ReportsPage from "./pages/reports/reports.jsx";
+
+import BillingPage from "./pages/billing/billing.jsx";
+import AddInvoicePage from "./pages/billing/AddInvoice.jsx";
+import InvoicePrintPage from "./pages/billing/InvoicePrint.jsx";
+
 
 // ✅ Protected Route Component – only checks if user is logged in
 function ProtectedRoute({ children }) {
@@ -199,7 +206,7 @@ function App() {
           path="/reports"
           element={
             <ProtectedRoute>
-              <div>reports page comming soon</div>
+              <ReportsPage />
             </ProtectedRoute>
           }
         />
@@ -208,7 +215,23 @@ function App() {
           path="/billing"
           element={
             <ProtectedRoute>
-              <div>billing page coming soon</div>
+              <div><BillingPage /></div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/billing/new"
+          element={
+            <ProtectedRoute>
+              <div><AddInvoicePage /></div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/billing/invoice/:id"
+          element={
+            <ProtectedRoute>
+              <InvoicePrintPage />
             </ProtectedRoute>
           }
         />
@@ -220,14 +243,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-             <Route
-  path="/patients/add"
-  element={
-    <ProtectedRoute>
-      <AddPatientPage />
-    </ProtectedRoute>
-  }
-/>
+
         {/* Fallback route -> dashboard */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

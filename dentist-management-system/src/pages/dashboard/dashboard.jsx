@@ -235,71 +235,46 @@ export default function DashboardPage() {
 
 
 
-      
-      // ✅ Calculate pending payments by summing each patient's outstanding balance
-      // Outstanding per patient = (completed appointment costs) - (invoices paid for that patient)
-      // Then sum all patient outstandings for dentist's patients (or all patients if admin)
-      
-      const patientBilling = {};
-      
-      // Step 1: Identify relevant patients
-      const relevantPatientIds = new Set();
-      
-      if (isDentist) {
-        // Dentist: only patients from their appointments
-        for (const appt of appointments) {
-          if (appt.patient_id) {
-            relevantPatientIds.add(appt.patient_id);
-          }
-        }
-      } else {
-        // Admin: all patients from all appointments
-        const allAppointments = await safeJson(await fetch(`${API_BASE}/api/appointments`));
-        if (allAppointments) {
-          for (const appt of allAppointments) {
-            if (appt.patient_id) {
-              relevantPatientIds.add(appt.patient_id);
-            }
-          }
-        }
-      }
-      
-      // Step 2: Calculate total COMPLETED appointment costs per patient
-      const allAppointmentsForBilling = isDentist ? appointments : (await safeJson(await fetch(`${API_BASE}/api/appointments`))) || [];
-      
-      for (const appt of allAppointmentsForBilling) {
-        const patientId = appt.patient_id;
-        if (!patientId || !relevantPatientIds.has(patientId)) continue;
-        
-        // Only count COMPLETED appointments
-        if (String(appt.status).toLowerCase() !== "completed") continue;
-        
-        const cost = parseFloat(appt.cost) || 0;
-        if (!patientBilling[patientId]) {
-          patientBilling[patientId] = { totalCost: 0, totalPaid: 0 };
-        }
-        patientBilling[patientId].totalCost += cost;
-      }
-      
-      // Step 3: Calculate total invoice payments per patient
-      for (const inv of invoices) {
-        const patientId = inv.patient_id;
-        if (!patientId || !relevantPatientIds.has(patientId)) continue;
-        
-        const amount = parseFloat(inv.amount) || 0;
-        if (!patientBilling[patientId]) {
-          patientBilling[patientId] = { totalCost: 0, totalPaid: 0 };
-        }
-        patientBilling[patientId].totalPaid += amount;
-      }
-      
-      // Step 4: Calculate outstanding per patient, then sum all outstandings
-      let totalPending = 0;
-      for (const patientId in patientBilling) {
-        const { totalCost, totalPaid } = patientBilling[patientId];
-        const patientOutstanding = Math.max(totalCost - totalPaid, 0);
-        totalPending += patientOutstanding;
-      }
+let totalPending = 0;
+
+// Step 1: Identify relevant patients
+const relevantPatientIds = new Set();
+if (isDentist) {
+  appointments.forEach((appt) => {
+    if (appt.patient_id) relevantPatientIds.add(appt.patient_id);
+  });
+} else {
+  patients.forEach((p) => relevantPatientIds.add(p.id));
+}
+
+// Step 2: Compute total appointment costs per patient (ALL statuses)
+const patientBilling = {};
+appointments.forEach((appt) => {
+  const patientId = appt.patient_id;
+  if (!patientId || !relevantPatientIds.has(patientId)) return;
+
+  const cost = parseFloat(appt.cost) || 0;
+  if (!patientBilling[patientId]) patientBilling[patientId] = { totalCost: 0, totalPaid: 0 };
+  patientBilling[patientId].totalCost += cost;
+});
+
+// Step 3: Add invoice payments
+invoices.forEach((inv) => {
+  const patientId = inv.patient_id;
+  if (!patientId || !relevantPatientIds.has(patientId)) return;
+
+  const amount = parseFloat(inv.amount) || 0;
+  if (!patientBilling[patientId]) patientBilling[patientId] = { totalCost: 0, totalPaid: 0 };
+  patientBilling[patientId].totalPaid += amount;
+});
+
+// Step 4: Sum outstanding per patient
+for (const pid in patientBilling) {
+  const { totalCost, totalPaid } = patientBilling[pid];
+  totalPending += Math.max(totalCost - totalPaid, 0);
+}
+
+
 
       setStats({
         appointments: Array.isArray(appointments) ? appointments.length : 0,
