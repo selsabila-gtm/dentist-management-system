@@ -99,6 +99,10 @@ export default function PatientsList() {
     navigate(`/patients/${patientId}/medical-records`);
   };
 
+  const handleView = (patientId) => {
+    navigate(`/patients/${patientId}`);
+  };
+
   const handleDelete = async (patientId) => {
     if (
       window.confirm(
@@ -252,7 +256,7 @@ export default function PatientsList() {
                         </td>
                         <td className="py-4 px-6 text-sm">
                           <button
-                            onClick={() => handleViewMedicalRecords(patient.id)}
+                            onClick={() => handleView(patient.id)}
                             className="text-blue-600 hover:text-blue-800 font-medium mr-3"
                           >
                             View

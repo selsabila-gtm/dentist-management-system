@@ -11,14 +11,14 @@ export default function ViewPatient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Tabs with labels and corresponding paths
+  // Tabs with labels and corresponding paths - using template literals
   const tabs = [
-    { label: "General Info", path: "/patients/general-info" },
-    { label: "Appointments", path: "/patients/appointments" },
-    { label: "Treatment Plans", path: "/patients/treatment-plans" },
-    { label: "Medical Records", path: "/patients/medical-records" },
-    { label: "Prescriptions", path: "/patients/prescriptions" },
-    { label: "Invoices/Payments", path: "/patients/invoices" },
+    { label: "General Info", path: `/patients/${id}` },
+    { label: "Appointments", path: `/patients/${id}/appointments` },
+    { label: "Treatment Plans", path: `/patients/${id}/treatment-plans` },
+    { label: "Medical Records", path: `/patients/${id}/medical-records` },
+    { label: "Prescriptions", path: `/patients/${id}/prescriptions` },
+    { label: "Invoices/Payments", path: `/patients/${id}/invoices` },
   ];
 
   // Fetch patient info from backend
@@ -31,8 +31,8 @@ export default function ViewPatient() {
 
         const data = await res.json();
         setPatientData({
-          firstName: data.first_name,
-          lastName: data.last_name,
+          firstName: data.first_name || data.name?.split(' ')[0] || '',
+          lastName: data.last_name || data.name?.split(' ')[1] || '',
           dateOfBirth: data.date_of_birth,
           gender: data.gender,
           phoneNumber: data.phone,
