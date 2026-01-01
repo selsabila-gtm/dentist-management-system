@@ -213,8 +213,8 @@ def reset_password():
     db.session.commit()
     return jsonify({"message": "Password updated."}), 200
 
+# ---- PATIENTS - FIXED ENDPOINTS ----
 
-# ---- PATIENTS ----
 @bp.route("/api/patients", methods=["GET"])
 def get_patients():
     rows = Patient.query.all()
@@ -231,21 +231,39 @@ def get_patients():
 @bp.route("/api/patients", methods=["POST"])
 def create_patient():
     data = request.get_json() or {}
-    if not data.get("full_name") and not (
-        data.get("first_name") and data.get("last_name")
-    ):
-        return jsonify({"error": "Patient name is required"}), 400
+    
+    # Accept both camelCase (from frontend) and snake_case
+    first_name = (data.get("firstName") or data.get("first_name") or "").strip()
+    last_name = (data.get("lastName") or data.get("last_name") or "").strip()
+    
+    if not first_name or not last_name:
+        return jsonify({"error": "First name and last name are required"}), 400
+    
+    # AUTO-GENERATE full_name from firstName + lastName
+    full_name = f"{first_name} {last_name}"
+    
     p = Patient(
-        full_name=data.get("full_name"),
-        first_name=data.get("first_name"),
-        last_name=data.get("last_name"),
-        date_of_birth=data.get("date_of_birth"),
-        phone=data.get("phone"),
+        full_name=full_name,
+        first_name=first_name,
+        last_name=last_name,
+        date_of_birth=data.get("dateOfBirth") or data.get("date_of_birth"),
+        phone=data.get("phoneNumber") or data.get("phone"),
         email=data.get("email"),
+        gender=data.get("gender"),
+        address=data.get("address"),
+        insurance_provider=data.get("insuranceProvider") or data.get("insurance_provider"),
+        insurance_policy_number=data.get("policyNumber") or data.get("insurance_policy_number"),
+        group_number=data.get("groupNumber") or data.get("group_number"),
     )
-    db.session.add(p)
-    db.session.commit()
-    return jsonify(p.to_dict()), 201
+    
+    try:
+        db.session.add(p)
+        db.session.commit()
+        return jsonify(p.to_dict()), 201
+    except Exception as e:
+        db.session.rollback()
+        print("Error creating patient:", e)
+        return jsonify({"error": "Failed to create patient", "detail": str(e)}), 500
 
 
 @bp.route("/api/patients/<int:patient_id>", methods=["GET"])
@@ -254,6 +272,85 @@ def get_patient(patient_id):
     return jsonify(p.to_dict())
 
 
+@bp.route("/api/patients/<int:patient_id>", methods=["PUT"])
+def update_patient(patient_id):
+    """Update patient information"""
+    p = Patient.query.get_or_404(patient_id)
+    data = request.get_json() or {}
+    
+    # Update first/last name (handle both camelCase and snake_case)
+    first_name = data.get("firstName") or data.get("first_name")
+    last_name = data.get("lastName") or data.get("last_name")
+    
+    if first_name:
+        p.first_name = first_name
+    if last_name:
+        p.last_name = last_name
+    
+    # AUTO-UPDATE full_name whenever first or last name changes
+    if first_name or last_name:
+        p.full_name = f"{p.first_name or ''} {p.last_name or ''}".strip()
+    
+    # Update other fields (accept camelCase from frontend)
+    if "dateOfBirth" in data or "date_of_birth" in data:
+        p.date_of_birth = data.get("dateOfBirth") or data.get("date_of_birth")
+    
+    if "phoneNumber" in data or "phone" in data:
+        p.phone = data.get("phoneNumber") or data.get("phone")
+    
+    if "email" in data:
+        p.email = data.get("email")
+    
+    if "gender" in data:
+        p.gender = data.get("gender")
+    
+    if "address" in data:
+        p.address = data.get("address")
+    
+    if "insuranceProvider" in data or "insurance_provider" in data:
+        p.insurance_provider = data.get("insuranceProvider") or data.get("insurance_provider")
+    
+    if "policyNumber" in data or "insurance_policy_number" in data:
+        p.insurance_policy_number = data.get("policyNumber") or data.get("insurance_policy_number")
+    
+    if "groupNumber" in data or "group_number" in data:
+        p.group_number = data.get("groupNumber") or data.get("group_number")
+    
+    try:
+        db.session.commit()
+        return jsonify(p.to_dict()), 200
+    except Exception as e:
+        db.session.rollback()
+        print("Error updating patient:", e)
+        return jsonify({"error": "Failed to update patient", "detail": str(e)}), 500
+
+
+@bp.route("/api/patients/<int:patient_id>", methods=["DELETE"])
+def delete_patient(patient_id):
+    """Delete a patient and all related records"""
+    p = Patient.query.get_or_404(patient_id)
+    
+    try:
+        # Delete related records first (to avoid foreign key constraints)
+        MedicalRecord.query.filter_by(patient_id=patient_id).delete()
+        MedicalDocument.query.filter_by(patient_id=patient_id).delete()
+        Prescription.query.filter_by(patient_id=patient_id).delete()
+        TreatmentPlan.query.filter_by(patient_id=patient_id).delete()
+        Invoice.query.filter_by(patient_id=patient_id).delete()
+        
+        # Update appointments to remove patient reference
+        Appointment.query.filter_by(patient_id=patient_id).update({"patient_id": None})
+        
+        # Finally delete the patient
+        db.session.delete(p)
+        db.session.commit()
+        
+        return jsonify({"message": "Patient deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        print("Error deleting patient:", e)
+        return jsonify({"error": "Failed to delete patient", "detail": str(e)}), 500
+    
 # ---- APPOINTMENTS ----
 @bp.route("/api/appointments", methods=["GET"])
 def list_appointments():
@@ -759,4 +856,343 @@ def invoices_collection():
     return jsonify(inv.to_dict()), 201
 
 
+# ==================== INVENTORY ROUTES ====================
 
+# ---- INVENTORY CATEGORIES ----
+@bp.route("/api/inventory/categories", methods=["GET"])
+def get_inventory_categories():
+    categories = InventoryCategory.query.order_by(InventoryCategory.name).all()
+    return jsonify([c.to_dict() for c in categories]), 200
+
+
+@bp.route("/api/inventory/categories", methods=["POST"])
+def create_inventory_category():
+    data = request.get_json() or {}
+    name = (data.get("name") or "").strip()
+    description = data.get("description", "")
+    if not name:
+        return jsonify({"error": "Category name is required"}), 400
+
+    existing = InventoryCategory.query.filter_by(name=name).first()
+    if existing:
+        return jsonify({"error": "Category already exists"}), 400
+
+    category = InventoryCategory(name=name, description=description)
+    db.session.add(category)
+    db.session.commit()
+    return jsonify(category.to_dict()), 201
+
+
+# ---- INVENTORY ITEMS ----
+@bp.route("/api/inventory", methods=["GET"])
+def get_inventory_items():
+    items = InventoryItem.query.order_by(InventoryItem.item_name).all()
+    return jsonify([item.to_dict() for item in items]), 200
+
+
+@bp.route("/api/inventory", methods=["POST"])
+def create_inventory_item():
+    data = request.get_json() or {}
+    item_name = (data.get("item_name") or "").strip()
+    if not item_name:
+        return jsonify({"error": "Item name is required"}), 400
+
+    try:
+        # parse numeric fields
+        quantity = int(data.get("quantity") or 0)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid quantity"}), 400
+
+    try:
+        minimum_stock = int(data.get("minimum_stock") or 0)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid minimum_stock"}), 400
+
+    # parse price_per_unit (optional)
+    price_raw = data.get("price_per_unit")
+    price_value = None
+    if price_raw is not None and price_raw != "":
+        try:
+            price_value = float(price_raw)
+            if price_value < 0:
+                raise ValueError("negative")
+        except Exception:
+            return jsonify({"error": "Invalid price_per_unit"}), 400
+
+    try:
+        item = InventoryItem(
+            item_name=item_name,
+            category_id=data.get("category_id"),
+            quantity=quantity,
+            minimum_stock=minimum_stock,
+            supplier=data.get("supplier"),
+            expiration_date=data.get("expiration_date") or "N/A",
+            notes=data.get("notes"),
+            last_updated=datetime.utcnow().strftime("%Y-%m-%d"),
+            price_per_unit=price_value,
+        )
+        db.session.add(item)
+        db.session.commit()
+        return jsonify(item.to_dict()), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Failed to create item", "detail": str(e)}), 500
+
+
+@bp.route("/api/inventory/<int:item_id>", methods=["GET"])
+def get_inventory_item(item_id):
+    item = InventoryItem.query.get_or_404(item_id)
+    return jsonify(item.to_dict()), 200
+
+
+@bp.route("/api/inventory/<int:item_id>", methods=["PUT"])
+def update_inventory_item(item_id):
+    item = InventoryItem.query.get_or_404(item_id)
+    data = request.get_json() or {}
+
+    # Update allowed fields
+    for field in ("item_name", "category_id", "supplier", "expiration_date", "notes"):
+        if field in data:
+            setattr(item, field, data[field])
+
+    # numeric fields with validation
+    if "quantity" in data:
+        try:
+            item.quantity = int(data["quantity"])
+        except (TypeError, ValueError):
+            pass
+
+    if "minimum_stock" in data:
+        try:
+            item.minimum_stock = int(data["minimum_stock"])
+        except (TypeError, ValueError):
+            pass
+
+    # price_per_unit (optional, allow null)
+    if "price_per_unit" in data:
+        pp = data["price_per_unit"]
+        if pp in (None, ""):
+            item.price_per_unit = None
+        else:
+            try:
+                ppv = float(pp)
+                if ppv < 0:
+                    # ignore invalid negative price
+                    pass
+                else:
+                    item.price_per_unit = ppv
+            except Exception:
+                # ignore invalid parse
+                pass
+
+    item.last_updated = datetime.utcnow().strftime("%Y-%m-%d")
+    try:
+        db.session.commit()
+        return jsonify(item.to_dict()), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Failed to update item", "detail": str(e)}), 500
+
+
+@bp.route("/api/inventory/<int:item_id>", methods=["DELETE"])
+def delete_inventory_item(item_id):
+    item = InventoryItem.query.get_or_404(item_id)
+    try:
+        db.session.delete(item)
+        db.session.commit()
+        return "", 204
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Failed to delete item", "detail": str(e)}), 500
+
+
+# ---- REPORTS ----
+@bp.route("/api/reports/billing", methods=["GET"])
+def get_billing_report():
+    """
+    Get billing report data including revenue, invoices, and collection rates
+    Query params: date_range (week, month, quarter, year)
+    """
+    date_range = request.args.get("date_range", "month")
+
+    # TODO: Implement actual calculations based on appointments and invoices
+    # For now, returning mock data structure
+    data = {
+        "total_revenue": 90000,
+        "paid_invoices": 85500,
+        "outstanding": 4500,
+        "avg_invoice": 245,
+        "total_invoices": 367,
+        "pending_count": 15,
+        "collection_rate": 95,
+        "revenue_by_procedure": [
+            {"procedure": "Routine Checkup", "count": 145, "revenue": 7250},
+            {"procedure": "Teeth Cleaning", "count": 98, "revenue": 9800},
+            {"procedure": "Filling", "count": 67, "revenue": 10050},
+            {"procedure": "Root Canal", "count": 23, "revenue": 11500},
+            {"procedure": "Extraction", "count": 34, "revenue": 5100},
+        ],
+    }
+
+    return jsonify(data), 200
+
+
+@bp.route("/api/reports/payments", methods=["GET"])
+def get_payments_report():
+    """
+    Get payment tracking report including paid, unpaid, and partial payments
+    Query params: date_range (week, month, quarter, year)
+    """
+    date_range = request.args.get("date_range", "month")
+
+    # TODO: Implement actual calculations from payment records
+    data = {
+        "paid": {"count": 312, "amount": 85500},
+        "unpaid": {"count": 37, "amount": 4200},
+        "partial": {"count": 18, "amount": 300},
+        "recent_payments": [
+            {
+                "id": 1,
+                "date": "2025-12-10",
+                "patient": "John Doe",
+                "invoice": "INV-2341",
+                "amount": 250,
+                "status": "paid",
+            },
+            {
+                "id": 2,
+                "date": "2025-12-10",
+                "patient": "Sarah Smith",
+                "invoice": "INV-2340",
+                "amount": 180,
+                "status": "paid",
+            },
+            {
+                "id": 3,
+                "date": "2025-12-09",
+                "patient": "Mike Johnson",
+                "invoice": "INV-2339",
+                "amount": 420,
+                "status": "partial",
+            },
+        ],
+    }
+
+    return jsonify(data), 200
+
+
+from datetime import datetime, timedelta
+
+@bp.route("/api/reports/inventory", methods=["GET"])
+def get_inventory_report():
+    """
+    Real inventory report (NO mock data).
+    - total_cost = current inventory value (stock * price_per_unit)
+    - consumed_this_period = sum of used quantities in completed summaries within date_range
+    """
+    date_range = request.args.get("date_range", "month")
+
+    RANGE_DAYS = {
+        "week": 7,
+        "month": 30,
+        "quarter": 90,
+        "year": 365,
+    }
+
+    days = RANGE_DAYS.get(date_range, 30)
+    from_dt = datetime.now() - timedelta(days=days)
+    from_str = from_dt.strftime("%Y-%m-%d")
+
+    # ---------- helpers ----------
+    def safe_int(v, default=0):
+        try:
+            return int(v)
+        except Exception:
+            return default
+
+    def safe_float(v, default=0.0):
+        try:
+            return float(v)
+        except Exception:
+            return default
+
+    # ---------- 1) compute consumption from summaries.inventory ----------
+    # We only count appointments in the selected date range.
+    # (Your Appointment.date is a "YYYY-MM-DD" string, so lexical compare works)
+    appts_in_range = Appointment.query.filter(Appointment.date >= from_str).all()
+
+    consumed_by_item = {}  # { item_id: qty_consumed_in_period }
+
+    for appt in appts_in_range:
+        # Only count completed appointments (recommended)
+        if appt.status != "completed":
+            continue
+
+        if not appt.summary:
+            continue
+
+        inv_list = load_json_field(appt.summary.inventory)
+
+        # Accept multiple possible shapes:
+        # {item_id, quantity} OR {id, qty} OR {inventory_item_id, count}
+        for entry in inv_list:
+            if not isinstance(entry, dict):
+                continue
+
+            item_id = entry.get("item_id") or entry.get("id") or entry.get("inventory_item_id")
+            qty = entry.get("quantity") or entry.get("qty") or entry.get("count")
+
+            item_id = safe_int(item_id, 0)
+            qty = safe_int(qty, 0)
+
+            if item_id > 0 and qty > 0:
+                consumed_by_item[item_id] = consumed_by_item.get(item_id, 0) + qty
+
+    # ---------- 2) compute stock + costs ----------
+    items = InventoryItem.query.order_by(InventoryItem.item_name).all()
+
+    report_items = []
+    total_items = 0
+    consumed_this_period = 0
+    total_cost = 0.0
+    low_stock_count = 0
+
+    for it in items:
+        stock = safe_int(it.quantity, 0)
+        min_stock = safe_int(it.minimum_stock, 0)
+        unit_price = safe_float(it.price_per_unit, 0.0)
+
+        consumed = safe_int(consumed_by_item.get(it.id, 0), 0)
+
+        # ✅ Current inventory value
+        current_value = stock * unit_price
+
+        # ✅ Cost of consumed inventory in this period
+        consumed_cost = consumed * unit_price
+
+        total_items += stock
+        consumed_this_period += consumed
+        total_cost += current_value
+
+        status = "low" if stock <= min_stock else "good"
+        if status == "low":
+            low_stock_count += 1
+
+        report_items.append({
+            "id": it.id,
+            "item": it.item_name,
+            "stock": stock,
+            "consumed": consumed,
+            "cost": round(current_value, 2),           # ✅ matches "Current inventory value"
+            "consumed_cost": round(consumed_cost, 2),  # ✅ what you requested
+            "unit_price": round(unit_price, 2),        # optional but useful
+            "status": status,
+        })
+
+    return jsonify({
+        "total_items": total_items,
+        "consumed_this_period": consumed_this_period,
+        "total_cost": round(total_cost, 2),
+        "low_stock_count": low_stock_count,
+        "items": report_items,
+    }), 200

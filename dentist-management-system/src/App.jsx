@@ -1,25 +1,27 @@
 // src/App.jsx
+
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
 
-// Auth utils
-import { getCurrentUser } from "./utils/auth";
-
 // Auth pages
-import LoginPage from "./pages/auth/login.jsx"; // ⬅️ matches your file path
-import ResetPasswordPage from "./pages/staff/resetPassword";
+import LoginPage from "./pages/auth/login";
+
+// Dashboard
+import DashboardPage from "./pages/dashboard/dashboard.jsx";
 
 // Inventory pages
 import InventoryListPage from "./pages/inventory/list";
 import InventoryAddPage from "./pages/inventory/add";
 import InventoryDetailsPage from "./pages/inventory/details";
-import Dashboard from "./pages/dashboard/dashboard.jsx";
 
 // Calendar / Appointments pages
 import Calendar from "./pages/appointments/calendar";
 import AppointmentAddPage from "./pages/appointments/add";
 import AppointmentPostSummaryPage from "./pages/appointments/post_summary";
+
+// Settings
+import SettingsPage from "./pages/settings/settings.jsx";
 
 // Staff pages
 import Staff from "./pages/staff/list";
@@ -28,16 +30,27 @@ import StaffProfilePage from "./pages/staff/profile.jsx";
 import ChangePasswordPage from "./pages/staff/changePassword.jsx";
 
 // Patient pages
+import AddPatient from "./pages/patients/AddPatient.jsx";
+import Appointment from "./pages/patients/PatientAppointment.jsx";
+import PatientInvoices from "./pages/patients/PatientInvoices.jsx";
+import SearchPatient from "./pages/patients/SearchPatient.jsx";
+import ViewPatient from "./pages/patients/ViewPatient.jsx";
+
 import MedicalRecordsPage from "./pages/patients/MedicalRecords.jsx";
 import PrescriptionsPage from "./pages/patients/Prescriptions.jsx";
 import TreatmentPlansPage from "./pages/patients/TreatmentPlans.jsx";
-import AddPatientPage from "./pages/patients/AddPatient.jsx";
 
-// ✅ Protected Route Component – only checks if user is logged in
+// Billing
+import BillingPage from "./pages/billing/billing.jsx";
+import AddInvoicePage from "./pages/billing/AddInvoice.jsx";
+import InvoicePrintPage from "./pages/billing/InvoicePrint.jsx";
+
+
+// Protected Route Component
 function ProtectedRoute({ children }) {
-  const user = getCurrentUser();
+  const staffId = localStorage.getItem("staff_id");
 
-  if (!user) {
+  if (!staffId) {
     return <Navigate to="/login" replace />;
   }
 
@@ -48,26 +61,36 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public routes */}
+        {/* ---------------- PUBLIC ---------------- */}
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-        {/* Root redirects to dashboard (staff list for now) */}
+        {/* ---------------- PATIENT (UNPROTECTED in your current setup) ---------------- */}
+        <Route path="/add-patient" element={<AddPatient />} />
+        <Route path="/b" element={<Appointment />} />
+        <Route path="/c" element={<PatientInvoices />} />
+        <Route path="/patients" element={<SearchPatient />} />
+        <Route path="/patient/:id" element={<ViewPatient />} />
+
+        {/* Redirect root */}
+        <Route path="/a" element={<Navigate to="/staff" />} />
+
+        {/* ---------------- PROTECTED ---------------- */}
+        {/* Default redirect */}
         <Route
           path="/"
           element={
             <ProtectedRoute>
-              <Dashboard />
+              <DashboardPage />
             </ProtectedRoute>
           }
         />
 
-        {/* Dashboard -> same as staff list for now */}
+        {/* Dashboard */}
         <Route
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <Dashboard />
+              <DashboardPage />
             </ProtectedRoute>
           }
         />
@@ -124,7 +147,7 @@ function App() {
           }
         />
 
-        {/* Staff management (admin-only logic is inside the pages/layout) */}
+        {/* Staff management */}
         <Route
           path="/staff"
           element={
@@ -158,9 +181,9 @@ function App() {
           }
         />
 
-        {/* Patient pages (protected) */}
+        {/* ✅ Patient pages (protected) now PER PATIENT */}
         <Route
-          path="/patients/medical-records"
+          path="/patients/:patientId/medical-records"
           element={
             <ProtectedRoute>
               <MedicalRecordsPage />
@@ -168,7 +191,7 @@ function App() {
           }
         />
         <Route
-          path="/patients/prescriptions"
+          path="/patients/:patientId/prescriptions"
           element={
             <ProtectedRoute>
               <PrescriptionsPage />
@@ -176,7 +199,7 @@ function App() {
           }
         />
         <Route
-          path="/patients/treatment-plans"
+          path="/patients/:patientId/treatment-plans"
           element={
             <ProtectedRoute>
               <TreatmentPlansPage />
@@ -184,22 +207,22 @@ function App() {
           }
         />
 
-        {/* Placeholder / other sections (protected) */}
+        {/* Billing */}
         <Route
-          path="/patients"
+          path="/billing"
           element={
             <ProtectedRoute>
-              <div>Patients Page (Coming Soon)</div>
+              <BillingPage />
             </ProtectedRoute>
           }
         />
 
-        {/* ✅ Real reports page, admin-only logic is inside ReportsPage */}
+        {/* Reports placeholder */}
         <Route
           path="/reports"
           element={
             <ProtectedRoute>
-              <div>reports page comming soon</div>
+              <div>Reports Page (Coming Soon)</div>
             </ProtectedRoute>
           }
         />
@@ -208,7 +231,7 @@ function App() {
           path="/billing"
           element={
             <ProtectedRoute>
-              <div>billing page coming soon</div>
+              <div><BillingPage /></div>
             </ProtectedRoute>
           }
         />
@@ -216,18 +239,11 @@ function App() {
           path="/settings"
           element={
             <ProtectedRoute>
-              <div>Settings Page (Coming Soon)</div>
+              <SettingsPage />
             </ProtectedRoute>
           }
         />
-             <Route
-  path="/patients/add"
-  element={
-    <ProtectedRoute>
-      <AddPatientPage />
-    </ProtectedRoute>
-  }
-/>
+
         {/* Fallback route -> dashboard */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

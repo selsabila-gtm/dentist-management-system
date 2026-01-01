@@ -32,7 +32,7 @@ export default function LoginPage() {
     if (!username.trim()) newErrors.username = "Username is required.";
     if (!password) newErrors.password = "Password is required.";
     else if (password.length < 8)
-      newErrors.password = "Password must be at least 8 characters.";
+    newErrors.password = "Password must be at least 8 characters.";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -42,19 +42,35 @@ export default function LoginPage() {
     if (!validate()) return;
 
     setSubmitting(true);
+    setErrors({}); // Clear any previous errors
 
     try {
       const res = await fetch(`${API_BASE}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ 
+          username: username.trim(), 
+          password: password 
+        }),
       });
 
-      const data = await res.json();
+      // Always try to parse the response
+      let data;
+      try {
+        data = await res.json();
+      } catch (parseErr) {
+        console.error("Failed to parse response:", parseErr);
+        showToast("Invalid response from server.", "error");
+        setSubmitting(false);
+        return;
+      }
+
       console.log("LOGIN RESPONSE:", data);
 
+      // Check if login was successful
       if (!res.ok || !data.success) {
         showToast(data.message || "Invalid username or password.", "error");
+        setSubmitting(false);
         return;
       }
 
@@ -94,12 +110,53 @@ export default function LoginPage() {
       // ✅ Save logged-in user - single source of truth
       localStorage.setItem("currentUser", JSON.stringify(normalizedUser));
 
-      // Success → navigate to staff dashboard
-      navigate("/staff");
+      // ✅ (optional) if your ProtectedRoute still relies on staff_id
+      // keep this so you don’t get stuck on login
+      localStorage.setItem("staff_id", String(normalizedUser.id || ""));
+
+      navigate("/dashboard");
+      // Login successful - store user data
+      try {
+        // Store individual fields in localStorage
+        if (data.staff_id) localStorage.setItem("staff_id", data.staff_id);
+        if (data.username) localStorage.setItem("username", data.username);
+        if (data.role) localStorage.setItem("role", data.role);
+        if (data.role_id) localStorage.setItem("role_id", data.role_id);
+        if (data.full_name) localStorage.setItem("full_name", data.full_name);
+
+        // Store complete user object
+        let userPayload = data.user || {
+          id: data.staff_id,
+          staff_id: data.staff_id,
+          username: data.username,
+          full_name: data.full_name,
+          email: data.email,
+          role: data.role,
+          role_id: data.role_id,
+          profile_photo: data.profile_photo,
+        };
+
+        localStorage.setItem("currentUser", JSON.stringify(userPayload));
+        
+        console.log("User data stored successfully");
+        
+        // Show success message
+        showToast("Login successful!", "success");
+        
+        // Navigate after a brief delay to show the success message
+        setTimeout(() => {
+          navigate("/dashboard", { replace: true });
+        }, 500);
+
+      } catch (storageErr) {
+        console.error("Failed to store user data:", storageErr);
+        showToast("Failed to save login session.", "error");
+        setSubmitting(false);
+      }
+
     } catch (err) {
-      console.error(err);
-      showToast("Could not connect to server.", "error");
-    } finally {
+      console.error("Login error:", err);
+      showToast("Could not connect to server. Please try again.", "error");
       setSubmitting(false);
     }
   };
@@ -138,7 +195,13 @@ export default function LoginPage() {
             }
             placeholder="Username"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={(e) => {
+              setUsername(e.target.value);
+              if (errors.username) {
+                setErrors(prev => ({ ...prev, username: "" }));
+              }
+            }}
+            disabled={submitting}
           />
           {errors.username && (
             <p className="staff-error-text">{errors.username}</p>
@@ -155,7 +218,13 @@ export default function LoginPage() {
             }
             placeholder="Password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (errors.password) {
+                setErrors(prev => ({ ...prev, password: "" }));
+              }
+            }}
+            disabled={submitting}
           />
           {errors.password && (
             <p className="staff-error-text">{errors.password}</p>
@@ -176,6 +245,7 @@ export default function LoginPage() {
               type="checkbox"
               checked={remember}
               onChange={(e) => setRemember(e.target.checked)}
+              disabled={submitting}
             />
             Remember me
           </label>

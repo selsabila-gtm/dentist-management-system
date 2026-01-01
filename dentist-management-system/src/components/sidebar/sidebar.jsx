@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import profileImg from "../../assets/images/profile_img.png";
 import {
@@ -17,6 +17,18 @@ import "./Sidebar.css";
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [userRole, setUserRole] = useState("");
+
+  useEffect(() => {
+    // Get user role from localStorage
+    try {
+      const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+      const role = (currentUser.role_name || "").toLowerCase();
+      setUserRole(role);
+    } catch (err) {
+      console.error("Error reading user role:", err);
+    }
+  }, []);
 
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
@@ -25,6 +37,14 @@ const Sidebar = () => {
   const closeSidebar = () => {
     setIsOpen(false);
   };
+
+  // Check if user has access to certain features
+  const isAdmin = userRole === "admin";
+
+  // Admin sees everything
+  // Staff and Reports are admin-only
+  const canSeeReports = isAdmin;
+  const canSeeStaff = isAdmin;
 
   return (
     <>
@@ -70,13 +90,16 @@ const Sidebar = () => {
             <FiCalendar className="icon" /> Calendar
           </NavLink>
 
-          <NavLink
-            to="/staff"
-            className={({ isActive }) => (isActive ? "menu-item active" : "menu-item")}
-            onClick={closeSidebar}
-          >
-            <FiUsers className="icon" /> Staff
-          </NavLink>
+          {/* Staff - Admin only */}
+          {canSeeStaff && (
+            <NavLink
+              to="/staff"
+              className={({ isActive }) => (isActive ? "menu-item active" : "menu-item")}
+              onClick={closeSidebar}
+            >
+              <FiUsers className="icon" /> Staff
+            </NavLink>
+          )}
 
           <NavLink
             to="/patients"
@@ -94,6 +117,7 @@ const Sidebar = () => {
             <FiDollarSign className="icon" /> Billing
           </NavLink>
 
+          {/* Inventory - Now visible to all users */}
           <NavLink
             to="/inventory"
             className={({ isActive }) => (isActive ? "menu-item active" : "menu-item")}
@@ -102,13 +126,16 @@ const Sidebar = () => {
             <FiBox className="icon" /> Inventory
           </NavLink>
 
-          <NavLink
-            to="/reports"
-            className={({ isActive }) => (isActive ? "menu-item active" : "menu-item")}
-            onClick={closeSidebar}
-          >
-            <FiBarChart2 className="icon" /> Reports
-          </NavLink>
+          {/* Reports - Admin only */}
+          {canSeeReports && (
+            <NavLink
+              to="/reports"
+              className={({ isActive }) => (isActive ? "menu-item active" : "menu-item")}
+              onClick={closeSidebar}
+            >
+              <FiBarChart2 className="icon" /> Reports
+            </NavLink>
+          )}
         </nav>
 
         {/* Settings at bottom */}
