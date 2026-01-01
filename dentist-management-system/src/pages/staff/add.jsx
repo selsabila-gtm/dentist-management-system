@@ -143,6 +143,15 @@ export default function StaffAddPage() {
       [name]: value,
     }));
 
+    // ✅ Clear error when user types
+    if (errors[name]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+
     // if user switches away from "Custom", clear the extra inputs
     if (name === "days_available" && value !== "Custom") {
       setCustomDays("");
@@ -172,19 +181,30 @@ export default function StaffAddPage() {
       newErrors.last_name = "Last name is required.";
     }
 
-    if (!form.email || !/^\S+@\S+\.\S+$/.test(form.email)) {
-      newErrors.email = "Please enter a valid email address.";
+    // Email validation - only show error if email is entered but invalid
+    if (form.email.trim()) {
+      if (!/^\S+@\S+\.\S+$/.test(form.email)) {
+        newErrors.email = "Please enter a valid email address.";
+      }
+    } else {
+      newErrors.email = "Email is required.";
     }
 
-    if (form.phone && !/^[0-9+\s()-]{6,}$/.test(form.phone)) {
+    // Phone validation - only if something is entered
+    if (form.phone.trim() && !/^[0-9+\s()-]{6,}$/.test(form.phone)) {
       newErrors.phone = "Please enter a valid phone number.";
     }
 
-    if (!form.username || form.username.length < 3) {
+    if (!form.username.trim()) {
+      newErrors.username = "Username is required.";
+    } else if (form.username.length < 3) {
       newErrors.username = "Username must be at least 3 characters.";
     }
 
-    if (!form.password || form.password.length < 8) {
+    // Password validation - only show length error if something is entered
+    if (!form.password.trim()) {
+      newErrors.password = "Password is required.";
+    } else if (form.password.length < 8) {
       newErrors.password = "Password must be at least 8 characters.";
     }
 
@@ -208,6 +228,14 @@ export default function StaffAddPage() {
     e.preventDefault();
 
     if (!validateForm()) {
+      // ✅ Scroll to first error
+      const firstErrorField = Object.keys(errors)[0];
+      const errorElement = document.querySelector(`[name="${firstErrorField}"]`);
+      if (errorElement) {
+        errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        errorElement.focus();
+      }
+      showToast("Please fix the errors in the form", "error");
       return;
     }
 
@@ -328,7 +356,7 @@ export default function StaffAddPage() {
       </div>
 
       <form
-        className="staff-card staff-form staff-form-two-col"
+        className="staff-card staff-form"
         onSubmit={handleSubmit}
       >
         {/* LEFT COLUMN: Personal Information */}
@@ -346,7 +374,6 @@ export default function StaffAddPage() {
                   ? "staff-input staff-input-error"
                   : "staff-input"
               }
-              required
             />
             {errors.first_name && (
               <p className="staff-error-text">{errors.first_name}</p>
@@ -364,7 +391,6 @@ export default function StaffAddPage() {
                   ? "staff-input staff-input-error"
                   : "staff-input"
               }
-              required
             />
             {errors.last_name && (
               <p className="staff-error-text">{errors.last_name}</p>
@@ -374,14 +400,13 @@ export default function StaffAddPage() {
           <div className="staff-field">
             <label>Email</label>
             <input
-              type="email"
+              type="text"
               name="email"
               value={form.email}
               onChange={handleChange}
               className={
                 errors.email ? "staff-input staff-input-error" : "staff-input"
               }
-              required
             />
             {errors.email && (
               <p className="staff-error-text">{errors.email}</p>
@@ -422,7 +447,6 @@ export default function StaffAddPage() {
               className={
                 errors.role_id ? "staff-input staff-input-error" : "staff-input"
               }
-              required
             >
               <option value="">Select role</option>
               {roles.map((r) => (
@@ -451,7 +475,6 @@ export default function StaffAddPage() {
                   ? "staff-input staff-input-error"
                   : "staff-input"
               }
-              required
             />
             {errors.username && (
               <p className="staff-error-text">{errors.username}</p>
@@ -469,8 +492,10 @@ export default function StaffAddPage() {
                   ? "staff-input staff-input-error"
                   : "staff-input"
               }
-              required
             />
+            {errors.password && (
+              <p className="staff-error-text">{errors.password}</p>
+            )}
           </div>
 
           <h2>Work Schedule</h2>
@@ -498,7 +523,7 @@ export default function StaffAddPage() {
                 placeholder="Enter custom days (e.g. Monday, Wednesday) - No Fridays"
                 value={customDays}
                 onChange={(e) => setCustomDays(e.target.value)}
-                required
+                style={{ marginTop: 6 }}
               />
             )}
           </div>
@@ -531,8 +556,18 @@ export default function StaffAddPage() {
                   }
                   placeholder="Enter hours (e.g. 9:00 AM – 5:00 PM)"
                   value={customHours}
-                  onChange={(e) => setCustomHours(e.target.value)}
-                  required
+                  onChange={(e) => {
+                    setCustomHours(e.target.value);
+                    // ✅ Clear error when user types in custom hours
+                    if (errors.hours) {
+                      setErrors((prev) => {
+                        const newErrors = { ...prev };
+                        delete newErrors.hours;
+                        return newErrors;
+                      });
+                    }
+                  }}
+                  style={{ marginTop: 6 }}
                 />
                 <p style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
                   Hours must be between 8:00 AM and 6:00 PM

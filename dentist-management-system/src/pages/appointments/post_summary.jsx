@@ -39,7 +39,7 @@ export default function PostSummary() {
   
   const [errors, setErrors] = useState({});
   
-  // ✅ NEW: Inventory errors state
+  // ✅ Inventory errors state
   const [inventoryErrors, setInventoryErrors] = useState({});
 
   function navigateBackToCalendar() {
@@ -168,7 +168,7 @@ export default function PostSummary() {
     setNewInv({ item_id: "", item_name: "", quantity: "" });
   }
 
-  // ✅ UPDATED: Added stock validation
+  // ✅ Added stock validation
   function saveNewInv() {
     if (!newInv.item_id || !newInv.quantity) {
       alert("Item and quantity are required.");
@@ -183,7 +183,7 @@ export default function PostSummary() {
 
     const requestedQty = parseInt(newInv.quantity);
 
-    // ✅ NEW: Check if quantity is available in stock
+    // ✅ Check if quantity is available in stock
     if (selectedItem.quantity < requestedQty) {
       setInventoryErrors({
         ...inventoryErrors,
@@ -210,7 +210,7 @@ export default function PostSummary() {
     setInventoryErrors(prev => ({ ...prev, new: undefined }));
   }
 
-  // ✅ UPDATED: Added stock validation
+  // ✅ Added stock validation
   function saveEditInv() {
     if (!editingInv.item_id || !editingInv.quantity) {
       alert("Item and quantity are required.");
@@ -225,7 +225,7 @@ export default function PostSummary() {
 
     const requestedQty = parseInt(editingInv.quantity);
 
-    // ✅ NEW: Check if quantity is available in stock
+    // ✅ Check if quantity is available in stock
     if (selectedItem.quantity < requestedQty) {
       setInventoryErrors({
         ...inventoryErrors,
@@ -394,7 +394,6 @@ export default function PostSummary() {
   }
 
   /* SAVE SUMMARY */
-  // ✅ UPDATED: Added backend error handling for inventory stock
   function saveSummary() {
     const newErrors = {};
 
@@ -405,10 +404,6 @@ export default function PostSummary() {
       if (isNaN(costValue) || costValue < 0) {
         newErrors.cost = "Cost must be a positive number";
       }
-    }
-
-    if (inventory.length === 0) {
-      newErrors.inventory = "At least one inventory item is required";
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -433,7 +428,7 @@ export default function PostSummary() {
         const data = await res.json();
         
         if (!res.ok) {
-          // ✅ NEW: Handle inventory stock errors from backend
+          // ✅ Handle inventory stock errors from backend
           if (data.error === "insufficient_stock" && data.inventory_errors) {
             const invErrors = {};
             data.inventory_errors.forEach(err => {
@@ -747,7 +742,6 @@ export default function PostSummary() {
         {/* INVENTORY */}
         <section className="card summary-section">
           <h2>Inventory Used</h2>
-          {errors.inventory && <div className="error-message">{errors.inventory}</div>}
 
           <table className="appointments-table">
             <thead>
@@ -791,7 +785,6 @@ export default function PostSummary() {
                           setInventoryErrors(prev => ({ ...prev, [idx]: undefined }));
                         }}
                       />
-                      {/* ✅ NEW: Show error message under quantity field */}
                       {inventoryErrors[idx] && (
                         <div className="error-message" style={{ marginTop: "5px", fontSize: "12px" }}>
                           {inventoryErrors[idx]}
@@ -864,7 +857,6 @@ export default function PostSummary() {
                       }}
                       placeholder="Quantity"
                     />
-                    {/* ✅ NEW: Show error message under quantity field */}
                     {inventoryErrors.new && (
                       <div className="error-message" style={{ marginTop: "5px", fontSize: "12px" }}>
                         {inventoryErrors.new}
