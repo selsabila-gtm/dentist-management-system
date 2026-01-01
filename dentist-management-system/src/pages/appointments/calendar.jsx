@@ -120,7 +120,6 @@ export default function Calendar() {
   const [appointments, setAppointments] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // ✅ BEST PRACTICE: Get user info from single source
   const getCurrentUser = () => {
     try {
       const userStr = localStorage.getItem("currentUser");
@@ -136,9 +135,8 @@ export default function Calendar() {
   const userRole = currentUser?.role_name;
 
   const today = new Date();
-  const initialMonth =
-    today.getFullYear() === CALENDAR_YEAR ? today.getMonth() : 10;
-
+  
+  // ✅ FIX: Always use today's date initially unless returning from another page
   const returnDate = location.state?.returnDate;
   
   const getInitialMonthIndex = () => {
@@ -152,23 +150,26 @@ export default function Calendar() {
         console.error("Error parsing return date:", error);
       }
     }
-    return CALENDAR_YEAR * 12 + initialMonth;
+    // ✅ Always use current month
+    return today.getFullYear() * 12 + today.getMonth();
   };
 
   const [monthIndex, setMonthIndex] = useState(getInitialMonthIndex());
   
-  const initialSelectedDateKey = returnDate || 
-    (today.getFullYear() === CALENDAR_YEAR
-      ? formatDateKey(CALENDAR_YEAR, initialMonth, today.getDate())
-      : "2025-11-01");
+  // ✅ FIX: Always use today's date initially unless returning from another page
+  const getInitialSelectedDate = () => {
+    if (returnDate) {
+      return returnDate;
+    }
+    // ✅ Always use TODAY'S date
+    return formatDateKey(today.getFullYear(), today.getMonth(), today.getDate());
+  };
 
-  const [selectedDateKey, setSelectedDateKey] = useState(initialSelectedDateKey);
+  const [selectedDateKey, setSelectedDateKey] = useState(getInitialSelectedDate());
 
   function loadAppointments() {
-    // ✅ Build API URL - only filter for Dentists
     let apiUrl = `${API_BASE}/api/appointments`;
     
-    // 🔍 DETAILED DEBUG LOGGING
     console.log("=== CALENDAR DEBUG ===");
     console.log("Current User Object:", currentUser);
     console.log("User Role:", userRole);
@@ -177,8 +178,6 @@ export default function Calendar() {
     console.log("Staff ID type:", typeof staffId);
     console.log("Role === 'Dentist'?", userRole === "Dentist");
     
-    // ✅ ONLY Dentists see filtered appointments
-    // Admins and Receptionists see ALL appointments
     if (userRole === "Dentist" && staffId) {
       apiUrl += `?dentist_id=${staffId}`;
       console.log("🔒 Dentist view - Filtering appointments for dentist ID:", staffId);
