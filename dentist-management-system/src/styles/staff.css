@@ -558,3 +558,100 @@ body {
     transform: translateY(0) translateX(0);
   }
 }
+/* ADD THESE STYLES TO YOUR EXISTING staff.css FILE */
+
+/* Error input styling - IMPORTANT: Use !important to override other styles */
+.staff-input.staff-input-error {
+  border: 2px solid #ef4444 !important;
+  background-color: #fef2f2 !important;
+  outline: none !important;
+}
+
+.staff-input.staff-input-error:focus {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+/* Error message text */
+.staff-error-text {
+  color: #ef4444;
+  font-size: 13px;
+  margin-top: 6px;
+  display: block;
+  font-weight: 500;
+}
+
+/* Ensure proper spacing for form fields */
+.staff-field {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.staff-field label {
+  margin-bottom: 6px;
+  display: block;
+}
+
+/* Toast notification styles if they don't exist */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+}
+
+.toast {
+  background: white;
+  border-radius: 8px;
+  padding: 16px 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 300px;
+  animation: slideIn 0.3s ease-out;
+}
+
+.toast-success {
+  border-left: 4px solid #10b981;
+}
+
+.toast-error {
+  border-left: 4px solid #ef4444;
+}
+
+.toast-message {
+  flex: 1;
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toast-close:hover {
+  color: #1f2937;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}

@@ -137,6 +137,11 @@ def save_summary(appt_id):
     if not a:
         return jsonify({"error": "not_found"}), 404
     
+    # ✅ NEW: Get old inventory to compare changes
+    old_inventory = []
+    if a.summary:
+        old_inventory = load_json_field(a.summary.inventory)
+    
     # ✅ Validate inventory quantities BEFORE saving
     inventory_items = data.get("inventory", [])
     inventory_errors = []
@@ -155,14 +160,19 @@ def save_summary(appt_id):
             })
             continue
         
-        # Check if enough stock is available
-        if inventory_item.quantity < requested_qty:
+        # ✅ NEW: Check if this item quantity was changed
+        old_item = next((item for item in old_inventory if item.get("item_id") == item_id), None)
+        old_qty = old_item.get("quantity", 0) if old_item else 0
+        qty_difference = requested_qty - old_qty
+        
+        # Check if enough stock is available for the NEW quantity needed
+        if inventory_item.quantity < qty_difference:
             inventory_errors.append({
                 "index": idx,
                 "item_name": inventory_item.item_name,
                 "requested": requested_qty,
-                "available": inventory_item.quantity,
-                "message": f"Insufficient stock. Available: {inventory_item.quantity}, Requested: {requested_qty}"
+                "available": inventory_item.quantity + old_qty,
+                "message": f"Insufficient stock. Available: {inventory_item.quantity + old_qty}, Requested: {requested_qty}"
             })
     
     # If there are inventory errors, return them
@@ -188,15 +198,23 @@ def save_summary(appt_id):
         except (ValueError, TypeError):
             a.cost = 0.0
     
-    # ✅ Deduct the inventory quantities from stock
+    # ✅ NEW: Only update inventory quantities for items that changed
     for item_data in inventory_items:
         item_id = item_data.get("item_id")
-        used_qty = item_data.get("quantity", 0)
+        new_qty = item_data.get("quantity", 0)
         
-        inventory_item = InventoryItem.query.get(item_id)
-        if inventory_item:
-            inventory_item.quantity -= used_qty
-            inventory_item.last_updated = datetime.now().strftime("%Y-%m-%d")
+        # Find if this item existed before
+        old_item = next((item for item in old_inventory if item.get("item_id") == item_id), None)
+        old_qty = old_item.get("quantity", 0) if old_item else 0
+        
+        # Only deduct the difference
+        qty_difference = new_qty - old_qty
+        
+        if qty_difference != 0:
+            inventory_item = InventoryItem.query.get(item_id)
+            if inventory_item:
+                inventory_item.quantity -= qty_difference
+                inventory_item.last_updated = datetime.now().strftime("%Y-%m-%d")
     
     a.status = "completed"
     
