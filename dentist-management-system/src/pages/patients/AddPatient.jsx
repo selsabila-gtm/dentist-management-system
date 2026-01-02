@@ -4,6 +4,7 @@ import Sidebar from '../../components/sidebar/sidebar';
 
 export default function AddPatient() {
   const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -17,21 +18,30 @@ export default function AddPatient() {
     groupNumber: ''
   });
 
-  const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 🔹 Modal state
+  const [modal, setModal] = useState({
+    open: false,
+    type: '', // success | error | confirm
+    title: '',
+    message: '',
+    onConfirm: null,
+  });
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSave = async () => {
-    // Basic validation
     if (!formData.firstName || !formData.lastName) {
-      setMessage("First name and last name are required");
+      setModal({
+        open: true,
+        type: 'error',
+        title: 'Validation Error',
+        message: 'First name and last name are required.',
+      });
       return;
     }
 
@@ -51,248 +61,209 @@ export default function AddPatient() {
     setIsSubmitting(true);
 
     try {
-      const res = await fetch("http://127.0.0.1:5000/api/patients", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('http://127.0.0.1:5000/api/patients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
-      let data;
-      try {
-        data = await res.json(); // Try parsing JSON
-      } catch (jsonError) {
-        console.error("Failed to parse JSON:", jsonError);
-        const text = await res.text(); // fallback: get raw text
-        console.error("Raw response:", text);
-        setMessage(`Backend returned invalid JSON: ${text}`);
-        setIsSubmitting(false);
-        return;
-      }
+      const data = await res.json();
 
       if (!res.ok) {
-        console.error("Backend error:", data);
-        setMessage(data.error || `Error ${res.status}: ${res.statusText}`);
+        setModal({
+          open: true,
+          type: 'error',
+          title: 'Error',
+          message: data.error || 'Failed to add patient.',
+        });
         setIsSubmitting(false);
         return;
       }
 
-      console.log("Patient added successfully:", data);
-      setMessage("Patient added successfully! Redirecting...");
-
-      setTimeout(() => {
-        navigate('/patients');
-      }, 1500);
+      setModal({
+        open: true,
+        type: 'success',
+        title: 'Patient Added',
+        message: 'The patient was added successfully.',
+        onConfirm: () => navigate('/patients'),
+      });
 
     } catch (error) {
-      console.error("Network or server error:", error);
-      setMessage(`Request failed: ${error.message}`);
+      setModal({
+        open: true,
+        type: 'error',
+        title: 'Network Error',
+        message: error.message,
+      });
+    } finally {
       setIsSubmitting(false);
     }
   };
 
-
   const handleCancel = () => {
-    if (window.confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
-      navigate('/patients');
-    }
+    setModal({
+      open: true,
+      type: 'confirm',
+      title: 'Cancel changes?',
+      message: 'Any unsaved changes will be lost.',
+      onConfirm: () => navigate('/patients'),
+    });
   };
 
   return (
-    
     <div className="flex h-screen bg-gray-50">
-      <div className="app-layout">
       <Sidebar />
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        <div className="p-8">
+      <main className="flex-1 overflow-auto p-8">
+        <h1 className="text-3xl font-bold text-gray-800 mb-6">Add New Patient</h1>
 
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Add New Patient</h1>
-            <p className="text-gray-500">Enter patient information and medical details</p>
+        {/* Patient Details */}
+        <div className="bg-white rounded-lg shadow p-8 mb-8">
+          <h2 className="text-xl font-semibold mb-6">Patient Details</h2>
 
-            {message && (
-              <p className={`mt-3 font-semibold ${
-                message.includes('success') ? 'text-green-600' : 'text-red-600'
-              }`}>
-                {message}
-              </p>
-            )}
+          <div className="grid grid-cols-2 gap-6 mb-6">
+            <input
+              name="firstName"
+              placeholder="First Name *"
+              value={formData.firstName}
+              onChange={handleInputChange}
+              className="input"
+            />
+            <input
+              name="lastName"
+              placeholder="Last Name *"
+              value={formData.lastName}
+              onChange={handleInputChange}
+              className="input"
+            />
           </div>
 
-          {/* Patient Details Form */}
-          <div className="bg-white rounded-lg shadow-sm p-8 mb-8">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Patient Details</h2>
-
-            <div className="grid grid-cols-2 gap-6 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-2">
-                  First Name *
-                </label>
-                <input
-                  type="text"
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full text-gray-800 bg-white px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-2">
-                  Last Name *
-                </label>
-                <input
-                  type="text"
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full text-gray-800 bg-white px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-6 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-2">
-                  Date of Birth
-                </label>
-                <input
-                  type="date"
-                  name="dateOfBirth"
-                  value={formData.dateOfBirth}
-                  onChange={handleInputChange}
-                  className="w-full text-gray-800 bg-white px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-2">
-                  Gender
-                </label>
-                <select
-                  name="gender"
-                  value={formData.gender}
-                  onChange={handleInputChange}
-                  className="w-full text-gray-800 bg-white px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select gender</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
-                  <option value="prefer-not-to-say">Prefer not to say</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-6 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-2">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  name="phoneNumber"
-                  value={formData.phoneNumber}
-                  onChange={handleInputChange}
-                  className="w-full text-gray-800 bg-white px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-2">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="w-full text-gray-800 bg-white px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-600 mb-2">Address</label>
-              <input
-                type="text"
-                name="address"
-                value={formData.address}
-                onChange={handleInputChange}
-                className="w-full text-gray-800 bg-white px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* Insurance */}
-          <div className="bg-white rounded-lg shadow-sm p-8">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Insurance Information</h2>
-
-            <div className="grid grid-cols-2 gap-6 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-2">
-                  Insurance Provider
-                </label>
-                <input
-                  type="text"
-                  name="insuranceProvider"
-                  value={formData.insuranceProvider}
-                  onChange={handleInputChange}
-                  className="w-full text-gray-800 bg-white px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-2">
-                  Policy Number
-                </label>
-                <input
-                  type="text"
-                  name="policyNumber"
-                  value={formData.policyNumber}
-                  onChange={handleInputChange}
-                  className="w-full text-gray-800 bg-white px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-600 mb-2">Group Number</label>
-              <input
-                type="text"
-                name="groupNumber"
-                value={formData.groupNumber}
-                onChange={handleInputChange}
-                className="w-full text-gray-800 bg-white px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* Buttons */}
-          <div className="flex justify-end gap-4 mt-8">
-            <button
-              onClick={handleCancel}
-              disabled={isSubmitting}
-              className="px-6 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+          <div className="grid grid-cols-2 gap-6 mb-6">
+            <input
+              type="date"
+              name="dateOfBirth"
+              value={formData.dateOfBirth}
+              onChange={handleInputChange}
+              className="input"
+            />
+            <select
+              name="gender"
+              value={formData.gender}
+              onChange={handleInputChange}
+              className="input"
             >
-              Cancel
-            </button>
-
-            <button
-              onClick={handleSave}
-              disabled={isSubmitting}
-              className="px-6 py-2 text-white bg-blue-500 rounded-lg hover:bg-blue-600 disabled:opacity-50"
-            >
-              {isSubmitting ? 'Saving...' : 'Save Patient'}
-            </button>
+              <option value="">Gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
           </div>
 
+          <div className="grid grid-cols-2 gap-6 mb-6">
+            <input
+              name="phoneNumber"
+              placeholder="Phone"
+              value={formData.phoneNumber}
+              onChange={handleInputChange}
+              className="input"
+            />
+            <input
+              name="email"
+              placeholder="Email"
+              value={formData.email}
+              onChange={handleInputChange}
+              className="input"
+            />
+          </div>
+
+          <input
+            name="address"
+            placeholder="Address"
+            value={formData.address}
+            onChange={handleInputChange}
+            className="input w-full"
+          />
+        </div>
+
+        {/* Insurance */}
+        <div className="bg-white rounded-lg shadow p-8">
+          <h2 className="text-xl font-semibold mb-6">Insurance Information</h2>
+
+          <div className="grid grid-cols-2 gap-6 mb-6">
+            <input
+              name="insuranceProvider"
+              placeholder="Insurance Provider"
+              value={formData.insuranceProvider}
+              onChange={handleInputChange}
+              className="input"
+            />
+            <input
+              name="policyNumber"
+              placeholder="Policy Number"
+              value={formData.policyNumber}
+              onChange={handleInputChange}
+              className="input"
+            />
+          </div>
+
+          <input
+            name="groupNumber"
+            placeholder="Group Number"
+            value={formData.groupNumber}
+            onChange={handleInputChange}
+            className="input w-full"
+          />
+        </div>
+
+        {/* Buttons */}
+        <div className="flex justify-end gap-4 mt-8">
+          <button
+            onClick={handleCancel}
+            className="px-6 py-2 border rounded-lg"
+          >
+            Cancel
+          </button>
+
+          <button
+            onClick={handleSave}
+            disabled={isSubmitting}
+            className="px-6 py-2 bg-blue-500 text-white rounded-lg"
+          >
+            {isSubmitting ? 'Saving...' : 'Save Patient'}
+          </button>
         </div>
       </main>
-    </div>
+
+      {/* 🔔 MODAL */}
+      {modal.open && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h2 className="text-xl font-semibold mb-2">{modal.title}</h2>
+            <p className="text-gray-600 mb-6">{modal.message}</p>
+
+            <div className="flex justify-end gap-3">
+              {modal.type === 'confirm' && (
+                <button
+                  onClick={() => setModal({ open: false })}
+                  className="px-4 py-2 border rounded"
+                >
+                  Cancel
+                </button>
+              )}
+
+              <button
+                onClick={() => {
+                  setModal({ open: false });
+                  modal.onConfirm && modal.onConfirm();
+                }}
+                className="px-4 py-2 bg-blue-500 text-white rounded"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
