@@ -75,9 +75,8 @@ const patientId = params.patientId ?? params.id;
   const totalPaid = invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
   const totalOutstanding = totalCost - totalPaid;
 
-  const handleAddDocument = () => {
-    console.log('Add invoice for patient:', patientId);
-    alert('Add Invoice dialog would open here');
+  const handleAddInvoice  = () => {
+    navigate(`/billing/new?patientId=${patientId}`);
   };
 
   return (
@@ -121,7 +120,7 @@ const patientId = params.patientId ?? params.id;
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold text-gray-900">Invoices & Payments</h2>
           <button
-            onClick={handleAddDocument}
+            onClick={handleAddInvoice}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Add Invoice

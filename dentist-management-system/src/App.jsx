@@ -215,6 +215,25 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+  path="/billing/new"
+  element={
+    <ProtectedRoute>
+      <AddInvoicePage />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/billing/invoice/:id"
+  element={
+    <ProtectedRoute>
+      <InvoicePrintPage />
+    </ProtectedRoute>
+  }
+/>
+
+
 
         {/* Reports placeholder */}
         <Route
