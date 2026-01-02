@@ -11,18 +11,11 @@ export default function ViewPatient() {
   const patientId = params.patientId ?? params.id;
 
   const [patientData, setPatientData] = useState(null); // original data
-  const [editableData, setEditableData] = useState(null); // temp editing copy
+  const [editableData, setEditableData] = useState(null); // temporary editing copy
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-
-  // Notification modal
-  const [notification, setNotification] = useState({
-    open: false,
-    type: "", // "success" | "error"
-    message: "",
-  });
 
   const tabs = [
     { label: "General Info", path: `/patients/${patientId}` },
@@ -43,16 +36,16 @@ export default function ViewPatient() {
 
         const data = await res.json();
         const formatted = {
-          firstName: data.first_name || data.name?.split(" ")[0] || "",
-          lastName: data.last_name || data.name?.split(" ")[1] || "",
-          dateOfBirth: data.date_of_birth || "",
-          gender: data.gender || "",
-          phoneNumber: data.phone || "",
-          email: data.email || "",
-          address: data.address || "",
-          insuranceProvider: data.insurance_provider || "",
-          policyNumber: data.insurance_policy_number || "",
-          groupNumber: data.group_number || "",
+          firstName: data.first_name || data.name?.split(' ')[0] || '',
+          lastName: data.last_name || data.name?.split(' ')[1] || '',
+          dateOfBirth: data.date_of_birth || '',
+          gender: data.gender || '',
+          phoneNumber: data.phone || '',
+          email: data.email || '',
+          address: data.address || '',
+          insuranceProvider: data.insurance_provider || '',
+          policyNumber: data.insurance_policy_number || '',
+          groupNumber: data.group_number || '',
         };
 
         setPatientData(formatted);
@@ -104,22 +97,12 @@ export default function ViewPatient() {
 
       if (!res.ok) throw new Error("Failed to save changes");
 
-      setPatientData(editableData); // commit edits
+      setPatientData(editableData); // commit edits to main data
       setEditing(false);
-
-      // show success notification
-      setNotification({
-        open: true,
-        type: "success",
-        message: "Patient info updated successfully!",
-      });
+      alert("Patient info updated successfully!");
     } catch (err) {
       console.error(err);
-      setNotification({
-        open: true,
-        type: "error",
-        message: "Error saving patient info: " + err.message,
-      });
+      alert("Error saving patient info: " + err.message);
     } finally {
       setSaving(false);
     }
@@ -127,7 +110,7 @@ export default function ViewPatient() {
 
   // Cancel editing
   const handleCancel = () => {
-    setEditableData(patientData); // revert edits
+    setEditableData(patientData); // revert to original data
     setEditing(false);
   };
 
@@ -142,6 +125,7 @@ export default function ViewPatient() {
             <button onClick={() => navigate("/patients")} className="secondary-button">
               ← Back to Patients
             </button>
+
             <div>
               <h1 className="page-title">Patient Profile</h1>
               <p className="page-subtitle">View patient information and history</p>
@@ -187,18 +171,12 @@ export default function ViewPatient() {
           </div>
 
           <div className="card-body">
-            {[
-              "firstName",
-              "lastName",
-              "dateOfBirth",
-              "gender",
-              "phoneNumber",
-              "email",
-              "address",
-            ].map((field) => (
+            {["firstName","lastName","dateOfBirth","gender","phoneNumber","email","address"].map((field) => (
               <div className="history-row" key={field}>
                 <div className="history-label">
-                  {field.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())}
+                  {field
+                    .replace(/([A-Z])/g, " $1")
+                    .replace(/^./, (str) => str.toUpperCase())}
                 </div>
                 <div className="history-value">
                   {editing ? (
@@ -246,10 +224,12 @@ export default function ViewPatient() {
           </div>
 
           <div className="card-body">
-            {["insuranceProvider", "policyNumber", "groupNumber"].map((field) => (
+            {["insuranceProvider","policyNumber","groupNumber"].map((field) => (
               <div className="history-row" key={field}>
                 <div className="history-label">
-                  {field.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())}
+                  {field
+                    .replace(/([A-Z])/g, " $1")
+                    .replace(/^./, (str) => str.toUpperCase())}
                 </div>
                 <div className="history-value">
                   {editing ? (
@@ -269,29 +249,6 @@ export default function ViewPatient() {
           </div>
         </section>
       </main>
-
-      {/* 🔔 Notification Modal */}
-      {notification.open && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-sm">
-            <p
-              className={
-                notification.type === "success" ? "text-green-600" : "text-red-600"
-              }
-            >
-              {notification.message}
-            </p>
-            <div className="flex justify-end mt-4">
-              <button
-                onClick={() => setNotification({ ...notification, open: false })}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
