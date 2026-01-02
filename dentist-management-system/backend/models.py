@@ -82,7 +82,7 @@ class Staff(db.Model):
 
     # auth
     username = db.Column(db.String(80), unique=True)
-    password_hash = db.Column(db.String(200))
+    password_hash = db.Column(db.Text, nullable=False)
 
     # role
     role_id = db.Column(db.Integer, db.ForeignKey("roles.id"), nullable=True)

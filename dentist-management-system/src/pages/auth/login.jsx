@@ -38,128 +38,83 @@ export default function LoginPage() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validate()) return;
+  e.preventDefault();
+  if (!validate()) return;
 
-    setSubmitting(true);
-    setErrors({}); // Clear any previous errors
+  setSubmitting(true);
+  setErrors({});
 
+  try {
+    const res = await fetch(`${API_BASE}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: username.trim(),
+        password: password,
+      }),
+    });
+
+    let data = {};
     try {
-      const res = await fetch(`${API_BASE}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          username: username.trim(), 
-          password: password 
-        }),
-      });
-
-      // Always try to parse the response
-      let data;
-      try {
-        data = await res.json();
-      } catch (parseErr) {
-        console.error("Failed to parse response:", parseErr);
-        showToast("Invalid response from server.", "error");
-        setSubmitting(false);
-        return;
-      }
-
-      console.log("LOGIN RESPONSE:", data);
-
-      // Check if login was successful
-      if (!res.ok || !data.success) {
-        showToast(data.message || "Invalid username or password.", "error");
-        setSubmitting(false);
-        return;
-      }
-
-      // ✅ Clear old localStorage data first
-      localStorage.clear();
-
-      // ✅ Find the "real" user object (backend may return it in different keys)
-      const rawUser =
-        data.user || data.staff || data.employee || data.current_user || null;
-
-      // ✅ Build a normalized user object that works with role-based access
-      const normalizedUser = {
-        ...(rawUser || {}),
-        // fallbacks if backend returns flat fields
-        id: (rawUser && rawUser.id) ?? data.id,
-        username: (rawUser && rawUser.username) ?? data.username ?? username,
-
-        // IMPORTANT: normalize role into role_name and role.name
-        role_name:
-          (rawUser && rawUser.role_name) ??
-          (typeof (rawUser && rawUser.role) === "string" ? rawUser.role : null) ??
-          data.role_name ??
-          (typeof data.role === "string" ? data.role : null) ??
-          (data.role && data.role.name ? data.role.name : null),
-
-        role:
-          (rawUser && rawUser.role && typeof rawUser.role === "object"
-            ? rawUser.role
-            : null) ||
-          (data.role && typeof data.role === "object" ? data.role : null) ||
-          null,
-
-        // keep permissions if backend returns them
-        permissions: (rawUser && rawUser.permissions) ?? data.permissions ?? null,
-      };
-
-      // ✅ Save logged-in user - single source of truth
-      localStorage.setItem("currentUser", JSON.stringify(normalizedUser));
-
-      // ✅ (optional) if your ProtectedRoute still relies on staff_id
-      // keep this so you don’t get stuck on login
-      localStorage.setItem("staff_id", String(normalizedUser.id || ""));
-
-      navigate("/dashboard");
-      // Login successful - store user data
-      try {
-        // Store individual fields in localStorage
-        if (data.staff_id) localStorage.setItem("staff_id", data.staff_id);
-        if (data.username) localStorage.setItem("username", data.username);
-        if (data.role) localStorage.setItem("role", data.role);
-        if (data.role_id) localStorage.setItem("role_id", data.role_id);
-        if (data.full_name) localStorage.setItem("full_name", data.full_name);
-
-        // Store complete user object
-        let userPayload = data.user || {
-          id: data.staff_id,
-          staff_id: data.staff_id,
-          username: data.username,
-          full_name: data.full_name,
-          email: data.email,
-          role: data.role,
-          role_id: data.role_id,
-          profile_photo: data.profile_photo,
-        };
-
-        localStorage.setItem("currentUser", JSON.stringify(userPayload));
-        
-        console.log("User data stored successfully");
-        
-        // Show success message
-        showToast("Login successful!", "success");
-        
-        // Navigate after a brief delay to show the success message
-        setTimeout(() => {
-          navigate("/dashboard", { replace: true });
-        }, 500);
-
-      } catch (storageErr) {
-        console.error("Failed to store user data:", storageErr);
-        showToast("Failed to save login session.", "error");
-        setSubmitting(false);
-      }
-
+      data = await res.json();
     } catch (err) {
-      console.error("Login error:", err);
-      showToast("Could not connect to server. Please try again.", "error");
+      console.error("Failed to parse response:", err);
+      showToast("Invalid response from server.", "error");
       setSubmitting(false);
+      return;
     }
-  };
+
+    console.log("LOGIN RESPONSE:", data);
+
+    // ✅ If backend uses success flag
+    const ok = res.ok && (data.success === true || data.success === undefined);
+
+    if (!ok) {
+      showToast(data.message || "Invalid username or password.", "error");
+      setSubmitting(false);
+      return;
+    }
+
+    // ✅ DO NOT clear everything (this can break other app state)
+    // Instead remove only login-related keys
+    localStorage.removeItem("currentUser");
+    localStorage.removeItem("staff_id");
+
+    const rawUser = data.user || data.staff || data.employee || data.current_user || null;
+
+    const normalizedUser = {
+      ...(rawUser || {}),
+      id: (rawUser && rawUser.id) ?? data.staff_id ?? data.id,
+      username: (rawUser && rawUser.username) ?? data.username ?? username.trim(),
+      role_name:
+        (rawUser && rawUser.role_name) ??
+        (typeof (rawUser && rawUser.role) === "string" ? rawUser.role : null) ??
+        data.role_name ??
+        (typeof data.role === "string" ? data.role : null) ??
+        (data.role && data.role.name ? data.role.name : null),
+      role:
+        (rawUser && rawUser.role && typeof rawUser.role === "object" ? rawUser.role : null) ||
+        (data.role && typeof data.role === "object" ? data.role : null) ||
+        null,
+      permissions: (rawUser && rawUser.permissions) ?? data.permissions ?? null,
+    };
+
+    // ✅ Save ONLY one source of truth
+    localStorage.setItem("currentUser", JSON.stringify(normalizedUser));
+    localStorage.setItem("staff_id", String(normalizedUser.id || ""));
+
+    showToast("Login successful!", "success");
+
+    // go dashboard
+    navigate("/dashboard", { replace: true });
+  } catch (err) {
+    console.error("Login error:", err);
+    showToast("Could not connect to server. Please try again.", "error");
+  } finally {
+    setSubmitting(false);
+  }
+};
+
 
   return (
     <div className="login-page">

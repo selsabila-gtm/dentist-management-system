@@ -62,7 +62,7 @@ def create_staff():
         role_id=role_id,
         days_available=data.get("days_available"),
         hours=data.get("hours"),
-        permissions=dumps_field(data.get("permissions")),
+        permissions=dumps_field(data.get("permissions") or {}),
         password_hash=generate_password_hash(password),
     )
 
@@ -112,7 +112,7 @@ def update_staff(staff_id):
             setattr(s, field, data[field])
 
     if "permissions" in data:
-        s.permissions = dumps_field(data.get("permissions"))
+        s.permissions = dumps_field(data.get("permissions") or {})
 
     # optional notification_preferences
     if "notification_preferences" in data:

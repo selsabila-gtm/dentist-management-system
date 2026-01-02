@@ -1,8 +1,23 @@
 from flask import request, jsonify
 from werkzeug.security import check_password_hash, generate_password_hash
+import json
 
 from backend.routes import bp
 from backend.models import db, Staff
+
+
+def load_json_dict(value):
+    """
+    Permissions must be a DICT.
+    If DB contains "[]" or invalid JSON, return {} so .get() never crashes.
+    """
+    if not value:
+        return {}
+    try:
+        obj = json.loads(value)
+        return obj if isinstance(obj, dict) else {}
+    except Exception:
+        return {}
 
 
 # ---------- AUTH ----------
@@ -22,8 +37,8 @@ def login():
     if not staff or not check_password_hash(staff.password_hash, password):
         return jsonify({"success": False, "message": "Invalid username or password."}), 401
 
-    # permissions may be stored as JSON string in DB
-    perms = load_json_field(staff.permissions) if getattr(staff, "permissions", None) else {}
+    # ✅ permissions must be dict (not [])
+    perms = load_json_dict(staff.permissions)
     role_name = staff.role.name if staff.role else None
 
     user = {
