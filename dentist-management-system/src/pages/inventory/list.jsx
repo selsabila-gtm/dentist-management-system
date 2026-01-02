@@ -1,17 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "../../components/Sidebar/Sidebar";
+import Sidebar from "../../components/sidebar/sidebar";
 import { FiSearch } from "react-icons/fi";
 import "./inventory.css";
 import Notifications from "../../components/notification/notifications";
 
 const API_BASE = "http://127.0.0.1:5000";
 
-const currency = new Intl.NumberFormat(undefined, {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 2,
-});
+const fmtCurrency = (v) =>
+    v === 0 ? "0 DA" : v ? `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })} DA` : "—";
+  const fmtNumber = (v) => (v === 0 ? "0" : v ? Number(v).toLocaleString() : "—");
 
 export default function InventoryListPage() {
   const navigate = useNavigate();
@@ -178,8 +176,8 @@ export default function InventoryListPage() {
                           </span>
                         </td>
                         <td>{item.minimum_stock}</td>
-                        <td>{isNaN(price) ? "—" : currency.format(price)}</td>
-                        <td>{currency.format(totalValue)}</td>
+                        <td>{isNaN(price) ? "—" : fmtCurrency(price)}</td>
+                        <td>{fmtCurrency(totalValue)}</td>
                         <td>{item.supplier || "—"}</td>
                         <td>{item.expiration_date || "N/A"}</td>
                         <td className="actions-cell">

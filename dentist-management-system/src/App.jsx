@@ -120,7 +120,7 @@ function App() {
           }
         />
 
-        {/* Calendar / Appointments routes */}
+{/* Calendar / Appointments routes */}
         <Route
           path="/calendar"
           element={

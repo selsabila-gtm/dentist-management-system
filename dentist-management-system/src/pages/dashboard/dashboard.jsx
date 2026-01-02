@@ -446,7 +446,7 @@ for (const pid in patientBilling) {
             <div className="action-buttons">
               <button onClick={() => navigate("/calendar/add")} className="action-button">➕ New Appointment</button>
               {!isDentist && (
-                <button onClick={() => navigate("/patients/add")} className="action-button">👤 Add Patient</button>
+                <button onClick={() => navigate("/add-patient")} className="action-button">👤 Add Patient</button>
               )}
               {isAdmin && (
                 <button onClick={() => navigate("/inventory/add")} className="action-button">📦 Add Inventory</button>

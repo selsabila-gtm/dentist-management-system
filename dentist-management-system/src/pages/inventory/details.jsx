@@ -1,15 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import Sidebar from "../../components/Sidebar/Sidebar";
+import Sidebar from "../../components/sidebar/sidebar";
 import "./inventory.css";
 
 const API_BASE = "http://127.0.0.1:5000";
 
-const currency = new Intl.NumberFormat(undefined, {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 2,
-});
+// ✅ Format currency in DA (Algerian Dinar)
+  const fmtCurrency = (v) =>
+    v === 0 ? "0 DA" : v ? `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })} DA` : "—";
+  const fmtNumber = (v) => (v === 0 ? "0" : v ? Number(v).toLocaleString() : "—");
 
 export default function InventoryDetailsPage() {
   const navigate = useNavigate();
@@ -415,12 +414,12 @@ export default function InventoryDetailsPage() {
 
                     <div>
                       <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "4px" }}>Price per Unit</p>
-                      <p style={{ fontSize: "15px", fontWeight: "500" }}>{isNaN(price) ? "N/A" : currency.format(price)}</p>
+                      <p style={{ fontSize: "15px", fontWeight: "500" }}>{isNaN(price) ? "N/A" : fmtCurrency(price)}</p>
                     </div>
 
                     <div>
                       <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "4px" }}>Total Value</p>
-                      <p style={{ fontSize: "15px", fontWeight: "500" }}>{currency.format(totalValue)}</p>
+                      <p style={{ fontSize: "15px", fontWeight: "500" }}>{fmtCurrency(totalValue)}</p>
                     </div>
 
                     <div>

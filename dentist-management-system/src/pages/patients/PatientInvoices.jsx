@@ -81,8 +81,9 @@ const patientId = params.patientId ?? params.id;
   };
 
   return (
+  <div className="flex h-screen bg-gray-50">
     <div className="app-layout">
-      <div className="flex h-screen bg-gray-50">
+      
       <Sidebar />
 
       <main className="main-content">
