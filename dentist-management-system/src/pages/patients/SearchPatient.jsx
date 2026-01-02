@@ -21,6 +21,12 @@ export default function PatientsList() {
     patientId: null,
   });
 
+  // 🔹 Sorting state
+  const [sortConfig, setSortConfig] = useState({
+    key: "dateAdded",
+    direction: "desc",
+  });
+
   useEffect(() => {
     fetchPatients();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -61,12 +67,14 @@ export default function PatientsList() {
           return {
             id: patient.id,
             name: patient.name,
-            phone: patient.phone || "N/A",
             email: patient.email || "N/A",
             nextAppointment: patientAppts[0]
               ? patientAppts[0].date
               : "None scheduled",
             outstandingBalance: billingData?.outstanding || 0,
+            dateAdded: patient.dateAdded
+              ? new Date(patient.dateAdded)
+              : new Date(), // fallback to now if not provided
           };
         })
       );
@@ -127,12 +135,33 @@ export default function PatientsList() {
     }
   };
 
+  // 🔹 Filter patients by search query (name + email only)
   const filteredPatients = patients.filter(
     (patient) =>
       patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      patient.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
       patient.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // 🔹 Sort patients based on sortConfig
+  const sortedPatients = [...filteredPatients].sort((a, b) => {
+    const { key, direction } = sortConfig;
+
+    if (key === "name") {
+      return direction === "asc"
+        ? a.name.localeCompare(b.name)
+        : b.name.localeCompare(a.name);
+    } else if (key === "dateAdded") {
+      return direction === "asc"
+        ? new Date(a.dateAdded) - new Date(b.dateAdded)
+        : new Date(b.dateAdded) - new Date(a.dateAdded);
+    } else if (key === "balance") {
+      return direction === "asc"
+        ? a.outstandingBalance - b.outstandingBalance
+        : b.outstandingBalance - a.outstandingBalance;
+    }
+
+    return 0;
+  });
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -145,8 +174,7 @@ export default function PatientsList() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Patients</h1>
               <p className="text-gray-500 mt-1">
-                {patients.length} total patient
-                {patients.length !== 1 ? "s" : ""}
+                {patients.length} total patient{patients.length !== 1 ? "s" : ""}
               </p>
             </div>
             <button
@@ -172,7 +200,7 @@ export default function PatientsList() {
                 />
                 <input
                   type="text"
-                  placeholder="Search patients by name, phone, or email"
+                  placeholder="Search patients by name or email"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="bg-white w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -180,19 +208,31 @@ export default function PatientsList() {
               </div>
 
               <div className="flex gap-4">
-                <FilterButton label="Name" />
-                <FilterButton label="Date added" />
-                <FilterButton label="Phone" />
-                <FilterButton label="Balance" />
+                <FilterButton
+                  label="Name"
+                  sortKey="name"
+                  sortConfig={sortConfig}
+                  setSortConfig={setSortConfig}
+                />
+                <FilterButton
+                  label="Date added"
+                  sortKey="dateAdded"
+                  sortConfig={sortConfig}
+                  setSortConfig={setSortConfig}
+                />
+                <FilterButton
+                  label="Balance"
+                  sortKey="balance"
+                  sortConfig={sortConfig}
+                  setSortConfig={setSortConfig}
+                />
               </div>
             </div>
 
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="animate-spin text-blue-600" size={32} />
-                <span className="ml-3 text-gray-600">
-                  Loading patients...
-                </span>
+                <span className="ml-3 text-gray-600">Loading patients...</span>
               </div>
             ) : (
               <div className="overflow-hidden">
@@ -201,9 +241,6 @@ export default function PatientsList() {
                     <tr className="border-t border-b border-gray-200 bg-gray-50">
                       <th className="text-left py-3 px-6 text-xs font-medium text-gray-600 uppercase">
                         Patient Name
-                      </th>
-                      <th className="text-left py-3 px-6 text-xs font-medium text-gray-600 uppercase">
-                        Phone
                       </th>
                       <th className="text-left py-3 px-6 text-xs font-medium text-gray-600 uppercase">
                         Next Appointment
@@ -218,22 +255,15 @@ export default function PatientsList() {
                   </thead>
 
                   <tbody>
-                    {filteredPatients.map((patient, index) => (
+                    {sortedPatients.map((patient, index) => (
                       <tr
                         key={patient.id}
                         className={`hover:bg-gray-50 ${
-                          index !== filteredPatients.length - 1
-                            ? "border-b"
-                            : ""
+                          index !== sortedPatients.length - 1 ? "border-b" : ""
                         }`}
                       >
-                        <td className="py-4 px-6 font-medium">
-                          {patient.name}
-                        </td>
-                        <td className="py-4 px-6">{patient.phone}</td>
-                        <td className="py-4 px-6">
-                          {patient.nextAppointment}
-                        </td>
+                        <td className="py-4 px-6 font-medium">{patient.name}</td>
+                        <td className="py-4 px-6">{patient.nextAppointment}</td>
                         <td className="py-4 px-6">
                           <span
                             className={
@@ -254,9 +284,7 @@ export default function PatientsList() {
                           </button>
                           <span className="text-gray-300">|</span>
                           <button
-                            onClick={() =>
-                              handleDeleteClick(patient.id)
-                            }
+                            onClick={() => handleDeleteClick(patient.id)}
                             className="text-red-600 hover:text-red-800 font-medium ml-3"
                           >
                             Delete
@@ -304,11 +332,28 @@ export default function PatientsList() {
   );
 }
 
-function FilterButton({ label }) {
+// 🔹 FilterButton Component
+function FilterButton({ label, sortKey, sortConfig, setSortConfig }) {
+  const isActive = sortConfig.key === sortKey;
+  const direction = isActive ? sortConfig.direction : "asc";
+
+  const handleClick = () => {
+    setSortConfig({
+      key: sortKey,
+      direction: isActive ? (direction === "asc" ? "desc" : "asc") : "asc",
+    });
+  };
+
   return (
-    <button className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+    <button
+      onClick={handleClick}
+      className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+    >
       {label}
-      <ChevronDown size={16} />
+      <ChevronDown
+        size={16}
+        className={isActive ? (direction === "asc" ? "rotate-180" : "") : ""}
+      />
     </button>
   );
 }
