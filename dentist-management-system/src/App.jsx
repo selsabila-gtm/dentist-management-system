@@ -65,10 +65,10 @@ function App() {
 
         {/* ---------------- PATIENT (UNPROTECTED in your current setup) ---------------- */}
         <Route path="/add-patient" element={<AddPatient />} />
-        <Route path="/b" element={<Appointment />} />
-        <Route path="/c" element={<PatientInvoices />} />
+        <Route path="/patients/:patientId" element={<ViewPatient />} /> {/* new */}
+        <Route path="/patients/:patientId/appointments" element={<Appointment />} />
         <Route path="/patients" element={<SearchPatient />} />
-        <Route path="/patient/:id" element={<ViewPatient />} />
+        <Route path="/patients/:patientId/invoices" element={<PatientInvoices />} />
 
         {/* Redirect root */}
         <Route path="/a" element={<Navigate to="/staff" />} />
@@ -120,7 +120,7 @@ function App() {
           }
         />
 
-        {/* Calendar / Appointments routes */}
+{/* Calendar / Appointments routes */}
         <Route
           path="/calendar"
           element={
