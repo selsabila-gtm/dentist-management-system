@@ -5,7 +5,9 @@ import "./patientProfile.css";
 
 export default function AppointmentHistory() {
   const navigate = useNavigate();
-  const { id } = useParams(); // Get patient ID from URL
+  const params = useParams();
+const patientId = params.patientId ?? params.id;
+ // Get patient ID from URL
   
   const appointments = [
     { id: 1, date: '2024-07-20', time: '10:00 AM', dentist: 'Dr. Emily Carter', status: 'scheduled' },
@@ -17,13 +19,14 @@ export default function AppointmentHistory() {
 
   // Tabs with labels and corresponding paths - using template literals
   const tabs = [
-    { label: "General Info", path: `/patients/${id}` },
-    { label: "Appointments", path: `/patients/${id}/appointments` },
-    { label: "Treatment Plans", path: `/patients/${id}/treatment-plans` },
-    { label: "Medical Records", path: `/patients/${id}/medical-records` },
-    { label: "Prescriptions", path: `/patients/${id}/prescriptions` },
-    { label: "Invoices/Payments", path: `/patients/${id}/invoices` },
+  { label: "General Info", path: `/patients/${patientId}` },
+  { label: "Appointments", path: `/patients/${patientId}/appointments` },
+  { label: "Treatment Plans", path: `/patients/${patientId}/treatment-plans` },
+  { label: "Medical Records", path: `/patients/${patientId}/medical-records` },
+  { label: "Prescriptions", path: `/patients/${patientId}/prescriptions` },
+  { label: "Invoices/Payments", path: `/patients/${patientId}/invoices` },
   ];
+
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -38,6 +41,7 @@ export default function AppointmentHistory() {
     console.log('View details for appointment:', appointmentId);
     alert(`Viewing details for appointment ${appointmentId}`);
   };
+
 
   const handleAddAppointment = () => {
     console.log('Add new appointment');

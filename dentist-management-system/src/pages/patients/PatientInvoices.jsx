@@ -5,7 +5,9 @@ import "./patientProfile.css";
 
 export default function InvoicesPayments() {
   const navigate = useNavigate();
-  const { id } = useParams(); // Get patient ID from URL
+  const params = useParams();
+const patientId = params.patientId ?? params.id;
+ // Get patient ID from URL
   
   const [invoices, setInvoices] = useState([]);
   const [appointments, setAppointments] = useState([]);
@@ -14,13 +16,14 @@ export default function InvoicesPayments() {
 
   // Tabs with labels and corresponding paths
   const tabs = [
-    { label: "General Info", path: `/patients/${id}` },
-    { label: "Appointments", path: `/patients/${id}/appointments` },
-    { label: "Treatment Plans", path: `/patients/${id}/treatment-plans` },
-    { label: "Medical Records", path: `/patients/${id}/medical-records` },
-    { label: "Prescriptions", path: `/patients/${id}/prescriptions` },
-    { label: "Invoices/Payments", path: `/patients/${id}/invoices` },
+  { label: "General Info", path: `/patients/${patientId}` },
+  { label: "Appointments", path: `/patients/${patientId}/appointments` },
+  { label: "Treatment Plans", path: `/patients/${patientId}/treatment-plans` },
+  { label: "Medical Records", path: `/patients/${patientId}/medical-records` },
+  { label: "Prescriptions", path: `/patients/${patientId}/prescriptions` },
+  { label: "Invoices/Payments", path: `/patients/${patientId}/invoices` },
   ];
+
 
   // Fetch invoices and appointments from backend for this specific patient
   useEffect(() => {
@@ -31,7 +34,7 @@ export default function InvoicesPayments() {
         
         // Fetch both invoices and appointments in parallel
         const [invoicesRes, appointmentsRes] = await Promise.all([
-          fetch(`http://127.0.0.1:5000/api/invoices?patient_id=${id}`),
+          fetch(`http://127.0.0.1:5000/api/invoices?patient_id=${patientId}`),
           fetch(`http://127.0.0.1:5000/api/appointments`)
         ]);
         
@@ -44,12 +47,12 @@ export default function InvoicesPayments() {
         
         // Filter invoices for this patient
         const patientInvoices = Array.isArray(invoicesData) 
-          ? invoicesData.filter(invoice => invoice.patient_id === parseInt(id))
+          ? invoicesData.filter(invoice => invoice.patient_id === parseInt(patientId))
           : [];
         
         // Filter appointments for this patient
         const patientAppointments = Array.isArray(appointmentsData)
-          ? appointmentsData.filter(apt => apt.patient_id === parseInt(id))
+          ? appointmentsData.filter(apt => apt.patient_id === parseInt(patientId))
           : [];
         
         setInvoices(patientInvoices);
@@ -62,10 +65,10 @@ export default function InvoicesPayments() {
       }
     };
 
-    if (id) {
+    if (patientId) {
       fetchData();
     }
-  }, [id]);
+  }, [patientId]);
 
   // Calculate totals
   const totalCost = appointments.reduce((sum, apt) => sum + (apt.cost || 0), 0);
@@ -73,7 +76,7 @@ export default function InvoicesPayments() {
   const totalOutstanding = totalCost - totalPaid;
 
   const handleAddDocument = () => {
-    console.log('Add invoice for patient:', id);
+    console.log('Add invoice for patient:', patientId);
     alert('Add Invoice dialog would open here');
   };
 

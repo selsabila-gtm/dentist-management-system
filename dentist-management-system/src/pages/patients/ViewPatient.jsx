@@ -5,7 +5,9 @@ import "./patientProfile.css";
 
 export default function ViewPatient() {
   const navigate = useNavigate();
-  const { id } = useParams(); // Get patient ID from URL
+  const params = useParams();
+const patientId = params.patientId ?? params.id; // supports both route styles
+ // Get patient ID from URL
 
   const [patientData, setPatientData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -13,12 +15,12 @@ export default function ViewPatient() {
 
   // Tabs with labels and corresponding paths - using template literals
   const tabs = [
-    { label: "General Info", path: `/patients/${id}` },
-    { label: "Appointments", path: `/patients/${id}/appointments` },
-    { label: "Treatment Plans", path: `/patients/${id}/treatment-plans` },
-    { label: "Medical Records", path: `/patients/${id}/medical-records` },
-    { label: "Prescriptions", path: `/patients/${id}/prescriptions` },
-    { label: "Invoices/Payments", path: `/patients/${id}/invoices` },
+  { label: "General Info", path: `/patients/${patientId}` },
+  { label: "Appointments", path: `/patients/${patientId}/appointments` },
+  { label: "Treatment Plans", path: `/patients/${patientId}/treatment-plans` },
+  { label: "Medical Records", path: `/patients/${patientId}/medical-records` },
+  { label: "Prescriptions", path: `/patients/${patientId}/prescriptions` },
+  { label: "Invoices/Payments", path: `/patients/${patientId}/invoices` },
   ];
 
   // Fetch patient info from backend
@@ -26,7 +28,7 @@ export default function ViewPatient() {
     const fetchPatient = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`http://127.0.0.1:5000/api/patients/${id}`);
+        const res = await fetch(`http://127.0.0.1:5000/api/patients/${patientId}`);
         if (!res.ok) throw new Error("Failed to fetch patient data");
 
         const data = await res.json();
@@ -52,7 +54,7 @@ export default function ViewPatient() {
     };
 
     fetchPatient();
-  }, [id]);
+  }, [patientId]);
 
   if (loading) return <div className="p-8">Loading patient...</div>;
   if (error) return <div className="p-8 text-red-600">Error: {error}</div>;
