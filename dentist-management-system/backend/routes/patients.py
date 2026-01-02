@@ -21,14 +21,23 @@ from backend.models import (
 @bp.route("/api/patients", methods=["GET"])
 def get_patients():
     rows = Patient.query.all()
-    result = [
-        {
+    result = []
+
+    for p in rows:
+        # 🔥 ALWAYS derive name from first + last if available
+        name = f"{p.first_name or ''} {p.last_name or ''}".strip()
+
+        if not name:
+            name = p.full_name or ""
+
+        result.append({
             "id": p.id,
-            "name": p.full_name or f"{p.first_name or ''} {p.last_name or ''}".strip(),
-        }
-        for p in rows
-    ]
+            "name": name,
+            "email": p.email,
+        })
+
     return jsonify(result)
+
 
 
 @bp.route("/api/patients", methods=["POST"])
@@ -51,10 +60,40 @@ def create_patient():
     return jsonify(p.to_dict()), 201
 
 
-@bp.route("/api/patients/<int:patient_id>", methods=["GET"])
-def get_patient(patient_id):
-    p = Patient.query.get_or_404(patient_id)
-    return jsonify(p.to_dict())
+@bp.route("/api/patients/<int:patient_id>", methods=["GET", "PUT"])
+def patient_detail(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+
+    # ---------- GET ----------
+    if request.method == "GET":
+        return jsonify(patient.to_dict())
+
+    # ---------- PUT ----------
+    data = request.get_json() or {}
+
+    patient.first_name = data.get("first_name", patient.first_name)
+    patient.last_name = data.get("last_name", patient.last_name)
+    patient.full_name = f"{patient.first_name or ''} {patient.last_name or ''}".strip()
+    patient.date_of_birth = data.get("date_of_birth", patient.date_of_birth)
+    patient.gender = data.get("gender", patient.gender)
+    patient.phone = data.get("phone", patient.phone)
+    patient.email = data.get("email", patient.email)
+    patient.address = data.get("address", patient.address)
+    patient.insurance_provider = data.get(
+        "insurance_provider", patient.insurance_provider
+    )
+    patient.insurance_policy_number = data.get(
+        "insurance_policy_number", patient.insurance_policy_number
+    )
+    patient.group_number = data.get("group_number", patient.group_number)
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Patient updated successfully",
+        "patient": patient.to_dict()
+    }), 200
+
 
 
 # ---- MEDICAL RECORDS ----

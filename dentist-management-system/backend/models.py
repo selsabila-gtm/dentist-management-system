@@ -143,10 +143,16 @@ class Patient(db.Model):
     group_number = db.Column(db.String(100))
 
     def to_dict(self):
+        full_name = (
+            self.full_name
+            or f"{self.first_name or ''} {self.last_name or ''}".strip()
+        )
+
         return {
             "id": self.id,
-            "firstName": self.first_name,
-            "lastName": self.last_name,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "full_name": full_name,
             "date_of_birth": self.date_of_birth,
             "phone": self.phone,
             "email": self.email,
