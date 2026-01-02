@@ -19,10 +19,9 @@ export default function InventoryAddPage() {
     supplier: "",
     expiration_date: "",
     notes: "",
-    price_per_unit: "", // new field
+    price_per_unit: "", 
   });
 
-  // modal state
   const [showModal, setShowModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [categoryError, setCategoryError] = useState("");
@@ -51,14 +50,12 @@ export default function InventoryAddPage() {
     }));
   };
 
-  // Open modal (and reset validation)
   const openAddCategoryModal = () => {
     setNewCategoryName("");
     setCategoryError("");
     setShowModal(true);
   };
 
-  // Close modal
   const closeModal = useCallback(() => {
     setShowModal(false);
     setNewCategoryName("");
@@ -66,7 +63,6 @@ export default function InventoryAddPage() {
     setAddingCategory(false);
   }, []);
 
-  // close on Escape
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === "Escape" && showModal) closeModal();
@@ -120,7 +116,6 @@ export default function InventoryAddPage() {
     setError("");
     setLoading(true);
 
-    // Validation
     if (!formData.item_name.trim()) {
       setError("Item name is required");
       setLoading(false);
@@ -145,7 +140,6 @@ export default function InventoryAddPage() {
       return;
     }
 
-    // price_per_unit validation: optional but if provided must be a non-negative number
     if (formData.price_per_unit !== "" && (isNaN(formData.price_per_unit) || parseFloat(formData.price_per_unit) < 0)) {
       setError("Please enter a valid non-negative price per unit");
       setLoading(false);
@@ -169,7 +163,7 @@ export default function InventoryAddPage() {
 
       if (!res.ok) {
         let errorData;
-        try { errorData = await res.json(); } catch { /* ignore */ }
+        try { errorData = await res.json(); } catch {}
         throw new Error((errorData && (errorData.error || errorData.detail)) || "Failed to create item");
       }
 

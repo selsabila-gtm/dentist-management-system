@@ -4,9 +4,7 @@ from flask import request, jsonify
 from backend.routes import bp
 from backend.models import db, InventoryCategory, InventoryItem
 
-# ==================== INVENTORY ROUTES ====================
-
-# ---- INVENTORY CATEGORIES ----
+#categories
 @bp.route("/api/inventory/categories", methods=["GET"])
 def get_inventory_categories():
     categories = InventoryCategory.query.order_by(InventoryCategory.name).all()
@@ -31,7 +29,7 @@ def create_inventory_category():
     return jsonify(category.to_dict()), 201
 
 
-# ---- INVENTORY ITEMS ----
+#items
 @bp.route("/api/inventory", methods=["GET"])
 def get_inventory_items():
     items = InventoryItem.query.order_by(InventoryItem.item_name).all()
@@ -46,7 +44,6 @@ def create_inventory_item():
         return jsonify({"error": "Item name is required"}), 400
 
     try:
-        # parse numeric fields
         quantity = int(data.get("quantity") or 0)
     except (TypeError, ValueError):
         return jsonify({"error": "Invalid quantity"}), 400
@@ -56,7 +53,6 @@ def create_inventory_item():
     except (TypeError, ValueError):
         return jsonify({"error": "Invalid minimum_stock"}), 400
 
-    # parse price_per_unit (optional)
     price_raw = data.get("price_per_unit")
     price_value = None
     if price_raw is not None and price_raw != "":
@@ -98,12 +94,10 @@ def update_inventory_item(item_id):
     item = InventoryItem.query.get_or_404(item_id)
     data = request.get_json() or {}
 
-    # Update allowed fields
     for field in ("item_name", "category_id", "supplier", "expiration_date", "notes"):
         if field in data:
             setattr(item, field, data[field])
 
-    # numeric fields with validation
     if "quantity" in data:
         try:
             item.quantity = int(data["quantity"])
@@ -116,7 +110,6 @@ def update_inventory_item(item_id):
         except (TypeError, ValueError):
             pass
 
-    # price_per_unit (optional, allow null)
     if "price_per_unit" in data:
         pp = data["price_per_unit"]
         if pp in (None, ""):
@@ -125,12 +118,10 @@ def update_inventory_item(item_id):
             try:
                 ppv = float(pp)
                 if ppv < 0:
-                    # ignore invalid negative price
                     pass
                 else:
                     item.price_per_unit = ppv
             except Exception:
-                # ignore invalid parse
                 pass
 
     item.last_updated = datetime.utcnow().strftime("%Y-%m-%d")

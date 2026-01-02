@@ -8,8 +8,8 @@ import Notifications from "../../components/notification/notifications";
 const API_BASE = "http://127.0.0.1:5000";
 
 const fmtCurrency = (v) =>
-    v === 0 ? "0 DA" : v ? `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })} DA` : "—";
-  const fmtNumber = (v) => (v === 0 ? "0" : v ? Number(v).toLocaleString() : "—");
+  v === 0 ? "0 DA" : v ? `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })} DA` : "—";
+const fmtNumber = (v) => (v === 0 ? "0" : v ? Number(v).toLocaleString() : "—");
 
 export default function InventoryListPage() {
   const navigate = useNavigate();
@@ -21,7 +21,6 @@ export default function InventoryListPage() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    // Check if user is admin
     try {
       const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
       const role = (currentUser.role_name || "").toLowerCase();

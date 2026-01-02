@@ -1,11 +1,9 @@
-// src/pages/dashboard/dashboard.jsx
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../../components/sidebar/sidebar";
 import Notifications from "../../components/notification/notifications";
 import "./dashboard.css";
 
-/* runtime-safe API base (Vite / CRA / fallback) */
 const API_BASE =
   (typeof import.meta !== "undefined" &&
     import.meta.env &&
@@ -15,7 +13,6 @@ const API_BASE =
     process.env.REACT_APP_API_BASE) ||
   "http://127.0.0.1:5000";
 
-/* helpers copied from your Notifications component logic */
 const EXPIRY_DAYS = 30;
 function parseExpiryToDate(expiryStr) {
   if (!expiryStr) return null;
@@ -70,7 +67,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Get current user from localStorage
   useEffect(() => {
     try {
       const user = JSON.parse(localStorage.getItem("currentUser") || "{}");
@@ -81,7 +77,6 @@ export default function DashboardPage() {
     }
   }, [navigate]);
 
-  // read dismissed notifications from localStorage (same key used by Notifications component)
   const getDismissed = () => {
     try {
       return JSON.parse(localStorage.getItem("dismissed_notifications") || "[]");
@@ -90,7 +85,6 @@ export default function DashboardPage() {
     }
   };
 
-  // safe json reader
   async function safeJson(res) {
     try {
       return await res.json();
@@ -109,12 +103,10 @@ export default function DashboardPage() {
       const isAdmin = userRole === "admin";
       const userId = currentUser.id;
 
-      // Build appointments URL with dentist filter if needed
-      const appointmentsUrl = isDentist 
+      const appointmentsUrl = isDentist
         ? `${API_BASE}/api/appointments?dentist_id=${userId}`
         : `${API_BASE}/api/appointments`;
 
-      // fetch main resources in parallel
       const fetchPromises = [
         fetch(appointmentsUrl),
         fetch(`${API_BASE}/api/patients`),
@@ -122,14 +114,12 @@ export default function DashboardPage() {
         fetch(`${API_BASE}/api/invoices`),
       ];
 
-      // Only fetch staff if admin
       if (isAdmin) {
         fetchPromises.push(fetch(`${API_BASE}/api/staff`));
       }
 
       const settled = await Promise.allSettled(fetchPromises);
 
-      // helpers to extract results
       const extract = async (index) => {
         if (!settled[index] || settled[index].status !== "fulfilled") return null;
         const res = settled[index].value;
@@ -143,7 +133,6 @@ export default function DashboardPage() {
       const invoices = (await extract(3)) || [];
       const staff = isAdmin ? ((await extract(4)) || []) : [];
 
-      // For dentists, filter patients to only those who have appointments with them
       let patients = allPatients;
       if (isDentist) {
         const patientIds = new Set(
@@ -154,7 +143,6 @@ export default function DashboardPage() {
         patients = allPatients.filter(p => patientIds.has(p.id));
       }
 
-      // compute low stock and expiry notifications (same logic as Notifications component)
       const now = new Date();
       const dismissList = getDismissed();
       const notifs = [];
@@ -201,16 +189,14 @@ export default function DashboardPage() {
         }
       }
 
-      // filter only today's appointments
       const today = todayKey();
       const todayAppointments = Array.isArray(appointments)
         ? appointments.filter((a) => String(a.date) === today)
         : [];
 
-      // ✅ Calculate revenue ONLY from today's COMPLETED appointments
       let totalRevenue = 0;
       let completedTodayCount = 0;
-      
+
       for (const a of todayAppointments) {
         if (String(a.status).toLowerCase() === "completed") {
           const c = parseFloat(a.cost);
@@ -220,13 +206,11 @@ export default function DashboardPage() {
           }
         }
       }
-      
-      // ✅ Average = today's revenue / today's completed appointments
-      const avgAppointmentCost = completedTodayCount > 0 
-        ? totalRevenue / completedTodayCount 
+
+      const avgAppointmentCost = completedTodayCount > 0
+        ? totalRevenue / completedTodayCount
         : 0;
 
-      // Count upcoming (scheduled) appointments for today
       const upcomingCount = todayAppointments.filter(
         (a) => String(a.status).toLowerCase() === "scheduled"
       ).length;
@@ -235,44 +219,40 @@ export default function DashboardPage() {
 
 
 
-let totalPending = 0;
+      let totalPending = 0;
 
-// Step 1: Identify relevant patients
-const relevantPatientIds = new Set();
-if (isDentist) {
-  appointments.forEach((appt) => {
-    if (appt.patient_id) relevantPatientIds.add(appt.patient_id);
-  });
-} else {
-  patients.forEach((p) => relevantPatientIds.add(p.id));
-}
+      const relevantPatientIds = new Set();
+      if (isDentist) {
+        appointments.forEach((appt) => {
+          if (appt.patient_id) relevantPatientIds.add(appt.patient_id);
+        });
+      } else {
+        patients.forEach((p) => relevantPatientIds.add(p.id));
+      }
 
-// Step 2: Compute total appointment costs per patient (ALL statuses)
-const patientBilling = {};
-appointments.forEach((appt) => {
-  const patientId = appt.patient_id;
-  if (!patientId || !relevantPatientIds.has(patientId)) return;
+      const patientBilling = {};
+      appointments.forEach((appt) => {
+        const patientId = appt.patient_id;
+        if (!patientId || !relevantPatientIds.has(patientId)) return;
 
-  const cost = parseFloat(appt.cost) || 0;
-  if (!patientBilling[patientId]) patientBilling[patientId] = { totalCost: 0, totalPaid: 0 };
-  patientBilling[patientId].totalCost += cost;
-});
+        const cost = parseFloat(appt.cost) || 0;
+        if (!patientBilling[patientId]) patientBilling[patientId] = { totalCost: 0, totalPaid: 0 };
+        patientBilling[patientId].totalCost += cost;
+      });
 
-// Step 3: Add invoice payments
-invoices.forEach((inv) => {
-  const patientId = inv.patient_id;
-  if (!patientId || !relevantPatientIds.has(patientId)) return;
+      invoices.forEach((inv) => {
+        const patientId = inv.patient_id;
+        if (!patientId || !relevantPatientIds.has(patientId)) return;
 
-  const amount = parseFloat(inv.amount) || 0;
-  if (!patientBilling[patientId]) patientBilling[patientId] = { totalCost: 0, totalPaid: 0 };
-  patientBilling[patientId].totalPaid += amount;
-});
+        const amount = parseFloat(inv.amount) || 0;
+        if (!patientBilling[patientId]) patientBilling[patientId] = { totalCost: 0, totalPaid: 0 };
+        patientBilling[patientId].totalPaid += amount;
+      });
 
-// Step 4: Sum outstanding per patient
-for (const pid in patientBilling) {
-  const { totalCost, totalPaid } = patientBilling[pid];
-  totalPending += Math.max(totalCost - totalPaid, 0);
-}
+      for (const pid in patientBilling) {
+        const { totalCost, totalPaid } = patientBilling[pid];
+        totalPending += Math.max(totalCost - totalPaid, 0);
+      }
 
 
 
@@ -299,7 +279,6 @@ for (const pid in patientBilling) {
     if (!currentUser) return;
     fetchStats();
 
-    // optional: refresh every 5 minutes
     const id = setInterval(fetchStats, 5 * 60 * 1000);
     return () => clearInterval(id);
   }, [fetchStats, currentUser]);
@@ -309,7 +288,6 @@ for (const pid in patientBilling) {
   const isAdmin = (currentUser?.role_name || "").toLowerCase() === "admin";
   const isDentist = (currentUser?.role_name || "").toLowerCase() === "dentist";
 
-  // ✅ Format currency in DA (Algerian Dinar)
   const fmtCurrency = (v) =>
     v === 0 ? "0 DA" : v ? `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })} DA` : "—";
   const fmtNumber = (v) => (v === 0 ? "0" : v ? Number(v).toLocaleString() : "—");
@@ -357,7 +335,6 @@ for (const pid in patientBilling) {
                   ) : (
                     stats.todayAppointments
                       .sort((a, b) => {
-                        // sort by time if available (HH:MM or HH:MM AM/PM)
                         const tA = String(a.time || "");
                         const tB = String(b.time || "");
                         return tA.localeCompare(tB, undefined, { numeric: true, sensitivity: "base" });

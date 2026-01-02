@@ -5,7 +5,6 @@ import "./inventory.css";
 
 const API_BASE = "http://127.0.0.1:5000";
 
-// ✅ Format currency in DA (Algerian Dinar)
   const fmtCurrency = (v) =>
     v === 0 ? "0 DA" : v ? `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })} DA` : "—";
   const fmtNumber = (v) => (v === 0 ? "0" : v ? Number(v).toLocaleString() : "—");
@@ -32,7 +31,6 @@ export default function InventoryDetailsPage() {
   });
 
   useEffect(() => {
-    // Check if user is admin
     try {
       const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
       const role = (currentUser.role_name || "").toLowerCase();
@@ -43,7 +41,6 @@ export default function InventoryDetailsPage() {
 
     fetchCategories();
     fetchItem();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchCategories = async () => {
@@ -99,7 +96,6 @@ export default function InventoryDetailsPage() {
     setError("");
     setSaving(true);
 
-    // Validation
     if (!formData.item_name.trim()) {
       setError("Item name is required");
       setSaving(false);
@@ -150,7 +146,7 @@ export default function InventoryDetailsPage() {
       }
 
       setIsEditing(false);
-      await fetchItem(); // Refresh data
+      await fetchItem(); 
     } catch (err) {
       setError(err.message || "An error occurred while updating the item");
     } finally {
@@ -184,7 +180,7 @@ export default function InventoryDetailsPage() {
   const handleCancel = () => {
     if (isEditing) {
       setIsEditing(false);
-      fetchItem(); // Reset form to original data
+      fetchItem(); 
       setError("");
     } else {
       navigate("/inventory");
@@ -241,7 +237,6 @@ export default function InventoryDetailsPage() {
             {error && <div className="error-banner">{error}</div>}
 
             {isEditing ? (
-              // EDIT MODE (only for admin)
               <form onSubmit={handleSubmit}>
                 <div className="form-group">
                   <label htmlFor="item_name">
@@ -375,7 +370,6 @@ export default function InventoryDetailsPage() {
                 </div>
               </form>
             ) : (
-              // VIEW MODE
               <div>
                 <div style={{ marginBottom: "24px" }}>
                   <h3 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "16px" }}>
