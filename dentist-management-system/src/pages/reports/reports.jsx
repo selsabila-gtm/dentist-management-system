@@ -683,7 +683,7 @@ function InventoryTab({ loading, report, currentRangeLabel }) {
         <div className="reports-card">
           <p className="reports-card-label">Total Cost</p>
           <p className="reports-card-value">
-            {formatCurrency(report.total_cost)}
+            {fmtCurrency(report.total_cost)}
           </p>
           <p className="reports-card-sub">Current inventory value</p>
         </div>
@@ -721,7 +721,7 @@ function InventoryTab({ loading, report, currentRangeLabel }) {
                 <td>{item.item}</td>
                 <td>{item.stock}</td>
                 <td>{item.consumed}</td>
-                <td>{formatCurrency(item.cost)}</td>
+                <td>{fmtCurrency(item.cost)}</td>
                 <td>{item.status}</td>
               </tr>
             ))}
