@@ -17,11 +17,15 @@ export default function ViewPatient() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Inline field errors
+  const [fieldErrors, setFieldErrors] = useState({});
+
   // Notification modal
   const [notification, setNotification] = useState({
     open: false,
-    type: "", // "success" | "error"
+    type: "", // "success" | "error" | "confirm"
     message: "",
+    onConfirm: null,
   });
 
   const tabs = [
@@ -77,10 +81,26 @@ export default function ViewPatient() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setEditableData((prev) => ({ ...prev, [name]: value }));
+    setFieldErrors((prev) => ({ ...prev, [name]: "" })); // clear error on typing
+  };
+
+  // ✅ Validation helpers
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const isValidAlgerianPhone = (phone) => /^(?:\+213|0)(5|6|7)\d{8}$/.test(phone);
+
+  const validateFields = () => {
+    const errors = {};
+    if (!editableData.firstName) errors.firstName = "First name is required.";
+    if (!editableData.lastName) errors.lastName = "Last name is required.";
+    if (editableData.email && !isValidEmail(editableData.email)) errors.email = "Enter a valid email.";
+    if (editableData.phoneNumber && !isValidAlgerianPhone(editableData.phoneNumber)) errors.phoneNumber = "Enter a valid Algerian phone number.";
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   // Save changes
   const handleSave = async () => {
+    if (!validateFields()) return; // stop if validation fails
     try {
       setSaving(true);
       const payload = {
@@ -104,10 +124,9 @@ export default function ViewPatient() {
 
       if (!res.ok) throw new Error("Failed to save changes");
 
-      setPatientData(editableData); // commit edits
+      setPatientData(editableData);
       setEditing(false);
 
-      // show success notification
       setNotification({
         open: true,
         type: "success",
@@ -127,8 +146,16 @@ export default function ViewPatient() {
 
   // Cancel editing
   const handleCancel = () => {
-    setEditableData(patientData); // revert edits
-    setEditing(false);
+    setNotification({
+      open: true,
+      type: "confirm",
+      message: "Any unsaved changes will be lost. Continue?",
+      onConfirm: () => {
+        setEditableData(patientData);
+        setEditing(false);
+        setNotification({ open: false });
+      },
+    });
   };
 
   return (
@@ -202,34 +229,39 @@ export default function ViewPatient() {
                 </div>
                 <div className="history-value">
                   {editing ? (
-                    field === "gender" ? (
-                      <select
-                        name="gender"
-                        value={editableData.gender || ""}
-                        onChange={handleChange}
-                        className="input-field"
-                      >
-                        <option value="">Select Gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                      </select>
-                    ) : field === "dateOfBirth" ? (
-                      <input
-                        type="date"
-                        name={field}
-                        value={editableData[field]}
-                        onChange={handleChange}
-                        className="input-field"
-                      />
-                    ) : (
-                      <input
-                        type="text"
-                        name={field}
-                        value={editableData[field]}
-                        onChange={handleChange}
-                        className="input-field"
-                      />
-                    )
+                    <>
+                      {field === "gender" ? (
+                        <select
+                          name="gender"
+                          value={editableData.gender || ""}
+                          onChange={handleChange}
+                          className="input-field"
+                        >
+                          <option value="">Select Gender</option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                        </select>
+                      ) : field === "dateOfBirth" ? (
+                        <input
+                          type="date"
+                          name={field}
+                          value={editableData[field]}
+                          onChange={handleChange}
+                          className="input-field"
+                        />
+                      ) : (
+                        <input
+                          type="text"
+                          name={field}
+                          value={editableData[field]}
+                          onChange={handleChange}
+                          className="input-field"
+                        />
+                      )}
+                      {fieldErrors[field] && (
+                        <p className="text-red-600 text-sm mt-1">{fieldErrors[field]}</p>
+                      )}
+                    </>
                   ) : (
                     patientData[field]
                   )}
@@ -274,21 +306,39 @@ export default function ViewPatient() {
       {notification.open && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-sm">
-            <p
-              className={
-                notification.type === "success" ? "text-green-600" : "text-red-600"
-              }
-            >
-              {notification.message}
-            </p>
-            <div className="flex justify-end mt-4">
-              <button
-                onClick={() => setNotification({ ...notification, open: false })}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                OK
-              </button>
-            </div>
+            {notification.type === "confirm" ? (
+              <>
+                <p>{notification.message}</p>
+                <div className="flex justify-end mt-4 gap-2">
+                  <button
+                    onClick={() => setNotification({ open: false })}
+                    className="px-4 py-2 border rounded"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => notification.onConfirm && notification.onConfirm()}
+                    className="px-4 py-2 bg-blue-600 text-white rounded"
+                  >
+                    OK
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className={notification.type === "success" ? "text-green-600" : "text-red-600"}>
+                  {notification.message}
+                </p>
+                <div className="flex justify-end mt-4">
+                  <button
+                    onClick={() => setNotification({ ...notification, open: false })}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    OK
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

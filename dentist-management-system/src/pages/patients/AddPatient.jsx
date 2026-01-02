@@ -18,9 +18,10 @@ export default function AddPatient() {
     groupNumber: ''
   });
 
+  const [fieldErrors, setFieldErrors] = useState({}); // 🔹 Inline field errors
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 🔹 Modal state
+  // 🔹 Modal state for success / cancel
   const [modal, setModal] = useState({
     open: false,
     type: '', // success | error | confirm
@@ -32,18 +33,33 @@ export default function AddPatient() {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+
+    // Clear inline error when user types
+    setFieldErrors(prev => ({ ...prev, [name]: '' }));
+  };
+
+  // ✅ Validation helpers
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const isValidAlgerianPhone = (phone) => /^(?:\+213|0)(5|6|7)\d{8}$/.test(phone);
+
+  const validateFields = () => {
+    const errors = {};
+
+    if (!formData.firstName) errors.firstName = 'First name is required.';
+    if (!formData.lastName) errors.lastName = 'Last name is required.';
+    if (formData.email && !isValidEmail(formData.email)) {
+      errors.email = 'Enter a valid email address.';
+    }
+    if (formData.phoneNumber && !isValidAlgerianPhone(formData.phoneNumber)) {
+      errors.phoneNumber = 'Enter a valid Algerian phone number.';
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSave = async () => {
-    if (!formData.firstName || !formData.lastName) {
-      setModal({
-        open: true,
-        type: 'error',
-        title: 'Validation Error',
-        message: 'First name and last name are required.',
-      });
-      return;
-    }
+    if (!validateFields()) return; // stop submission if field errors
 
     const payload = {
       first_name: formData.firstName,
@@ -80,6 +96,7 @@ export default function AddPatient() {
         return;
       }
 
+      // ✅ Success modal
       setModal({
         open: true,
         type: 'success',
@@ -122,20 +139,26 @@ export default function AddPatient() {
           <h2 className="text-xl font-semibold mb-6">Patient Details</h2>
 
           <div className="grid grid-cols-2 gap-6 mb-6">
-            <input
-              name="firstName"
-              placeholder="First Name *"
-              value={formData.firstName}
-              onChange={handleInputChange}
-              className="input"
-            />
-            <input
-              name="lastName"
-              placeholder="Last Name *"
-              value={formData.lastName}
-              onChange={handleInputChange}
-              className="input"
-            />
+            <div>
+              <input
+                name="firstName"
+                placeholder="First Name *"
+                value={formData.firstName}
+                onChange={handleInputChange}
+                className="input"
+              />
+              {fieldErrors.firstName && <p className="text-red-600 text-sm mt-1">{fieldErrors.firstName}</p>}
+            </div>
+            <div>
+              <input
+                name="lastName"
+                placeholder="Last Name *"
+                value={formData.lastName}
+                onChange={handleInputChange}
+                className="input"
+              />
+              {fieldErrors.lastName && <p className="text-red-600 text-sm mt-1">{fieldErrors.lastName}</p>}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-6 mb-6">
@@ -159,20 +182,26 @@ export default function AddPatient() {
           </div>
 
           <div className="grid grid-cols-2 gap-6 mb-6">
-            <input
-              name="phoneNumber"
-              placeholder="Phone"
-              value={formData.phoneNumber}
-              onChange={handleInputChange}
-              className="input"
-            />
-            <input
-              name="email"
-              placeholder="Email"
-              value={formData.email}
-              onChange={handleInputChange}
-              className="input"
-            />
+            <div>
+              <input
+                name="phoneNumber"
+                placeholder="Phone"
+                value={formData.phoneNumber}
+                onChange={handleInputChange}
+                className="input"
+              />
+              {fieldErrors.phoneNumber && <p className="text-red-600 text-sm mt-1">{fieldErrors.phoneNumber}</p>}
+            </div>
+            <div>
+              <input
+                name="email"
+                placeholder="Email"
+                value={formData.email}
+                onChange={handleInputChange}
+                className="input"
+              />
+              {fieldErrors.email && <p className="text-red-600 text-sm mt-1">{fieldErrors.email}</p>}
+            </div>
           </div>
 
           <input

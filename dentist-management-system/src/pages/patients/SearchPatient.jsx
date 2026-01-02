@@ -272,7 +272,7 @@ export default function PatientsList() {
                                 : "text-green-600"
                             }
                           >
-                            ${patient.outstandingBalance.toFixed(2)}
+                            DZD {patient.outstandingBalance.toFixed(2)}
                           </span>
                         </td>
                         <td className="py-4 px-6">
