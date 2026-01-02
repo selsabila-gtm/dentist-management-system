@@ -67,9 +67,18 @@ const patientId = params.patientId ?? params.id; // supports both route styles
       <main className="main-content">
         {/* Header */}
         <header className="page-header">
-          <h1 className="page-title">Patient Profile</h1>
-          <p className="page-subtitle">View patient information and history</p>
-        </header>
+  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+    <button onClick={() => navigate("/patients")} className="secondary-button">
+      ← Back to Patients
+    </button>
+
+    <div>
+      <h1 className="page-title">Patient Profile</h1>
+      <p className="page-subtitle">View patient information and history</p>
+    </div>
+  </div>
+</header>
+
 
         {/* Tabs */}
         <div className="tabs-row">
