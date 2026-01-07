@@ -348,7 +348,3 @@ def upload_document(appt_id):
         return jsonify({"error": f"Failed to upload document: {str(e)}"}), 500
 
 
-@bp.route("/uploads/<path:filename>")
-def serve_upload(filename):
-    """Serve uploaded files"""
-    return send_from_directory(current_app.config["UPLOAD_FOLDER"], filename)

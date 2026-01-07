@@ -1,6 +1,6 @@
 // src/pages/billing/AddInvoice.jsx
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "../../components/sidebar/sidebar";
 import "../../styles/staff.css";
 import "./billing.css";
@@ -41,8 +41,11 @@ function Toast({ message, type = "info", onClose }) {
 
 export default function AddInvoicePage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const query = new URLSearchParams(location.search);
+  const preselectedPatientId = query.get("patientId") || "";
   const [patients, setPatients] = useState([]);
-  const [patientId, setPatientId] = useState("");
+  const [patientId, setPatientId] = useState(preselectedPatientId);
   const [summary, setSummary] = useState(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
 
@@ -96,6 +99,13 @@ export default function AddInvoicePage() {
       setLoadingSummary(false);
     }
   };
+  useEffect(() => {
+  if (preselectedPatientId) {
+    loadSummary(preselectedPatientId);
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preselectedPatientId]);
+
 
   const handlePatientChange = (e) => {
     const value = e.target.value;

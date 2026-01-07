@@ -25,10 +25,9 @@ const RANGE_LABELS = {
   year: "Last Year",
 };
 
-function formatCurrency(v) {
-  const num = Number(v || 0);
-  return `$${num.toFixed(2)}`;
-}
+const fmtCurrency = (v) =>
+    v === 0 ? "0 DA" : v ? `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })} DA` : "—";
+  const fmtNumber = (v) => (v === 0 ? "0" : v ? Number(v).toLocaleString() : "—");
 
 function filterInvoicesByRange(invoices, rangeKey) {
   const days = RANGE_DAYS[rangeKey] || 30;
@@ -560,7 +559,7 @@ function BillingTab({ stats, currentRangeLabel }) {
         <div className="reports-card">
           <p className="reports-card-label">Total Revenue</p>
           <p className="reports-card-value">
-            {formatCurrency(stats.totalRevenue)}
+            {fmtCurrency(stats.totalRevenue)}
           </p>
           <p className="reports-card-sub">
             {stats.invoiceCount} invoice
@@ -571,7 +570,7 @@ function BillingTab({ stats, currentRangeLabel }) {
         <div className="reports-card">
           <p className="reports-card-label">Average Paid per Patient</p>
           <p className="reports-card-value">
-            {formatCurrency(stats.avgPaidPerPerson)}
+            {fmtCurrency(stats.avgPaidPerPerson)}
           </p>
           <p className="reports-card-sub">
             Among patients who paid in this period
@@ -581,7 +580,7 @@ function BillingTab({ stats, currentRangeLabel }) {
         <div className="reports-card">
           <p className="reports-card-label">Outstanding Balance</p>
           <p className="reports-card-value">
-            {formatCurrency(stats.totalOutstanding)}
+            {fmtCurrency(stats.totalOutstanding)}
           </p>
           <p className="reports-card-sub">All patients combined</p>
         </div>
@@ -621,8 +620,8 @@ function BillingTab({ stats, currentRangeLabel }) {
                 <tr key={p.patient_id}>
                   <td>{p.name}</td>
                   <td>{p.invoicesCount}</td>
-                  <td>{formatCurrency(p.paidAmount)}</td>
-                  <td>{formatCurrency(p.outstanding)}</td>
+                  <td>{fmtCurrency(p.paidAmount)}</td>
+                  <td>{fmtCurrency(p.outstanding)}</td>
                 </tr>
               ))}
             </tbody>
@@ -684,7 +683,7 @@ function InventoryTab({ loading, report, currentRangeLabel }) {
         <div className="reports-card">
           <p className="reports-card-label">Total Cost</p>
           <p className="reports-card-value">
-            {formatCurrency(report.total_cost)}
+            {fmtCurrency(report.total_cost)}
           </p>
           <p className="reports-card-sub">Current inventory value</p>
         </div>
@@ -722,7 +721,7 @@ function InventoryTab({ loading, report, currentRangeLabel }) {
                 <td>{item.item}</td>
                 <td>{item.stock}</td>
                 <td>{item.consumed}</td>
-                <td>{formatCurrency(item.cost)}</td>
+                <td>{fmtCurrency(item.cost)}</td>
                 <td>{item.status}</td>
               </tr>
             ))}

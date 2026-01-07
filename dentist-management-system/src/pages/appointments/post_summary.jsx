@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 
 import "./summary.css";
-import Sidebar from "../components/sidebar/sidebar"; 
+import Sidebar from "../../components/sidebar/sidebar";
 const API_BASE = "http://127.0.0.1:5000";
 
 export default function PostSummary() {

@@ -42,6 +42,7 @@ import TreatmentPlansPage from "./pages/patients/TreatmentPlans.jsx";
 import BillingPage from "./pages/billing/billing.jsx";
 import AddInvoicePage from "./pages/billing/AddInvoice.jsx";
 import InvoicePrintPage from "./pages/billing/InvoicePrint.jsx";
+import ReportsPage from "./pages/reports/reports.jsx";
 
 
 // Protected Route Component
@@ -64,10 +65,10 @@ function App() {
 
         {/* ---------------- PATIENT (UNPROTECTED in your current setup) ---------------- */}
         <Route path="/add-patient" element={<AddPatient />} />
-        <Route path="/b" element={<Appointment />} />
-        <Route path="/c" element={<PatientInvoices />} />
+        <Route path="/patients/:patientId" element={<ViewPatient />} /> {/* new */}
+        <Route path="/patients/:patientId/appointments" element={<Appointment />} />
         <Route path="/patients" element={<SearchPatient />} />
-        <Route path="/patient/:id" element={<ViewPatient />} />
+        <Route path="/patients/:patientId/invoices" element={<PatientInvoices />} />
 
         {/* Redirect root */}
         <Route path="/a" element={<Navigate to="/staff" />} />
@@ -119,7 +120,7 @@ function App() {
           }
         />
 
-        {/* Calendar / Appointments routes */}
+{/* Calendar / Appointments routes */}
         <Route
           path="/calendar"
           element={
@@ -214,22 +215,32 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+  path="/billing/new"
+  element={
+    <ProtectedRoute>
+      <AddInvoicePage />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/billing/invoice/:id"
+  element={
+    <ProtectedRoute>
+      <InvoicePrintPage />
+    </ProtectedRoute>
+  }
+/>
+
+
 
         {/* Reports placeholder */}
         <Route
           path="/reports"
           element={
             <ProtectedRoute>
-              <div>Reports Page (Coming Soon)</div>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/billing"
-          element={
-            <ProtectedRoute>
-              <div><BillingPage /></div>
+              <ReportsPage />
             </ProtectedRoute>
           }
         />

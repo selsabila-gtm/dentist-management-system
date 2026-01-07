@@ -1,5 +1,22 @@
 from flask import jsonify, request
 from backend.routes import bp
+from backend.models import Appointment, InventoryItem
+import json
+
+
+def load_json_field(value):
+    if not value:
+        return []
+    if isinstance(value, list):
+        return value
+    try:
+        return json.loads(value)
+    except Exception:
+        return []
+
+
+
+
 
 # ---- REPORTS ----
 @bp.route("/api/reports/billing", methods=["GET"])
