@@ -1,0 +1,411 @@
+/* calendar.css – FULL FILE (page-scoped, no need for index.css UI styles) */
+
+/* ====== Layout / page wrapper ====== */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* If your Calendar component root uses: <div className="page calendar-page"> */
+.calendar-page {
+  flex: 1;
+  padding: 24px 40px;
+  background-color: #f5f7fb;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* ====== Header (same look as your old global) ====== */
+.calendar-page .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.calendar-page .page-header h1 {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* ====== Buttons (scoped) ====== */
+.calendar-page .primary-button {
+  background-color: #1A73F0;
+  color: white;
+  border-radius: 10px;
+  border: none;
+  padding: 8px 18px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.calendar-page .primary-button:hover {
+  background-color: #0d2771;
+}
+
+.calendar-page .secondary-button {
+  background-color: #e5e7eb;
+  border-radius: 10px;
+  border: none;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.calendar-page .secondary-button:hover {
+  background-color: #d1d5db;
+}
+
+/* ====== Card (scoped) ====== */
+.calendar-page .card {
+  background-color: white;
+  border-radius: 14px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+/* ====== Tables (scoped) ====== */
+.calendar-page .appointments-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.calendar-page .appointments-table th,
+.calendar-page .appointments-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #edf2f7;
+  text-align: left;
+}
+
+.calendar-page .appointments-table th {
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.calendar-page .link-text,
+.calendar-page .link-button {
+  color: #2563eb;
+  font-size: 13px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.calendar-page .actions-cell {
+  white-space: nowrap;
+}
+
+/* ====== Status badges (scoped) ====== */
+.calendar-page .status-badge {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  text-transform: capitalize;
+}
+
+.calendar-page .status-scheduled {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+.calendar-page .status-completed {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.calendar-page .status-cancelled {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+/* ====== Your original CALENDAR styles (unchanged) ====== */
+
+.calendar-page .calendar-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.calendar-months {
+  display: flex;
+  gap: 32px;
+  overflow-x: auto;
+}
+
+.month-card {
+  background-color: white;
+  border-radius: 14px;
+  padding: 12px 16px 16px;
+  min-width: 380px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.month-title {
+  text-align: center;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.month-grid-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  font-size: 11px;
+  color: #94a3b8;
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.month-day {
+  border: none;
+  background: none;
+  border-radius: 999px;
+  width: 30px;
+  height: 30px;
+  font-size: 12px;
+  cursor: pointer;
+  margin: 2px auto;
+  transition: background-color 0.15s ease;
+}
+
+.month-day:hover {
+  background-color: #e5e7eb;
+}
+
+/* Selected day - Dark blue */
+.month-day.selected {
+  background-color: #2563eb;
+  color: white;
+  font-weight: 600;
+}
+
+/* Today - Grey background */
+.month-day.today {
+  background-color: #e5e7eb;
+  font-weight: 600;
+}
+
+/* Days with scheduled appointments - Blue */
+.month-day.has-scheduled {
+  background-color: #dbeafe;
+  color: #1e40af;
+  font-weight: 500;
+}
+
+/* Days with all completed appointments - Green */
+.month-day.all-completed {
+  background-color: #d1fae5;
+  color: #047857;
+  font-weight: 500;
+}
+
+/* Selected state takes priority */
+.month-day.selected.today,
+.month-day.selected.has-scheduled,
+.month-day.selected.all-completed {
+  background-color: #2563eb;
+  color: white;
+}
+
+/* Hover states for different day types */
+.month-day.has-scheduled:hover {
+  background-color: #bfdbfe;
+}
+
+.month-day.all-completed:hover {
+  background-color: #a7f3d0;
+}
+
+.month-day.today:hover {
+  background-color: #d1d5db;
+}
+
+.month-arrow {
+  border-radius: 999px;
+  border: none;
+  width: 32px;
+  height: 32px;
+  background-color: white;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  cursor: pointer;
+}
+
+.appointments-section {
+  margin-top: 8px;
+}
+
+.appointments-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.appointments-header h2 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.appointments-date-label {
+  font-size: 13px;
+  color: #6b7280;
+}
+.status-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.view-btn.disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ====== RESPONSIVE STYLES ====== */
+
+/* Tablet styles (768px - 1024px) */
+@media (max-width: 1024px) {
+  .calendar-page {
+    padding: 20px 24px;
+    max-width: 100%;
+  }
+
+  .calendar-page .page-header h1 {
+    font-size: 22px;
+  }
+
+  .month-card {
+    min-width: 320px;
+  }
+
+  .calendar-months {
+    gap: 20px;
+  }
+}
+
+/* Mobile styles (below 768px) */
+@media (max-width: 768px) {
+  .calendar-page {
+    padding: 80px 16px 16px;
+  }
+
+  .calendar-page .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .calendar-page .page-header h1 {
+    font-size: 20px;
+  }
+
+  .calendar-page .calendar-section {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .month-arrow {
+    width: 40px;
+    height: 40px;
+  }
+
+  .calendar-months {
+    width: 100%;
+    gap: 16px;
+  }
+
+  .month-card {
+    min-width: 280px;
+    padding: 10px 12px 14px;
+  }
+
+  .month-day {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+
+  .appointments-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .appointments-date-label {
+    order: -1;
+    margin-bottom: 4px;
+  }
+
+  /* Make table scrollable on mobile */
+  .calendar-page .card {
+    overflow-x: auto;
+    padding: 12px;
+  }
+
+  .calendar-page .appointments-table {
+    font-size: 12px;
+    min-width: 600px;
+  }
+
+  .calendar-page .appointments-table th,
+  .calendar-page .appointments-table td {
+    padding: 6px 8px;
+  }
+
+  .calendar-page .primary-button {
+    width: 100%;
+    padding: 10px 18px;
+  }
+
+  .status-cell {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}
+
+/* Small mobile adjustments (below 480px) */
+@media (max-width: 480px) {
+  .calendar-page {
+    padding: 70px 12px 12px;
+  }
+
+  .calendar-page .page-header h1 {
+    font-size: 18px;
+  }
+
+  .month-card {
+    min-width: 260px;
+    padding: 8px 10px 12px;
+  }
+
+  .month-day {
+    width: 26px;
+    height: 26px;
+    font-size: 10px;
+  }
+
+  .month-grid-header {
+    font-size: 10px;
+  }
+
+  .calendar-page .appointments-table {
+    font-size: 11px;
+  }
+
+  .calendar-page .primary-button,
+  .calendar-page .secondary-button {
+    font-size: 13px;
+    padding: 8px 14px;
+  }
+}
